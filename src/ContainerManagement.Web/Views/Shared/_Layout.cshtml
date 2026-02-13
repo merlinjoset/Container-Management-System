@@ -1,0 +1,162 @@
+﻿@using System.Security.Claims
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] Container Processing & Compliance System </title>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ContainerManagement.Web.styles.css" asp-append-version="true" />
+
+    <style>
+        .app-navbar {
+            background: linear-gradient(90deg, #0f172a, #111827);
+        }
+
+            .app-navbar .nav-link {
+                color: rgba(255,255,255,.85) !important;
+                border-radius: .5rem;
+                padding: .45rem .8rem;
+            }
+
+                .app-navbar .nav-link:hover {
+                    background: rgba(255,255,255,.08);
+                    color: #fff !important;
+                }
+
+                .app-navbar .nav-link.active {
+                    background: rgba(255,255,255,.14);
+                    color: #fff !important;
+                }
+
+            .app-navbar .navbar-brand {
+                color: #fff !important;
+                font-weight: 600;
+                letter-spacing: .2px;
+            }
+
+        .user-pill {
+            background: rgba(255,255,255,.10);
+            border: 1px solid rgba(255,255,255,.18);
+            color: rgba(255,255,255,.92);
+            padding: .35rem .65rem;
+            border-radius: 999px;
+            font-size: .9rem;
+            display: inline-flex;
+            gap: .35rem;
+            align-items: center;
+        }
+
+        .app-container {
+            min-height: calc(100vh - 120px);
+        }
+
+        .app-footer {
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    @{
+        var path = Context?.Request?.Path.Value?.ToLowerInvariant() ?? "";
+        var isPayments = path.StartsWith("/payments");
+        var isProviders = path.StartsWith("/providers");
+        var isUsers = path.StartsWith("/users");
+        var isAccount = path.StartsWith("/account");
+
+        var display =
+        User.FindFirstValue(ClaimTypes.Email)
+        ?? User.Identity?.Name
+        ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? "User";
+    }
+
+    <header>
+        <nav class="navbar navbar-expand-lg app-navbar shadow-sm">
+            <div class="container-fluid px-3">
+                <a class="navbar-brand d-flex align-items-center gap-2" asp-controller="Payments" asp-action="Index">
+                    Container Processing & Compliance System
+                </a>
+
+                <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+                        aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarMain">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(isPayments ? "active" : "")" asp-controller="Payments" asp-action="Index">Payments</a>
+                            </li>
+                        }
+
+                        @if (User.Identity?.IsAuthenticated == true && User.IsInRole("admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(isProviders ? "active" : "")" asp-controller="Providers" asp-action="Index">Providers</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
+                            </li>
+                        }
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item my-2 my-lg-0">
+                                <span class="user-pill">
+                                    <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                                    <span>Signed in</span>
+                                    <strong class="ms-1">@display</strong>
+                                </span>
+                            </li>
+
+                            <li class="nav-item">
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-light btn-sm">
+                                        Logout
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="btn btn-outline-light btn-sm @(isAccount ? "active" : "")" asp-controller="Account" asp-action="Login">
+                                    Login
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container app-container py-4">
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top app-footer text-muted py-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div>&copy; @DateTime.UtcNow.Year - Container Processing & Compliance System</div>
+            <div class="small">Container Processing & Compliance System</div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,54 @@
+﻿@model ContainerManagement.Web.Models.ProviderEditVm
+
+@{
+    ViewData["Title"] = "Create Provider";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Create Provider</h2>
+        <div class="text-muted">Add a new payment provider</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="/Providers">Back</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="post" action="/Providers/Create" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input asp-for="Name" class="form-control" placeholder="e.g. FakeProvider" />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Endpoint URL</label>
+                        <input asp-for="EndpointUrl" class="form-control" placeholder="https://provider.example.com/api/pay" />
+                        <span asp-validation-for="EndpointUrl" class="text-danger small"></span>
+                        <div class="form-text">This URL will be used by the payment processing job.</div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                        <label class="form-check-label" asp-for="IsActive">Active</label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create</button>
+                        <a class="btn btn-light" href="/Providers/Index">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

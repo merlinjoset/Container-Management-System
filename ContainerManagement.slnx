@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ContainerManagement.Application/ContainerManagement.Application.csproj" />
+    <Project Path="src/ContainerManagement.Domain/ContainerManagement.Domain.csproj" />
+    <Project Path="src/ContainerManagement.Integration/ContainerManagement.Integration.csproj" />
+    <Project Path="src/ContainerManagement.Infrastructure/ContainerManagement.Infrastructure.csproj" />
+    <Project Path="src/ContainerManagement.Web/ContainerManagement.Web.csproj" />
+  </Folder>
+</Solution>

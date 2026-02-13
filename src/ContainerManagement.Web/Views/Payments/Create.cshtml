@@ -1,0 +1,122 @@
+﻿@model ContainerManagement.Application.Dtos.CreatePaymentRequestDto
+@using ContainerManagement.Domain.Providers
+
+@{
+    ViewData["Title"] = "Create Payment";
+    var providers = ViewBag.Providers as List<PaymentProvider> ?? new();
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">Create Payment</h2>
+        <div class="text-muted">Fill the details to create a new payment</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="/Payments">Back</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form asp-action="Create" asp-controller="Payments" method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Provider</label>
+                        <select asp-for="ProviderId" class="form-select">
+                            <option value="">-- Select Provider --</option>
+                            @foreach (var p in providers)
+                            {
+                                <option value="@p.Id">@p.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="ProviderId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Amount</label>
+                            <input asp-for="Amount" class="form-control" placeholder="0.00" type="number" step="0.01" min="0.01" inputmode="decimal" />
+                            <span asp-validation-for="Amount" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Currency</label>
+                            <input asp-for="Currency" class="form-control" placeholder="AED / USD / EUR" />
+                            <span asp-validation-for="Currency" class="text-danger small"></span>
+                            <div class="form-text">Use 3-letter code (e.g., AED).</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Reference</label>
+                        <input asp-for="Reference" class="form-control" placeholder="e.g. INV-10021" />
+                        <span asp-validation-for="Reference" class="text-danger small"></span>
+                    </div>
+
+                    <hr />
+                    <h5>Card Details</h5>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Card Number</label>
+                            <input asp-for="CardNumber" class="form-control" inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456" pattern="^\d{13,19}$" maxlength="19" data-digit-only="true" />
+                            <span asp-validation-for="CardNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Expiry Month</label>
+                            <input asp-for="ExpiryMonth" class="form-control" inputmode="numeric" placeholder="MM" autocomplete="cc-exp-month" type="number" min="1" max="12" maxlength="2" data-digit-only="true" />
+                            <span asp-validation-for="ExpiryMonth" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Expiry Year</label>
+                            <input asp-for="ExpiryYear" class="form-control" inputmode="numeric" placeholder="YYYY" autocomplete="cc-exp-year" type="number" min="2020" max="2100" maxlength="4" data-digit-only="true" />
+                            <span asp-validation-for="ExpiryYear" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">CVV</label>
+                            <input asp-for="Cvv" class="form-control" inputmode="numeric" placeholder="CVV" autocomplete="cc-csc" pattern="^\d{3}$" maxlength="3" data-digit-only="true" />
+                            <span asp-validation-for="Cvv" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            Create Payment
+                        </button>
+                        <a class="btn btn-light" href="/Payments">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            // Prevent non-digit characters for inputs flagged with data-digit-only
+            document.querySelectorAll('[data-digit-only="true"]').forEach(function (el) {
+                el.addEventListener('input', function (e) {
+                    const max = el.getAttribute('maxlength');
+                    let v = el.value.replace(/\D+/g, '');
+                    if (max) v = v.slice(0, parseInt(max, 10));
+                    if (el.value !== v) el.value = v;
+                });
+                el.addEventListener('keydown', function (e) {
+                    // Allow control keys, block e, +, - which number inputs accept
+                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                });
+            });
+
+            // Harden number fields (like Amount) to avoid e/E/+/-
+            document.querySelectorAll('input[type="number"]').forEach(function (el) {
+                el.addEventListener('keydown', function (e) {
+                    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+                });
+            });
+        })();
+    </script>
+}
