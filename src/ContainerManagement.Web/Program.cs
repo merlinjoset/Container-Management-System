@@ -1,15 +1,14 @@
-using ContainerManagement.Application.Abstractions;
-using ContainerManagement.Application.Jobs;
+﻿using ContainerManagement.Application.Abstractions;
 using ContainerManagement.Application.Security;
 using ContainerManagement.Application.Services;
+using ContainerManagement.Infrastructure;
+using ContainerManagement.Application;
 using ContainerManagement.Infrastructure.Integrations;
 using ContainerManagement.Infrastructure.Persistence;
 using ContainerManagement.Infrastructure.Persistence.Repositories;
 using ContainerManagement.Infrastructure.Persistence.Uow;
 using ContainerManagement.Infrastructure.Seed;
-using ContainerManagement.Web.Hubs;
-using Hangfire;
-using Hangfire.SqlServer;
+using ContainerManagement.Web.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -90,19 +89,18 @@ builder.Services.AddAuthorization(opt =>
 });
 
 // Repos & UoW & Services
-builder.Services.AddScoped<IPaymentRepository, EfPaymentRepository>();
-builder.Services.AddScoped<IProviderRepository, EfProviderRepository>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
-builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<ITokenStore, EfTokenStore>();
-builder.Services.AddScoped<IPaymentEvents, ContainerManagement.Web.Hubs.SignalRPaymentEvents>();
 
 // JWT login services
 builder.Services.AddScoped<IAuthUserRepository, AuthUserRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IUserManagementRepository, EfUserManagementRepository>();
-builder.Services.AddScoped<UserAdminService>();
+builder.Services.AddInfrastructure(); //Infrastructure services
+builder.Services.AddApplication();  //Application services
 builder.Services.AddControllersWithViews();
+
+
 
 // FakeProvider client
 builder.Services.AddHttpClient<IFakeProviderClient, FakeProviderClient>(c =>
@@ -110,18 +108,18 @@ builder.Services.AddHttpClient<IFakeProviderClient, FakeProviderClient>(c =>
     c.BaseAddress = new Uri(builder.Configuration["FakeProvider:BaseUrl"]!);
 });
 
-// Hangfire
-builder.Services.AddHangfire(cfg =>
-    cfg.UseSqlServerStorage(builder.Configuration.GetConnectionString("Default"),
-        new SqlServerStorageOptions { PrepareSchemaIfNecessary = true }));
-builder.Services.AddHangfireServer(opt => opt.Queues = new[] { "payments", "default" });
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<ExceptionHandlingFilter>();
+});
+
+
 builder.Services.AddSignalR();
 
 var app = builder.Build();
 
 app.UseStaticFiles();
 app.UseRouting();
-app.MapHub<PaymentsHub>("/hubs/payments");
 
 app.Use(async (context, next) =>
 {
@@ -137,8 +135,6 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseHangfireDashboard("/hangfire");
 
 app.MapControllers();
 app.MapControllerRoute(

@@ -1,0 +1,55 @@
+﻿@model ContainerManagement.Application.Dtos.Ports.PortUpdateDto
+
+@{
+    ViewData["Title"] = "Edit Port";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-warning">
+            <h4>Edit Port</h4>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+
+                <input type="hidden" asp-for="Id" />
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="PortCode" class="form-label"></label>
+                        <input asp-for="PortCode" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="FullName" class="form-label"></label>
+                        <input asp-for="FullName" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label asp-for="Country" class="form-label"></label>
+                        <input asp-for="Country" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Region" class="form-label"></label>
+                        <input asp-for="Region" class="form-control" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="RegionCode" class="form-label"></label>
+                        <input asp-for="RegionCode" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-warning">Update</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

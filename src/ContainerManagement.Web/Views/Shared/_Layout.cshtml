@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] Container Processing & Compliance System </title>
+    <title>@ViewData["Title"] Container Processing & Customer Compliance System </title>
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -78,7 +78,7 @@
         <nav class="navbar navbar-expand-lg app-navbar shadow-sm">
             <div class="container-fluid px-3">
                 <a class="navbar-brand d-flex align-items-center gap-2" asp-controller="Payments" asp-action="Index">
-                    Container Processing & Compliance System
+                    Container Processing & Customer Compliance System
                 </a>
 
                 <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
@@ -91,7 +91,7 @@
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
-                                <a class="nav-link @(isPayments ? "active" : "")" asp-controller="Payments" asp-action="Index">Payments</a>
+                                <a class="nav-link @(isPayments ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
                             </li>
                         }
 
@@ -148,8 +148,8 @@
 
     <footer class="border-top app-footer text-muted py-3">
         <div class="container d-flex justify-content-between align-items-center">
-            <div>&copy; @DateTime.UtcNow.Year - Container Processing & Compliance System</div>
-            <div class="small">Container Processing & Compliance System</div>
+            <div>&copy; @DateTime.UtcNow.Year - Container Processing & Customer Compliance System</div>
+            <div class="small">Container Processing & Customer Compliance System</div>
         </div>
     </footer>
 

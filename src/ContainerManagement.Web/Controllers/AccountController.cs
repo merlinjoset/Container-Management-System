@@ -38,7 +38,7 @@ public class AccountController : Controller
                 Expires = res.ExpiresAtUtc
             });
 
-            return RedirectToAction("Index", "Payments");
+            return RedirectToAction("Index", "Home");
         }
         catch (UnauthorizedAccessException)
         {

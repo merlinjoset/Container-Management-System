@@ -16,20 +16,7 @@ public static class DbSeeder
         await DbSeederInternals.TryBaselineInitialMigrationAsync(db);
 
         await db.Database.MigrateAsync();
-
-        // Seed Providers
-        if (!await db.PaymentProviders.AnyAsync())
-        {
-            db.PaymentProviders.Add(new PaymentProviderEntity
-            {
-                Id = Guid.NewGuid(),
-                Name = "FakeProvider",
-                IsActive = true,
-                EndpointUrl = fakeProviderBaseUrl
-            });
-
-            await db.SaveChangesAsync();
-        }
+     
     }
 }
 

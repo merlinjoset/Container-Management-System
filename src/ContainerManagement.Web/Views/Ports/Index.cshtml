@@ -1,0 +1,66 @@
+﻿@model List<ContainerManagement.Application.Dtos.Ports.PortListItemDto>
+
+@{
+    ViewData["Title"] = "Ports";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold">Ports</h2>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Port
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Port Code</th>
+                        <th>Full Name</th>
+                        <th>Country</th>
+                        <th>Region</th>
+                        <th>Region Code</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        foreach (var port in Model)
+                        {
+                            <tr>
+                                <td><strong>@port.PortCode</strong></td>
+                                <td>@port.FullName</td>
+                                <td>@port.Country</td>
+                                <td>@port.Region</td>
+                                <td>@port.RegionCode</td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@port.Id"
+                                       class="btn btn-sm btn-warning me-2">
+                                        Edit
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@port.Id"
+                                       class="btn btn-sm btn-danger">
+                                        Delete
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                No ports available.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</div>

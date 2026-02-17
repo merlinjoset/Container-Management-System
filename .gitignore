@@ -9,3 +9,4 @@ src/ContainerManagement.Domain/bin
 src/ContainerManagement.Domain/obj
 .vscode
 /src/ContainerManagement.Integration/obj
+/src/ContainerManagement.Integration/bin/Debug

@@ -10,9 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<UserRoleEntity> UserRoles => Set<UserRoleEntity>();
     public DbSet<UserLoginEntity> UserLogins => Set<UserLoginEntity>();
     public DbSet<UserTokenEntity> UserTokens => Set<UserTokenEntity>();
-
-    public DbSet<PaymentProviderEntity> PaymentProviders => Set<PaymentProviderEntity>();
-    public DbSet<PaymentEntity> Payments => Set<PaymentEntity>();
+    public DbSet<PortsEntity> Ports => Set<PortsEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -76,37 +74,33 @@ public class AppDbContext : DbContext
             e.Property(x => x.Name).HasMaxLength(128).IsRequired();
         });
 
-        // ---------------- PaymentProviders ----------------
-        b.Entity<PaymentProviderEntity>(e =>
+        // ---------------- TblPorts ----------------
+        b.Entity<PortsEntity>(e =>
         {
-            e.ToTable("PaymentProviders");
+            e.ToTable("TblPorts");
+
             e.HasKey(x => x.Id);
 
-            e.Property(x => x.Name).HasMaxLength(128).IsRequired();
-            e.Property(x => x.EndpointUrl).HasMaxLength(512).IsRequired();
-            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.Property(x => x.PortCode).HasMaxLength(20);
 
-            e.HasIndex(x => x.Name).HasDatabaseName("IX_PaymentProviders_Name");
+            e.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+
+            e.Property(x => x.Country).HasMaxLength(100).IsRequired();
+
+            e.Property(x => x.Region).HasMaxLength(100);
+
+            e.Property(x => x.RegionCode).HasMaxLength(20);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+
+            e.Property(x => x.CreatedOn).IsRequired();
+
+            e.Property(x => x.ModifiedOn).IsRequired();
+
+            e.Property(x => x.CreatedBy).IsRequired();
+
+            e.Property(x => x.ModifiedBy).IsRequired();
         });
 
-        // ---------------- Payments ----------------
-        b.Entity<PaymentEntity>(e =>
-        {
-            e.ToTable("Payments");
-            e.HasKey(x => x.Id);
-
-            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
-            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
-            e.Property(x => x.Reference).HasMaxLength(64).IsRequired();
-            e.Property(x => x.Status).HasColumnName("Status"); 
-
-            e.Property(x => x.AttemptCount).HasDefaultValue(0);
-            e.Property(x => x.CreationTimeUtc).HasDefaultValueSql("SYSUTCDATETIME()");
-
-            e.Property(x => x.CardLast4).HasMaxLength(4);
-            e.Property(x => x.CardExpMonth);
-            e.Property(x => x.CardExpYear);
-
-        });
     }
 }
