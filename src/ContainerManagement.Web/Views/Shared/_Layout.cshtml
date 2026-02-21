@@ -56,13 +56,67 @@
         .app-footer {
             background: #f8fafc;
         }
+
+        .app-shell {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .app-sidebar {
+            width: 260px;
+            position: sticky;
+            top: 84px; /* aligns under navbar; adjust if navbar height differs */
+            height: calc(100vh - 110px);
+            border-radius: 1rem;
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, .08);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
+            overflow: auto;
+        }
+
+            .app-sidebar .sidebar-title {
+                font-weight: 700;
+                color: #0f172a;
+                letter-spacing: .2px;
+            }
+
+            .app-sidebar .nav-link {
+                color: #0f172a !important;
+                border-radius: .75rem;
+                padding: .55rem .75rem;
+                display: flex;
+                align-items: center;
+                gap: .6rem;
+            }
+
+                .app-sidebar .nav-link:hover {
+                    background: #f1f5f9;
+                }
+
+                .app-sidebar .nav-link.active {
+                    background: #0f172a;
+                    color: #fff !important;
+                }
+
+        .app-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        @@media (min-width: 1400px) {
+            .container-xxl, .container-xl, .container-lg, .container-md, .container-sm, .container {
+                max-width: 100% !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-light">
 
     @{
         var path = Context?.Request?.Path.Value?.ToLowerInvariant() ?? "";
-        var isPayments = path.StartsWith("/payments");
+        var isPorts = path.StartsWith("/ports");
+        var isTerminals = path.StartsWith("/terminals");
         var isProviders = path.StartsWith("/providers");
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
@@ -88,18 +142,8 @@
 
                 <div class="collapse navbar-collapse" id="navbarMain">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link @(isPayments ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
-                            </li>
-                        }
-
                         @if (User.Identity?.IsAuthenticated == true && User.IsInRole("admin"))
                         {
-                            <li class="nav-item">
-                                <a class="nav-link @(isProviders ? "active" : "")" asp-controller="Providers" asp-action="Index">Providers</a>
-                            </li>
                             <li class="nav-item">
                                 <a class="nav-link @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
@@ -141,9 +185,41 @@
     </header>
 
     <div class="container app-container py-4">
-        <main role="main">
-            @RenderBody()
-        </main>
+        <div class="app-shell">
+
+            @* Sidebar *@
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <aside class="app-sidebar p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="sidebar-title">Navigation</div>
+                    </div>
+
+                    <div class="text-muted small mb-3">Master Data</div>
+
+                    <nav class="nav nav-pills flex-column gap-1">
+                        <a class="nav-link @(isPorts ? "active" : "")"
+                           asp-controller="Ports" asp-action="Index">
+                            <span>Ports</span>
+                        </a>
+
+                        <a class="nav-link @(isTerminals ? "active" : "")"
+                           asp-controller="Terminals" asp-action="Index">
+                            <span>Terminals</span>
+                        </a>
+                    </nav>
+                   
+                </aside>
+            }
+
+            @* Main content *@
+            <section class="app-content">
+                <main role="main">
+                    @RenderBody()
+                </main>
+            </section>
+
+        </div>
     </div>
 
     <footer class="border-top app-footer text-muted py-3">

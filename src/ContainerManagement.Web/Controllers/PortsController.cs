@@ -1,12 +1,11 @@
 ﻿using ContainerManagement.Application.Dtos.Ports;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ContainerManagement.Web.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class PortsController : ControllerBase
+    public class PortsController : Controller
     {
         private readonly PortService _portService;
 
@@ -15,39 +14,111 @@ namespace ContainerManagement.Web.Controllers
             _portService = portService;
         }
 
-        // GET: api/ports
         [HttpGet]
-        public async Task<ActionResult<List<PortListItemDto>>> GetAll(CancellationToken ct)
+        public IActionResult Create()
         {
-            var result = await _portService.GetAllAsync(ct);
-            return Ok(result);
+            return View();
         }
 
-        // POST: api/ports
+        [HttpGet]
+        public async Task<IActionResult> Index(CancellationToken ct)
+        {
+            var ports = await _portService.GetAllAsync(ct);
+            return View(ports);
+        }
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PortCreateDto dto, CancellationToken ct)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(PortCreateDto dto, CancellationToken ct)
         {
-            var id = await _portService.CreateAsync(dto, ct);
-            return Ok(new { id });
+            if (!ModelState.IsValid)
+                return View(dto);
+
+            // DB requires CreatedBy/ModifiedBy (NOT NULL)
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                ModelState.AddModelError("", "Invalid user session. Please login again.");
+                return View(dto);
+            }
+
+            dto.CreatedBy = userId;
+
+            try
+            {
+                await _portService.CreateAsync(dto, ct);
+                TempData["Success"] = "Port created successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                return View(dto);
+            }
         }
 
-        // PUT: api/ports/{id}
-        [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Edit(Guid id, [FromBody] PortUpdateDto dto, CancellationToken ct)
+        [HttpGet]
+        public async Task<IActionResult> Edit(Guid id, CancellationToken ct)
         {
-            if (id != dto.Id)
-                return BadRequest("Route id and body id do not match.");
+            // If you later add GetByIdAsync in service, replace this with that call.
+            var ports = await _portService.GetAllAsync(ct);
+            var port = ports.FirstOrDefault(x => x.Id == id);
 
-            await _portService.UpdateAsync(dto, ct);
-            return Ok("Port updated successfully");
+            if (port == null)
+                return NotFound();
+
+            var dto = new PortUpdateDto
+            {
+                Id = port.Id,
+                PortCode = port.PortCode,
+                FullName = port.FullName,
+                Country = port.Country,
+                Region = port.Region,
+                RegionCode = port.RegionCode
+            };
+
+            return View(dto);
         }
 
-        // DELETE: api/ports/{id}?modifiedBy={guid}
-        [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id, [FromQuery] Guid modifiedBy, CancellationToken ct)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(PortUpdateDto dto, CancellationToken ct)
         {
-            await _portService.DeleteAsync(id, modifiedBy, ct);
-            return Ok("Port deleted successfully");
+            if (!ModelState.IsValid)
+                return View(dto);
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
+            dto.ModifiedBy = userId;
+
+            try
+            {
+                await _portService.UpdateAsync(dto, ct);
+                TempData["Success"] = "Port updated successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                return View(dto);
+            }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
+            await _portService.DeleteAsync(id, userId, ct);
+            TempData["Success"] = "Port deleted successfully.";
+            return RedirectToAction(nameof(Index));
+        }
+
+
     }
 }

@@ -42,10 +42,15 @@
                                        class="btn btn-sm btn-warning me-2">
                                         Edit
                                     </a>
-                                    <a asp-action="Delete" asp-route-id="@port.Id"
-                                       class="btn btn-sm btn-danger">
-                                        Delete
-                                    </a>
+                                   <button type="button"
+                                        class="btn btn-sm btn-danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deletePortModal"
+                                        data-id="@port.Id"
+                                        data-code="@port.PortCode"
+                                        data-name="@port.FullName">
+                                    Delete
+                                </button>
                                 </td>
                             </tr>
                         }
@@ -64,3 +69,54 @@
         </div>
     </div>
 </div>
+
+
+<div class="modal fade" id="deletePortModal" tabindex="-1" aria-labelledby="deletePortModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deletePortModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to delete this port?</p>
+
+                <div class="border rounded p-2 bg-light">
+                    <div><strong>Port Code:</strong> <span id="delPortCode"></span></div>
+                    <div><strong>Full Name:</strong> <span id="delPortName"></span></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+
+                <form id="deletePortForm" asp-action="Delete" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="delPortId" />
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        const deleteModal = document.getElementById('deletePortModal');
+
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+
+            const id = button.getAttribute('data-id');
+            const code = button.getAttribute('data-code');
+            const name = button.getAttribute('data-name');
+
+            document.getElementById('delPortId').value = id;
+            document.getElementById('delPortCode').textContent = code || '';
+            document.getElementById('delPortName').textContent = name || '';
+        });
+    </script>
+}
+

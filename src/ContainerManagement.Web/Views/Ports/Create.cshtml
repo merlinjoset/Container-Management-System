@@ -1,55 +1,73 @@
-﻿@model ContainerManagement.Application.Dtos.Ports.PortCreateDto
+﻿@model ContainerManagement.Application.Dtos.Ports.PortUpdateDto
 
 @{
-    ViewData["Title"] = "Create Port";
+    ViewData["Title"] = "Edit Port";
 }
 
 <div class="container mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h4>Create New Port</h4>
+    <h3 class="fw-bold mb-3">Edit Port</h3>
+
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+
+                <table class="table table-bordered align-middle mb-0">
+                    <tbody>
+                        <tr>
+                            <th style="width: 25%;" class="bg-light">Port Code</th>
+                            <td>
+                                <input asp-for="PortCode" class="form-control" />
+                                <span asp-validation-for="PortCode" class="text-danger"></span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th class="bg-light">Full Name</th>
+                            <td>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th class="bg-light">Country</th>
+                            <td>
+                                <input asp-for="Country" class="form-control" />
+                                <span asp-validation-for="Country" class="text-danger"></span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th class="bg-light">Region</th>
+                            <td>
+                                <input asp-for="Region" class="form-control" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <th class="bg-light">Region Code</th>
+                            <td>
+                                <input asp-for="RegionCode" class="form-control" />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
+            <div class="card-footer text-end">
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-warning">Update</button>
+            </div>
         </div>
-
-        <div class="card-body">
-            <form asp-action="Create" method="post">
-
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label asp-for="PortCode" class="form-label"></label>
-                        <input asp-for="PortCode" class="form-control" />
-                        <span asp-validation-for="PortCode" class="text-danger"></span>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label asp-for="FullName" class="form-label"></label>
-                        <input asp-for="FullName" class="form-control" />
-                        <span asp-validation-for="FullName" class="text-danger"></span>
-                    </div>
-                </div>
-
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label asp-for="Country" class="form-label"></label>
-                        <input asp-for="Country" class="form-control" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label asp-for="Region" class="form-label"></label>
-                        <input asp-for="Region" class="form-control" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label asp-for="RegionCode" class="form-label"></label>
-                        <input asp-for="RegionCode" class="form-control" />
-                    </div>
-                </div>
-
-                <div class="text-end">
-                    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-success">Save</button>
-                </div>
-
-            </form>
-        </div>
-    </div>
+    </form>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
