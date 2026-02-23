@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<PortsEntity> Ports => Set<PortsEntity>();
     public DbSet<RegionEntity> Regions => Set<RegionEntity>();
     public DbSet<CountryEntity> Countries => Set<CountryEntity>();
+    public DbSet<TerminalEntity> Terminals => Set<TerminalEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -146,6 +147,51 @@ public class AppDbContext : DbContext
             e.Property(x => x.CreatedBy).IsRequired();
 
             e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblTerminal ----------------
+        b.Entity<TerminalEntity>(e =>
+        {
+            e.ToTable("TblTerminal");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.Id)
+                .HasDefaultValueSql("NEWID()");
+
+            e.Property(x => x.PortId).IsRequired();
+
+            e.Property(x => x.TerminalName)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            e.Property(x => x.TerminalCode)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            e.Property(x => x.IsDeleted)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            e.Property(x => x.CreatedOn)
+                .HasDefaultValueSql("GETUTCDATE()")
+                .IsRequired();
+
+            e.Property(x => x.ModifiedOn)
+                .HasDefaultValueSql("GETUTCDATE()")
+                .IsRequired();
+
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.PortId)
+                .HasConstraintName("FK_Terminal_Port")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.PortId)
+                .HasDatabaseName("IX_Terminal_PortId");
         });
 
     }

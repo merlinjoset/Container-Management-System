@@ -1,0 +1,56 @@
+@model ContainerManagement.Application.Dtos.Terminals.TerminalUpdateDto
+
+@{
+    ViewData["Title"] = "Edit Terminal";
+    var ports = ViewBag.Ports as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+}
+
+<div class="container mt-4">
+    <h3 class="fw-bold mb-3">Edit Terminal</h3>
+
+    <form asp-action="Edit" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-bordered align-middle mb-0">
+                    <tbody>
+                        <tr>
+                            <th style="width: 25%;" class="bg-light">Port</th>
+                            <td>
+                                <select asp-for="PortId" class="form-select" asp-items="ports"></select>
+                                <span asp-validation-for="PortId" class="text-danger"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Terminal Name</th>
+                            <td>
+                                <input asp-for="TerminalName" class="form-control" />
+                                <span asp-validation-for="TerminalName" class="text-danger"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="bg-light">Terminal Code</th>
+                            <td>
+                                <input asp-for="TerminalCode" class="form-control" />
+                                <span asp-validation-for="TerminalCode" class="text-danger"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer text-end">
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-warning">Update</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

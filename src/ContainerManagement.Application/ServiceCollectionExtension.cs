@@ -11,6 +11,7 @@ namespace ContainerManagement.Application
             services.AddScoped<PortService>();
             services.AddScoped<RegionService>();
             services.AddScoped<CountryService>();
+            services.AddScoped<TerminalService>();
 
             return services;
         }

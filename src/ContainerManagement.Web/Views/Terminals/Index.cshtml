@@ -1,0 +1,103 @@
+@model List<ContainerManagement.Application.Dtos.Terminals.TerminalListItemDto>
+
+@{
+    ViewData["Title"] = "Terminals";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold">Terminals</h2>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Terminal
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-hover table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Port Code</th>
+                        <th>Port Name</th>
+                        <th>Terminal Name</th>
+                        <th>Terminal Code</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        foreach (var t in Model)
+                        {
+                            <tr>
+                                <td>@t.PortCode</td>
+                                <td>@t.PortName</td>
+                                <td>@t.TerminalName</td>
+                                <td>@t.TerminalCode</td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-sm btn-warning me-2">Edit</a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteTerminalModal"
+                                            data-id="@t.Id"
+                                            data-name="@t.TerminalName"
+                                            data-code="@t.TerminalCode">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No terminals available.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteTerminalModal" tabindex="-1" aria-labelledby="deleteTerminalModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteTerminalModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to delete this terminal?</p>
+                <div class="border rounded p-2 bg-light">
+                    <div><strong>Terminal Name:</strong> <span id="delTerminalName"></span></div>
+                    <div><strong>Terminal Code:</strong> <span id="delTerminalCode"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteTerminalForm" asp-action="Delete" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="delTerminalId" />
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const deleteModal = document.getElementById('deleteTerminalModal');
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const code = button.getAttribute('data-code');
+            document.getElementById('delTerminalId').value = id;
+            document.getElementById('delTerminalName').textContent = name || '';
+            document.getElementById('delTerminalCode').textContent = code || '';
+        });
+    </script>
+}
