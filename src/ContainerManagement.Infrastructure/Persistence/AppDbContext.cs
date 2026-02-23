@@ -107,7 +107,7 @@ public class AppDbContext : DbContext
         // ---------------- TblRegions ----------------
         b.Entity<RegionEntity>(e =>
         {
-            e.ToTable("TblRegions");
+            e.ToTable("TblRegion");
 
             e.HasKey(x => x.Id);
 
@@ -115,7 +115,7 @@ public class AppDbContext : DbContext
 
             e.Property(x => x.RegionCode).HasMaxLength(20);
 
-            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.IsDeleted).IsRequired();
 
             e.Property(x => x.CreatedOn).IsRequired();
 
@@ -137,7 +137,7 @@ public class AppDbContext : DbContext
 
             e.Property(x => x.CountryCode).HasMaxLength(20);
 
-            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.IsDeleted).IsRequired();
 
             e.Property(x => x.CreatedOn).IsRequired();
 
