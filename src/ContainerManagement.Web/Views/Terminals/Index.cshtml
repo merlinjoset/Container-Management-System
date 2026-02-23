@@ -5,16 +5,18 @@
 }
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold">Terminals</h2>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Add Terminal
-        </a>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <h2 class="fw-bold mb-0">Terminals</h2>
+        <div class="d-flex gap-2 w-100 w-md-auto">
+            <input id="terminalSearch" class="form-control" placeholder="Search terminals..." />
+            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Terminal</a>
+        </div>
     </div>
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <table class="table table-hover table-striped align-middle">
+            <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle" id="terminalsTable">
                 <thead class="table-dark">
                     <tr>
                         <th>Port Code</th>
@@ -57,6 +59,7 @@
                     }
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>
@@ -89,6 +92,15 @@
 
 @section Scripts {
     <script>
+        const tSearch = document.getElementById('terminalSearch');
+        const tTable = document.getElementById('terminalsTable');
+        tSearch?.addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            tTable.querySelectorAll('tbody tr').forEach(tr => {
+                const text = tr.innerText.toLowerCase();
+                tr.style.display = text.includes(q) ? '' : 'none';
+            });
+        });
         const deleteModal = document.getElementById('deleteTerminalModal');
         deleteModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;

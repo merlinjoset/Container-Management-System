@@ -1,0 +1,30 @@
+@{
+    var hasSuccess = TempData["Success"] is string s && !string.IsNullOrWhiteSpace(s);
+    var hasError = TempData["Error"] is string e && !string.IsNullOrWhiteSpace(e);
+    var hasInfo = TempData["Info"] is string i && !string.IsNullOrWhiteSpace(i);
+}
+
+<div class="container px-0 mb-3">
+    @if (hasSuccess)
+    {
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <div>@TempData["Success"]</div>
+        </div>
+    }
+    @if (hasError)
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>@TempData["Error"]</div>
+        </div>
+    }
+    @if (hasInfo)
+    {
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            <div>@TempData["Info"]</div>
+        </div>
+    }
+</div>
+

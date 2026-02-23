@@ -5,17 +5,19 @@
 }
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold">Regions</h2>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Add Region
-        </a>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <h2 class="fw-bold mb-0">Regions</h2>
+        <div class="d-flex gap-2 w-100 w-md-auto">
+            <input id="regionSearch" class="form-control" placeholder="Search regions..." />
+            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Region</a>
+        </div>
     </div>
 
     <div class="card shadow-sm">
         <div class="card-body">
 
-            <table class="table table-hover table-striped align-middle">
+            <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle" id="regionsTable">
                 <thead class="table-dark">
                     <tr>
                         <th>Region Name</th>
@@ -54,6 +56,7 @@
                     }
                 </tbody>
             </table>
+            </div>
 
         </div>
     </div>
@@ -87,6 +90,15 @@
 
 @section Scripts {
     <script>
+        const search = document.getElementById('regionSearch');
+        const table = document.getElementById('regionsTable');
+        search?.addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const text = tr.innerText.toLowerCase();
+                tr.style.display = text.includes(q) ? '' : 'none';
+            });
+        });
         const deleteModal = document.getElementById('deleteRegionModal');
         deleteModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
@@ -99,4 +111,3 @@
         });
     </script>
 }
-
