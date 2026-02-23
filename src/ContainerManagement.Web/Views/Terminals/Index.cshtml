@@ -7,9 +7,18 @@
 <div class="container mt-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
         <h2 class="fw-bold mb-0">Terminals</h2>
-        <div class="d-flex gap-2 w-100 w-md-auto">
-            <input id="terminalSearch" class="form-control" placeholder="Search terminals..." />
-            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Terminal</a>
+        <div class="w-100 w-md-auto" style="min-width:480px;">
+            <div class="input-group">
+                <span class="input-group-text">Name</span>
+                <input id="terminalSearch" class="form-control" placeholder="Filter by name..." />
+                <select id="terminalPageSize" class="form-select" style="max-width: 120px;">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="0">All</option>
+                </select>
+                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Terminal</a>
+            </div>
         </div>
     </div>
 
@@ -32,14 +41,14 @@
                         foreach (var t in Model)
                         {
                             <tr>
-                                <td>@t.PortCode</td>
-                                <td>@t.PortName</td>
-                                <td>@t.TerminalName</td>
-                                <td>@t.TerminalCode</td>
+                                <td>@t.Port Code</td>
+                                <td>@t.Port Name</td>
+                                <td>@t.Terminal Name</td>
+                                <td>@t.Terminal Code</td>
                                 <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-sm btn-warning me-2">Edit</a>
+                                    <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-warning me-2">Edit</a>
                                     <button type="button"
-                                            class="btn btn-sm btn-danger"
+                                            class="btn btn-danger"
                                             data-bs-toggle="modal"
                                             data-bs-target="#deleteTerminalModal"
                                             data-id="@t.Id"
@@ -53,7 +62,7 @@
                     }
                     else
                     {
-                        <tr>
+                        <tr data-empty-row="1">
                             <td colspan="3" class="text-center text-muted">No terminals available.</td>
                         </tr>
                     }
@@ -94,13 +103,31 @@
     <script>
         const tSearch = document.getElementById('terminalSearch');
         const tTable = document.getElementById('terminalsTable');
-        tSearch?.addEventListener('input', function () {
-            const q = this.value.toLowerCase();
-            tTable.querySelectorAll('tbody tr').forEach(tr => {
+        const tSize = document.getElementById('terminalPageSize');
+        function applyTerminalFilter() {
+            const q = (tSearch?.value || '').toLowerCase();
+            const rows = Array.from(tTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
+            rows.forEach(tr => {
                 const text = tr.innerText.toLowerCase();
-                tr.style.display = text.includes(q) ? '' : 'none';
+                tr.dataset.match = text.includes(q) ? '1' : '0';
             });
-        });
+            paginateTerminals();
+        }
+        function paginateTerminals() {
+            const size = parseInt(tSize?.value || '25', 10);
+            const matched = Array.from(tTable.querySelectorAll('tbody tr')).filter(tr => tr.dataset.match !== '0' && !tr.dataset.emptyRow);
+            const all = Array.from(tTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
+            all.forEach(tr => tr.style.display = 'none');
+            if (size === 0) matched.forEach(tr => tr.style.display = '');
+            else matched.slice(0, size).forEach(tr => tr.style.display = '');
+
+            const emptyRow = tTable.querySelector('tbody tr[data-empty-row="1"]');
+            if (emptyRow) emptyRow.style.display = matched.length === 0 ? '' : 'none';
+        }
+        tSearch?.addEventListener('input', applyTerminalFilter);
+        tSize?.addEventListener('change', paginateTerminals);
+        Array.from(tTable.querySelectorAll('tbody tr')).forEach(tr => { if (!tr.dataset.emptyRow) tr.dataset.match = '1'; });
+        paginateTerminals();
         const deleteModal = document.getElementById('deleteTerminalModal');
         deleteModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;

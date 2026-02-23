@@ -7,9 +7,18 @@
 <div class="container mt-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
         <h2 class="fw-bold mb-0">Countries</h2>
-        <div class="d-flex gap-2 w-100 w-md-auto">
-            <input id="countrySearch" class="form-control" placeholder="Search countries..." />
-            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Country</a>
+        <div class="w-100 w-md-auto" style="min-width:480px;">
+            <div class="input-group">
+                <span class="input-group-text">Name</span>
+                <input id="countrySearch" class="form-control" placeholder="Filter by name..." />
+                <select id="countryPageSize" class="form-select" style="max-width: 120px;">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="0">All</option>
+                </select>
+                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Country</a>
+            </div>
         </div>
     </div>
 
@@ -50,7 +59,7 @@
                     }
                     else
                     {
-                        <tr>
+                        <tr data-empty-row="1">
                             <td colspan="3" class="text-center text-muted">No countries available.</td>
                         </tr>
                     }
@@ -92,13 +101,31 @@
     <script>
         const cSearch = document.getElementById('countrySearch');
         const cTable = document.getElementById('countriesTable');
-        cSearch?.addEventListener('input', function () {
-            const q = this.value.toLowerCase();
-            cTable.querySelectorAll('tbody tr').forEach(tr => {
+        const cSize = document.getElementById('countryPageSize');
+        function applyCountryFilter() {
+            const q = (cSearch?.value || '').toLowerCase();
+            const rows = Array.from(cTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
+            rows.forEach(tr => {
                 const text = tr.innerText.toLowerCase();
-                tr.style.display = text.includes(q) ? '' : 'none';
+                tr.dataset.match = text.includes(q) ? '1' : '0';
             });
-        });
+            paginateCountries();
+        }
+        function paginateCountries() {
+            const size = parseInt(cSize?.value || '25', 10);
+            const matched = Array.from(cTable.querySelectorAll('tbody tr')).filter(tr => tr.dataset.match !== '0' && !tr.dataset.emptyRow);
+            const all = Array.from(cTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
+            all.forEach(tr => tr.style.display = 'none');
+            if (size === 0) matched.forEach(tr => tr.style.display = '');
+            else matched.slice(0, size).forEach(tr => tr.style.display = '');
+
+            const emptyRow = cTable.querySelector('tbody tr[data-empty-row="1"]');
+            if (emptyRow) emptyRow.style.display = matched.length === 0 ? '' : 'none';
+        }
+        cSearch?.addEventListener('input', applyCountryFilter);
+        cSize?.addEventListener('change', paginateCountries);
+        Array.from(cTable.querySelectorAll('tbody tr')).forEach(tr => { if (!tr.dataset.emptyRow) tr.dataset.match = '1'; });
+        paginateCountries();
         const deleteModal = document.getElementById('deleteCountryModal');
         deleteModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
