@@ -9,6 +9,7 @@ namespace ContainerManagement.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
             services.AddScoped<IPortsRepository, PortsRepository>();
+            services.AddScoped<IRegionsRepository, RegionsRepository>();
 
             return services;
         }

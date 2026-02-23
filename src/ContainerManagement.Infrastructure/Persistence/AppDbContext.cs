@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<UserLoginEntity> UserLogins => Set<UserLoginEntity>();
     public DbSet<UserTokenEntity> UserTokens => Set<UserTokenEntity>();
     public DbSet<PortsEntity> Ports => Set<PortsEntity>();
+    public DbSet<RegionEntity> Regions => Set<RegionEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -88,6 +89,28 @@ public class AppDbContext : DbContext
             e.Property(x => x.Country).HasMaxLength(100).IsRequired();
 
             e.Property(x => x.Region).HasMaxLength(100);
+
+            e.Property(x => x.RegionCode).HasMaxLength(20);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+
+            e.Property(x => x.CreatedOn).IsRequired();
+
+            e.Property(x => x.ModifiedOn).IsRequired();
+
+            e.Property(x => x.CreatedBy).IsRequired();
+
+            e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblRegions ----------------
+        b.Entity<RegionEntity>(e =>
+        {
+            e.ToTable("TblRegions");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.RegionName).HasMaxLength(100);
 
             e.Property(x => x.RegionCode).HasMaxLength(20);
 

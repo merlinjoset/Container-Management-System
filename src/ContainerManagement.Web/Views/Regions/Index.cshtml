@@ -1,0 +1,102 @@
+@model List<ContainerManagement.Application.Dtos.Regions.RegionListItemDto>
+
+@{
+    ViewData["Title"] = "Regions";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold">Regions</h2>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Region
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <table class="table table-hover table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Region Name</th>
+                        <th>Region Code</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        foreach (var r in Model)
+                        {
+                            <tr>
+                                <td>@r.RegionName</td>
+                                <td>@r.RegionCode</td>
+                                <td class="text-end">
+                                    <a asp-action="Edit" asp-route-id="@r.Id" class="btn btn-sm btn-warning me-2">Edit</a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteRegionModal"
+                                            data-id="@r.Id"
+                                            data-name="@r.RegionName"
+                                            data-code="@r.RegionCode">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No regions available.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteRegionModal" tabindex="-1" aria-labelledby="deleteRegionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteRegionModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to delete this region?</p>
+                <div class="border rounded p-2 bg-light">
+                    <div><strong>Region Name:</strong> <span id="delRegionName"></span></div>
+                    <div><strong>Region Code:</strong> <span id="delRegionCode"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteRegionForm" asp-action="Delete" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="delRegionId" />
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const deleteModal = document.getElementById('deleteRegionModal');
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const code = button.getAttribute('data-code');
+            document.getElementById('delRegionId').value = id;
+            document.getElementById('delRegionName').textContent = name || '';
+            document.getElementById('delRegionCode').textContent = code || '';
+        });
+    </script>
+}
+

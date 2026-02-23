@@ -9,6 +9,7 @@ namespace ContainerManagement.Application
         {
             services.AddScoped<UserAdminService>();
             services.AddScoped<PortService>();
+            services.AddScoped<RegionService>();
 
             return services;
         }
