@@ -117,6 +117,7 @@
         var path = Context?.Request?.Path.Value?.ToLowerInvariant() ?? "";
         var isPorts = path.StartsWith("/ports");
         var isRegions = path.StartsWith("/regions");
+        var isCountries = path.StartsWith("/countries");
         var isTerminals = path.StartsWith("/terminals");
         var isProviders = path.StartsWith("/providers");
         var isUsers = path.StartsWith("/users");
@@ -207,6 +208,11 @@
                         <a class="nav-link @(isRegions ? "active" : "")"
                            asp-controller="Regions" asp-action="Index">
                             <span>Regions</span>
+                        </a>
+
+                        <a class="nav-link @(isCountries ? "active" : "")"
+                           asp-controller="Countries" asp-action="Index">
+                            <span>Countries</span>
                         </a>
 
                         <a class="nav-link @(isTerminals ? "active" : "")"

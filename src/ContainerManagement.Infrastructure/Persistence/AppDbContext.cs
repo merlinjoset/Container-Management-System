@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<UserTokenEntity> UserTokens => Set<UserTokenEntity>();
     public DbSet<PortsEntity> Ports => Set<PortsEntity>();
     public DbSet<RegionEntity> Regions => Set<RegionEntity>();
+    public DbSet<CountryEntity> Countries => Set<CountryEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -113,6 +114,28 @@ public class AppDbContext : DbContext
             e.Property(x => x.RegionName).HasMaxLength(100);
 
             e.Property(x => x.RegionCode).HasMaxLength(20);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+
+            e.Property(x => x.CreatedOn).IsRequired();
+
+            e.Property(x => x.ModifiedOn).IsRequired();
+
+            e.Property(x => x.CreatedBy).IsRequired();
+
+            e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblCountry ----------------
+        b.Entity<CountryEntity>(e =>
+        {
+            e.ToTable("TblCountry");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.CountryName).HasMaxLength(100);
+
+            e.Property(x => x.CountryCode).HasMaxLength(20);
 
             e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
 

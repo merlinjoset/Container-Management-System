@@ -10,6 +10,7 @@ namespace ContainerManagement.Infrastructure
         {
             services.AddScoped<IPortsRepository, PortsRepository>();
             services.AddScoped<IRegionsRepository, RegionsRepository>();
+            services.AddScoped<ICountriesRepository, CountriesRepository>();
 
             return services;
         }

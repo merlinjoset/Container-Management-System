@@ -30,6 +30,8 @@ namespace ContainerManagement.Application.Services
 
         public async Task<Guid> CreateAsync(PortCreateDto dto, CancellationToken ct = default)
         {
+            if (string.IsNullOrWhiteSpace(dto.PortCode) || dto.PortCode.Length != 5)
+                throw new Exception("Port Code must be exactly 5 characters.");
             if (await _repository.ExistsAsync(dto.PortCode, null, ct))
                 throw new Exception("PortCode already exists.");
 
@@ -57,6 +59,8 @@ namespace ContainerManagement.Application.Services
 
         public async Task UpdateAsync(PortUpdateDto dto, CancellationToken ct = default)
         {
+            if (string.IsNullOrWhiteSpace(dto.PortCode) || dto.PortCode.Length != 5)
+                throw new Exception("Port Code must be exactly 5 characters.");
             var port = await _repository.GetByIdAsync(dto.Id, ct);
             if (port == null)
                 throw new Exception("Port not found.");
