@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<RegionEntity> Regions => Set<RegionEntity>();
     public DbSet<CountryEntity> Countries => Set<CountryEntity>();
     public DbSet<TerminalEntity> Terminals => Set<TerminalEntity>();
+    public DbSet<VesselEntity> Vessels => Set<VesselEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -192,6 +193,31 @@ public class AppDbContext : DbContext
 
             e.HasIndex(x => x.PortId)
                 .HasDatabaseName("IX_Terminal_PortId");
+        });
+
+        // ---------------- TblVessel ----------------
+        b.Entity<VesselEntity>(e =>
+        {
+            e.ToTable("TblVessel");
+
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasDefaultValueSql("NEWID()");
+
+            e.Property(x => x.VesselName).HasMaxLength(150).IsRequired();
+            e.Property(x => x.VesselCode).HasMaxLength(50).IsRequired();
+            e.Property(x => x.ImoCode).HasMaxLength(20).IsRequired();
+
+            e.Property(x => x.Flag).HasMaxLength(100);
+
+            e.Property(x => x.NRT).HasColumnType("decimal(18,2)");
+            e.Property(x => x.GRT).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Speed).HasColumnType("decimal(5,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).HasDefaultValueSql("GETUTCDATE()").IsRequired();
+            e.Property(x => x.ModifiedOn).HasDefaultValueSql("GETUTCDATE()").IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
         });
 
     }

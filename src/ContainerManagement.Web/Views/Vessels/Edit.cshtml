@@ -1,0 +1,73 @@
+@model ContainerManagement.Application.Dtos.Vessels.VesselUpdateDto
+
+@{
+    ViewData["Title"] = "Edit Vessel";
+}
+
+<div class="container mt-4">
+    <h3 class="fw-bold mb-3">Edit Vessel</h3>
+
+    <form asp-action="Edit" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="VesselName" class="form-label"></label>
+                        <input asp-for="VesselName" class="form-control" />
+                        <span asp-validation-for="VesselName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="VesselCode" class="form-label"></label>
+                        <input asp-for="VesselCode" class="form-control" />
+                        <span asp-validation-for="VesselCode" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="ImoCode" class="form-label"></label>
+                        <input asp-for="ImoCode" class="form-control" />
+                        <span asp-validation-for="ImoCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="Teus" class="form-label"></label>
+                        <input asp-for="Teus" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="NRT" class="form-label"></label>
+                        <input asp-for="NRT" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="GRT" class="form-label"></label>
+                        <input asp-for="GRT" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Flag" class="form-label"></label>
+                        <input asp-for="Flag" class="form-control" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="Speed" class="form-label"></label>
+                        <input asp-for="Speed" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="BuildYear" class="form-label"></label>
+                        <input asp-for="BuildYear" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-end">
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-warning">Update</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
