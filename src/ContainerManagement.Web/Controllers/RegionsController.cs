@@ -2,6 +2,8 @@ using ContainerManagement.Application.Dtos.Regions;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using ExcelDataReader;
+using ClosedXML.Excel;
 
 namespace ContainerManagement.Web.Controllers
 {
@@ -110,6 +112,83 @@ namespace ContainerManagement.Web.Controllers
             TempData["Success"] = "Region deleted successfully.";
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpGet]
+        public IActionResult Import()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file, CancellationToken ct)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file (.xlsx or .xls).";
+                return RedirectToAction(nameof(Import));
+            }
+
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+            {
+                TempData["Error"] = "Unsupported file type. Please upload .xlsx or .xls.";
+                return RedirectToAction(nameof(Import));
+            }
+
+            var rows = new List<(string? Name, string? Code)>();
+            using (var stream = file.OpenReadStream())
+            using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                var rowIndex = 0;
+                while (reader.Read())
+                {
+                    // Attempt to skip header if present
+                    if (rowIndex == 0)
+                    {
+                        var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
+                        var c1 = reader.GetValue(1)?.ToString()?.Trim().ToLowerInvariant();
+                        if ((c0?.Contains("region") == true && c0.Contains("name")) || (c1?.Contains("code") == true))
+                        {
+                            rowIndex++;
+                            continue;
+                        }
+                    }
+
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString() : null;
+                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString() : null;
+                    rows.Add((name, code));
+                    rowIndex++;
+                }
+            }
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
+            var (added, updated, skipped) = await _regionService.ImportAsync(rows, userId, ct);
+            TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public IActionResult Template()
+        {
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Regions");
+            // Headers
+            ws.Cell(1, 1).Value = "Region Name";
+            ws.Cell(1, 2).Value = "Region Code";
+            ws.Range(1, 1, 1, 2).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, 2).Style.Fill.BackgroundColor = XLColor.LightGray;
+
+            ws.Columns(1, 2).AdjustToContents();
+
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            var bytes = ms.ToArray();
+            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            return File(bytes, contentType, "RegionsTemplate.xlsx");
+        }
     }
 }
-

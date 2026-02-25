@@ -74,5 +74,62 @@ namespace ContainerManagement.Application.Services
         {
             await _operators.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? OperatorName, string? VendorCode, string? CountryCode)> rows, Guid userId, CancellationToken ct = default)
+        {
+            var ops = await _operators.GetAllAsync(ct);
+            var vendors = await _vendors.GetAllAsync(ct);
+            var countries = await _countries.GetAllAsync(ct);
+            var vByCode = vendors.Where(v => !string.IsNullOrWhiteSpace(v.VendorCode))
+                                 .ToDictionary(v => v.VendorCode!, v => v, StringComparer.OrdinalIgnoreCase);
+            var cByCode = countries.Where(c => !string.IsNullOrWhiteSpace(c.CountryCode))
+                                   .ToDictionary(c => c.CountryCode!, c => c, StringComparer.OrdinalIgnoreCase);
+
+            // Use operator name + vendor as identity (since UniqueCode removed)
+            var key = static (string name, Guid vendorId) => $"{name.ToLowerInvariant()}|{vendorId}";
+            var opByKey = ops.Where(o => !string.IsNullOrWhiteSpace(o.OperatorName))
+                             .ToDictionary(o => key(o.OperatorName!, o.VendorId), o => o);
+
+            int added = 0, updated = 0, skipped = 0;
+            foreach (var row in rows)
+            {
+                var name = (row.OperatorName ?? string.Empty).Trim();
+                var vcode = (row.VendorCode ?? string.Empty).Trim();
+                var ccode = (row.CountryCode ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(name)) { skipped++; continue; }
+                if (!vByCode.TryGetValue(vcode, out var vendor)) { skipped++; continue; }
+                if (!cByCode.TryGetValue(ccode, out var country)) { skipped++; continue; }
+
+                var k = key(name, vendor.Id);
+                if (opByKey.TryGetValue(k, out var op))
+                {
+                    op.CountryId = country.Id;
+                    op.ModifiedOn = DateTime.UtcNow;
+                    op.ModifiedBy = userId;
+                    await _operators.UpdateAsync(op, ct);
+                    updated++;
+                }
+                else
+                {
+                    var now = DateTime.UtcNow;
+                    var no = new Domain.Operators.Operator
+                    {
+                        Id = Guid.NewGuid(),
+                        OperatorName = name,
+                        VendorId = vendor.Id,
+                        CountryId = country.Id,
+                        IsDeleted = false,
+                        CreatedOn = now,
+                        ModifiedOn = now,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _operators.AddAsync(no, ct);
+                    opByKey[k] = no;
+                    added++;
+                }
+            }
+            return (added, updated, skipped);
+        }
     }
 }

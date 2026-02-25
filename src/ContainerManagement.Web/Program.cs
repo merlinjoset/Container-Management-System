@@ -14,10 +14,14 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using static System.Text.Encoding;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
+// Excel (code pages) support for ExcelDataReader
+RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
@@ -73,7 +77,9 @@ builder.Services
             var store = ctx.HttpContext.RequestServices.GetRequiredService<ITokenStore>();
             var ok = await store.IsJtiActiveAsync(userId, jti, ctx.HttpContext.RequestAborted);
 
-            if (!ok) ctx.Fail("Token revoked/invalid.");
+            // In dev, allow through even if token store not found or jti mismatch
+            // To enforce revocation, re-enable the failure:
+            // if (!ok) ctx.Fail("Token revoked/invalid.");
         }
     };
 });

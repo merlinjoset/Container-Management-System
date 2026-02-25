@@ -3,6 +3,8 @@ using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
+using ExcelDataReader;
+using ClosedXML.Excel;
 
 namespace ContainerManagement.Web.Controllers
 {
@@ -153,6 +155,75 @@ namespace ContainerManagement.Web.Controllers
             await _portService.DeleteAsync(id, userId, ct);
             TempData["Success"] = "Port deleted successfully.";
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Import()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file, CancellationToken ct)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file.";
+                return RedirectToAction(nameof(Import));
+            }
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+            {
+                TempData["Error"] = "Unsupported file type. Please upload .xlsx or .xls.";
+                return RedirectToAction(nameof(Import));
+            }
+
+            var rows = new List<(string? PortCode, string? FullName, string? CountryCode, string? RegionCode)>();
+            using (var stream = file.OpenReadStream())
+            using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                var rowIndex = 0;
+                while (reader.Read())
+                {
+                    if (rowIndex == 0)
+                    {
+                        var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
+                        if (c0?.Contains("port") == true && c0.Contains("code"))
+                        { rowIndex++; continue; }
+                    }
+                    var pcode = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString() : null;
+                    var name = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString() : null;
+                    var ccode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString() : null;
+                    var rcode = reader.FieldCount > 3 ? reader.GetValue(3)?.ToString() : null;
+                    rows.Add((pcode, name, ccode, rcode));
+                    rowIndex++;
+                }
+            }
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+
+            var (added, updated, skipped) = await _portService.ImportAsync(rows, userId, ct);
+            TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public IActionResult Template()
+        {
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Ports");
+            ws.Cell(1, 1).Value = "Port Code";
+            ws.Cell(1, 2).Value = "Full Name";
+            ws.Cell(1, 3).Value = "Country Code";
+            ws.Cell(1, 4).Value = "Region Code";
+            ws.Range(1, 1, 1, 4).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, 4).Style.Fill.BackgroundColor = XLColor.LightGray;
+            ws.Columns(1, 4).AdjustToContents();
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PortsTemplate.xlsx");
         }
     }
 }

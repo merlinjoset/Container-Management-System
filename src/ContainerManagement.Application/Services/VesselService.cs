@@ -88,6 +88,62 @@ namespace ContainerManagement.Application.Services
         {
             await _repository.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? Name, string? Code, string? Imo, int? Teus, decimal? Nrt, decimal? Grt, string? Flag, decimal? Speed, int? Year)> rows, Guid userId, CancellationToken ct = default)
+        {
+            var existing = await _repository.GetAllAsync(ct);
+            var byCode = existing.Where(v => !string.IsNullOrWhiteSpace(v.VesselCode))
+                                 .ToDictionary(v => v.VesselCode!, v => v, StringComparer.OrdinalIgnoreCase);
+            int added = 0, updated = 0, skipped = 0;
+            foreach (var row in rows)
+            {
+                var name = (row.Name ?? string.Empty).Trim();
+                var code = (row.Code ?? string.Empty).Trim();
+                var imo = (row.Imo ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(code)) { skipped++; continue; }
+
+                if (byCode.TryGetValue(code, out var v))
+                {
+                    v.VesselName = string.IsNullOrWhiteSpace(name) ? v.VesselName : name;
+                    v.ImoCode = string.IsNullOrWhiteSpace(imo) ? v.ImoCode : imo;
+                    v.Teus = row.Teus ?? v.Teus;
+                    v.NRT = row.Nrt ?? v.NRT;
+                    v.GRT = row.Grt ?? v.GRT;
+                    v.Flag = string.IsNullOrWhiteSpace(row.Flag) ? v.Flag : row.Flag;
+                    v.Speed = row.Speed ?? v.Speed;
+                    v.BuildYear = row.Year ?? v.BuildYear;
+                    v.ModifiedOn = DateTime.UtcNow;
+                    v.ModifiedBy = userId;
+                    await _repository.UpdateAsync(v, ct);
+                    updated++;
+                }
+                else
+                {
+                    var now = DateTime.UtcNow;
+                    var nv = new Domain.Vessels.Vessel
+                    {
+                        Id = Guid.NewGuid(),
+                        VesselName = name,
+                        VesselCode = code,
+                        ImoCode = imo,
+                        Teus = row.Teus,
+                        NRT = row.Nrt,
+                        GRT = row.Grt,
+                        Flag = row.Flag,
+                        Speed = row.Speed,
+                        BuildYear = row.Year,
+                        IsDeleted = false,
+                        CreatedOn = now,
+                        ModifiedOn = now,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _repository.AddAsync(nv, ct);
+                    byCode[code] = nv;
+                    added++;
+                }
+            }
+            return (added, updated, skipped);
+        }
     }
 }
-

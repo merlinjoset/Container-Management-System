@@ -105,6 +105,11 @@
             min-width: 0;
         }
 
+        @@media (max-width: 767.98px) {
+            .app-shell { flex-direction: column; }
+            .app-sidebar { display: none; }
+        }
+
         @@media (min-width: 1400px) {
             .container-xxl, .container-xl, .container-lg, .container-md, .container-sm, .container {
                 max-width: 100% !important;
@@ -148,7 +153,12 @@
 
                 <div class="collapse navbar-collapse" id="navbarMain">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        @if (User.Identity?.IsAuthenticated == true && User.IsInRole("admin"))
+                        <li class="nav-item d-md-none me-2">
+                            <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar">
+                                <i class="bi bi-list"></i> Menu
+                            </button>
+                        </li>
+                        @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
                                 <a class="nav-link @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
@@ -196,7 +206,7 @@
             @* Sidebar *@
             @if (User.Identity?.IsAuthenticated == true)
             {
-                <aside class="app-sidebar p-3">
+                <aside class="app-sidebar p-3 d-none d-md-block">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="sidebar-title">Navigation</div>
                     </div>
@@ -266,5 +276,26 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="mobileSidebarLabel">Navigation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body">
+                <nav class="nav nav-pills flex-column gap-1">
+                    <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
+                    <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
+                    <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
+                    <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
+                    <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
+                    <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
+                    <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
+                </nav>
+            </div>
+        </div>
+    }
 </body>
 </html>

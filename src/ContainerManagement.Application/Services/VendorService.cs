@@ -75,5 +75,55 @@ namespace ContainerManagement.Application.Services
         {
             await _vendors.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? VendorName, string? VendorCode, string? CountryCode)> rows, Guid userId, CancellationToken ct = default)
+        {
+            var vendors = await _vendors.GetAllAsync(ct);
+            var countries = await _countries.GetAllAsync(ct);
+            var vByCode = vendors.Where(v => !string.IsNullOrWhiteSpace(v.VendorCode))
+                                 .ToDictionary(v => v.VendorCode!, v => v, StringComparer.OrdinalIgnoreCase);
+            var cByCode = countries.Where(c => !string.IsNullOrWhiteSpace(c.CountryCode))
+                                   .ToDictionary(c => c.CountryCode!, c => c, StringComparer.OrdinalIgnoreCase);
+
+            int added = 0, updated = 0, skipped = 0;
+            foreach (var row in rows)
+            {
+                var name = (row.VendorName ?? string.Empty).Trim();
+                var code = (row.VendorCode ?? string.Empty).Trim();
+                var ccode = (row.CountryCode ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(code)) { skipped++; continue; }
+                if (!cByCode.TryGetValue(ccode, out var c)) { skipped++; continue; }
+
+                if (vByCode.TryGetValue(code, out var v))
+                {
+                    v.VendorName = string.IsNullOrWhiteSpace(name) ? v.VendorName : name;
+                    v.CountryId = c.Id;
+                    v.ModifiedOn = DateTime.UtcNow;
+                    v.ModifiedBy = userId;
+                    await _vendors.UpdateAsync(v, ct);
+                    updated++;
+                }
+                else
+                {
+                    var now = DateTime.UtcNow;
+                    var nv = new Domain.Vendors.Vendor
+                    {
+                        Id = Guid.NewGuid(),
+                        VendorName = name,
+                        VendorCode = code,
+                        CountryId = c.Id,
+                        IsDeleted = false,
+                        CreatedOn = now,
+                        ModifiedOn = now,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _vendors.AddAsync(nv, ct);
+                    vByCode[code] = nv;
+                    added++;
+                }
+            }
+            return (added, updated, skipped);
+        }
     }
 }

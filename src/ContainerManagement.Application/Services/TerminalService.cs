@@ -81,5 +81,56 @@ namespace ContainerManagement.Application.Services
         {
             await _repository.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? TerminalName, string? TerminalCode, string? PortCode)> rows, Guid userId, CancellationToken ct = default)
+        {
+            var terminals = await _repository.GetAllAsync(ct);
+            var ports = await _portsRepository.GetAllAsync(ct);
+            var tByCode = terminals.Where(t => !string.IsNullOrWhiteSpace(t.TerminalCode))
+                                   .ToDictionary(t => t.TerminalCode!, t => t, StringComparer.OrdinalIgnoreCase);
+            var pByCode = ports.Where(p => !string.IsNullOrWhiteSpace(p.PortCode))
+                               .ToDictionary(p => p.PortCode!, p => p, StringComparer.OrdinalIgnoreCase);
+
+            int added = 0, updated = 0, skipped = 0;
+            foreach (var row in rows)
+            {
+                var name = (row.TerminalName ?? string.Empty).Trim();
+                var code = (row.TerminalCode ?? string.Empty).Trim();
+                var pcode = (row.PortCode ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(code)) { skipped++; continue; }
+                if (!pByCode.TryGetValue(pcode, out var port)) { skipped++; continue; }
+
+                if (tByCode.TryGetValue(code, out var exist))
+                {
+                    exist.TerminalName = string.IsNullOrWhiteSpace(name) ? exist.TerminalName : name;
+                    exist.PortId = port.Id;
+                    exist.ModifiedOn = DateTime.UtcNow;
+                    exist.ModifiedBy = userId;
+                    await _repository.UpdateAsync(exist, ct);
+                    updated++;
+                }
+                else
+                {
+                    var now = DateTime.UtcNow;
+                    var nt = new Terminal
+                    {
+                        Id = Guid.NewGuid(),
+                        TerminalName = name,
+                        TerminalCode = code,
+                        PortId = port.Id,
+                        IsDeleted = false,
+                        CreatedOn = now,
+                        ModifiedOn = now,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _repository.AddAsync(nt, ct);
+                    tByCode[code] = nt;
+                    added++;
+                }
+            }
+
+            return (added, updated, skipped);
+        }
     }
 }

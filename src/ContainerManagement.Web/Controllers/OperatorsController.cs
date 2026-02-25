@@ -3,6 +3,8 @@ using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
+using ExcelDataReader;
+using ClosedXML.Excel;
 
 namespace ContainerManagement.Web.Controllers
 {
@@ -148,6 +150,67 @@ namespace ContainerManagement.Web.Controllers
             await _operatorService.DeleteAsync(id, userId, ct);
             TempData["Success"] = "Operator deleted successfully.";
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public IActionResult Import() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file, CancellationToken ct)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file.";
+                return RedirectToAction(nameof(Import));
+            }
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+            {
+                TempData["Error"] = "Unsupported file type. Please upload .xlsx or .xls.";
+                return RedirectToAction(nameof(Import));
+            }
+
+            var rows = new List<(string? OperatorName, string? VendorCode, string? CountryCode)>();
+            using (var stream = file.OpenReadStream())
+            using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                var rowIndex = 0;
+                while (reader.Read())
+                {
+                    if (rowIndex == 0)
+                    {
+                        var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
+                        if (c0?.Contains("operator") == true)
+                        { rowIndex++; continue; }
+                    }
+                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
+                    rows.Add((S(0), S(1), S(2)));
+                    rowIndex++;
+                }
+            }
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            var (added, updated, skipped) = await _operatorService.ImportAsync(rows, userId, ct);
+            TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public IActionResult Template()
+        {
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Operators");
+            ws.Cell(1, 1).Value = "Operator Name";
+            ws.Cell(1, 2).Value = "Vendor Code";
+            ws.Cell(1, 3).Value = "Country Code";
+            ws.Range(1, 1, 1, 3).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, 3).Style.Fill.BackgroundColor = XLColor.LightGray;
+            ws.Columns(1, 3).AdjustToContents();
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OperatorsTemplate.xlsx");
         }
     }
 }

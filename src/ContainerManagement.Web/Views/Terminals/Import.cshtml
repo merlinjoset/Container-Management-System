@@ -1,0 +1,39 @@
+@{
+    ViewData["Title"] = "Import Terminals";
+}
+
+<div class="container mt-4">
+    <h3 class="fw-bold mb-3">Import Terminals</h3>
+
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>Upload an Excel file (.xlsx or .xls) with these columns:</div>
+        <ul class="mb-0">
+            <li>Column A: Terminal Name</li>
+            <li>Column B: Terminal Code (required)</li>
+            <li>Column C: Port Code (required)</li>
+        </ul>
+        <a asp-action="Template" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-download"></i> Download Template
+        </a>
+    </div>
+
+    <form asp-action="Import" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-8">
+                        <input class="form-control" type="file" name="file" accept=".xlsx,.xls" />
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a asp-action="Index" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Import
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+

@@ -90,5 +90,63 @@ namespace ContainerManagement.Application.Services
         {
             await _repository.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? PortCode, string? FullName, string? CountryCode, string? RegionCode)> rows, Guid userId, CancellationToken ct = default)
+        {
+            var ports = await _repository.GetAllAsync(ct);
+            var countries = await _countries.GetAllAsync(ct);
+            var regions = await _regions.GetAllAsync(ct);
+            var pByCode = ports.Where(p => !string.IsNullOrWhiteSpace(p.PortCode))
+                               .ToDictionary(p => p.PortCode!, p => p, StringComparer.OrdinalIgnoreCase);
+            var cByCode = countries.Where(c => !string.IsNullOrWhiteSpace(c.CountryCode))
+                                   .ToDictionary(c => c.CountryCode!, c => c, StringComparer.OrdinalIgnoreCase);
+            var rByCode = regions.Where(r => !string.IsNullOrWhiteSpace(r.RegionCode))
+                                  .ToDictionary(r => r.RegionCode!, r => r, StringComparer.OrdinalIgnoreCase);
+
+            int added = 0, updated = 0, skipped = 0;
+            foreach (var row in rows)
+            {
+                var code = (row.PortCode ?? string.Empty).Trim();
+                var name = (row.FullName ?? string.Empty).Trim();
+                var ccode = (row.CountryCode ?? string.Empty).Trim();
+                var rcode = (row.RegionCode ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(code)) { skipped++; continue; }
+                if (!cByCode.TryGetValue(ccode, out var c)) { skipped++; continue; }
+                if (!rByCode.TryGetValue(rcode, out var r)) { skipped++; continue; }
+
+                if (pByCode.TryGetValue(code, out var port))
+                {
+                    port.FullName = string.IsNullOrWhiteSpace(name) ? port.FullName : name;
+                    port.CountryId = c.Id;
+                    port.RegionId = r.Id;
+                    port.ModifiedOn = DateTime.UtcNow;
+                    port.ModifiedBy = userId;
+                    await _repository.UpdateAsync(port, ct);
+                    updated++;
+                }
+                else
+                {
+                    var now = DateTime.UtcNow;
+                    var newPort = new Port
+                    {
+                        Id = Guid.NewGuid(),
+                        PortCode = code,
+                        FullName = name,
+                        CountryId = c.Id,
+                        RegionId = r.Id,
+                        IsDeleted = false,
+                        CreatedOn = now,
+                        ModifiedOn = now,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _repository.AddAsync(newPort, ct);
+                    pByCode[code] = newPort;
+                    added++;
+                }
+            }
+
+            return (added, updated, skipped);
+        }
     }
 }
