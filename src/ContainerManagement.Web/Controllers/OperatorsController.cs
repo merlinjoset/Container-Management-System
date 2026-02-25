@@ -40,7 +40,7 @@ namespace ContainerManagement.Web.Controllers
             var countryItems = countries.Select(c => new SelectListItem
             {
                 Value = c.Id.ToString(),
-                Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.Country : $"{c.CountryCode} - {c.Country}",
+                Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.CountryName : $"{c.CountryCode} - {c.CountryName}",
                 Selected = countryId.HasValue && c.Id == countryId.Value
             }).ToList();
 
@@ -99,7 +99,6 @@ namespace ContainerManagement.Web.Controllers
             {
                 Id = op.Id,
                 OperatorName = op.OperatorName,
-                UniqueCode = op.UniqueCode,
                 VendorId = op.VendorId,
                 CountryId = op.CountryId
             };
@@ -152,4 +151,3 @@ namespace ContainerManagement.Web.Controllers
         }
     }
 }
-

@@ -31,7 +31,7 @@ namespace ContainerManagement.Web.Controllers
                 .Select(c => new SelectListItem
                 {
                     Value = c.Id.ToString(),
-                    Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.Country : $"{c.CountryCode} - {c.Country}",
+                    Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.CountryName : $"{c.CountryCode} - {c.CountryName}",
                     Selected = selectedId.HasValue && c.Id == selectedId.Value
                 })
                 .ToList();
@@ -141,4 +141,3 @@ namespace ContainerManagement.Web.Controllers
         }
     }
 }
-

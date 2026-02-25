@@ -32,7 +32,7 @@ namespace ContainerManagement.Application.Services
                 VendorId = o.VendorId,
                 CountryId = o.CountryId,
                 VendorName = vendorById.TryGetValue(o.VendorId, out var v) ? v.VendorName : null,
-                CountryName = countryById.TryGetValue(o.CountryId, out var c) ? c.Country : null
+                CountryName = countryById.TryGetValue(o.CountryId, out var c) ? c.CountryName : null
             }).ToList();
         }
 

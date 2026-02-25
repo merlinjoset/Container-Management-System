@@ -27,7 +27,7 @@ namespace ContainerManagement.Application.Services
                 VendorName = v.VendorName,
                 VendorCode = v.VendorCode,
                 CountryId = v.CountryId,
-                CountryName = countryById.TryGetValue(v.CountryId, out var c) ? c.Country : null
+                CountryName = countryById.TryGetValue(v.CountryId, out var c) ? c.CountryName : null
             }).ToList();
         }
 
@@ -77,4 +77,3 @@ namespace ContainerManagement.Application.Services
         }
     }
 }
-
