@@ -1,0 +1,134 @@
+@model List<ContainerManagement.Application.Dtos.Operators.OperatorListItemDto>
+
+@{
+    ViewData["Title"] = "Operators";
+}
+
+<div class="container mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <h2 class="fw-bold mb-0">Operators</h2>
+        <div class="w-100 w-md-auto" style="min-width:640px;">
+            <div class="input-group">
+                <span class="input-group-text">Name</span>
+                <input id="opSearch" class="form-control" placeholder="Filter by name..." />
+                <select id="opPageSize" class="form-select" style="max-width: 120px;">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="0">All</option>
+                </select>
+                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Operator</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle" id="opsTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Operator</th>
+                            
+                            <th>Vendor</th>
+                            <th>Country</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            foreach (var o in Model)
+                            {
+                                <tr>
+                                    <td>@o.OperatorName</td>
+                                    
+                                    <td>@o.VendorName</td>
+                                    <td>@o.CountryName</td>
+                                    <td class="text-end">
+                                        <a asp-action="Edit" asp-route-id="@o.Id" class="btn btn-warning me-2">Edit</a>
+                                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteOpModal" data-id="@o.Id" data-name="@o.OperatorName">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr data-empty-row="1">
+                                <td colspan="5" class="text-center text-muted">No operators available.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteOpModal" tabindex="-1" aria-labelledby="deleteOpModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteOpModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you sure you want to delete this operator?</p>
+                <div class="border rounded p-2 bg-light">
+                    <div><strong>Operator:</strong> <span id="delOpName"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteOpForm" asp-action="Delete" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="delOpId" />
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const opSearch = document.getElementById('opSearch');
+        const opTable = document.getElementById('opsTable');
+        const opSize = document.getElementById('opPageSize');
+        function applyOpFilter() {
+            const q = (opSearch?.value || '').toLowerCase();
+            const rows = Array.from(opTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
+            rows.forEach(tr => {
+                const text = tr.innerText.toLowerCase();
+                tr.dataset.match = text.includes(q) ? '1' : '0';
+            });
+            paginateOps();
+        }
+        function paginateOps() {
+            const size = parseInt(opSize?.value || '25', 10);
+            const matched = Array.from(opTable.querySelectorAll('tbody tr')).filter(tr => tr.dataset.match !== '0' && !tr.dataset.emptyRow);
+            const all = Array.from(opTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
+            all.forEach(tr => tr.style.display = 'none');
+            if (size === 0) matched.forEach(tr => tr.style.display = '');
+            else matched.slice(0, size).forEach(tr => tr.style.display = '');
+
+            const emptyRow = opTable.querySelector('tbody tr[data-empty-row="1"]');
+            if (emptyRow) emptyRow.style.display = matched.length === 0 ? '' : 'none';
+        }
+        opSearch?.addEventListener('input', applyOpFilter);
+        opSize?.addEventListener('change', paginateOps);
+        Array.from(opTable.querySelectorAll('tbody tr')).forEach(tr => { if (!tr.dataset.emptyRow) tr.dataset.match = '1'; });
+        paginateOps();
+
+        const deleteModal = document.getElementById('deleteOpModal');
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            document.getElementById('delOpId').value = id;
+            document.getElementById('delOpName').textContent = name || '';
+        });
+    </script>
+}

@@ -13,6 +13,8 @@ namespace ContainerManagement.Infrastructure
             services.AddScoped<ICountriesRepository, CountriesRepository>();
             services.AddScoped<ITerminalsRepository, TerminalsRepository>();
             services.AddScoped<IVesselsRepository, VesselsRepository>();
+            services.AddScoped<IVendorsRepository, VendorsRepository>();
+            services.AddScoped<IOperatorsRepository, OperatorsRepository>();
 
             return services;
         }

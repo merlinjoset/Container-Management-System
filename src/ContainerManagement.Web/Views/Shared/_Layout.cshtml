@@ -121,6 +121,8 @@
         var isCountries = path.StartsWith("/countries");
         var isTerminals = path.StartsWith("/terminals");
         var isVessels = path.StartsWith("/vessels");
+        var isVendors = path.StartsWith("/vendors");
+        var isOperators = path.StartsWith("/operators");
         var isProviders = path.StartsWith("/providers");
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
@@ -225,6 +227,16 @@
                         <a class="nav-link @(isVessels ? "active" : "")"
                            asp-controller="Vessels" asp-action="Index">
                             <span>Vessels</span>
+                        </a>
+
+                        <a class="nav-link @(isVendors ? "active" : "")"
+                           asp-controller="Vendors" asp-action="Index">
+                            <span>Vendors</span>
+                        </a>
+
+                        <a class="nav-link @(isOperators ? "active" : "")"
+                           asp-controller="Operators" asp-action="Index">
+                            <span>Operators</span>
                         </a>
                     </nav>
                    

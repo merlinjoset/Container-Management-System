@@ -15,6 +15,8 @@ public class AppDbContext : DbContext
     public DbSet<CountryEntity> Countries => Set<CountryEntity>();
     public DbSet<TerminalEntity> Terminals => Set<TerminalEntity>();
     public DbSet<VesselEntity> Vessels => Set<VesselEntity>();
+    public DbSet<VendorEntity> Vendors => Set<VendorEntity>();
+    public DbSet<OperatorEntity> Operators => Set<OperatorEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -218,6 +220,67 @@ public class AppDbContext : DbContext
             e.Property(x => x.ModifiedOn).HasDefaultValueSql("GETUTCDATE()").IsRequired();
             e.Property(x => x.CreatedBy).IsRequired();
             e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblVendor ----------------
+        b.Entity<VendorEntity>(e =>
+        {
+            e.ToTable("TblVendor");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VendorName).HasMaxLength(150).IsRequired();
+            e.Property(x => x.VendorCode).HasMaxLength(50).IsRequired();
+            e.HasIndex(x => x.VendorCode).IsUnique().HasDatabaseName("UQ_TblVendor_VendorCode");
+
+            e.Property(x => x.CountryId).IsRequired();
+
+            e.Property(x => x.IsDeleted).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<CountryEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.CountryId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // ---------------- TblOperator ----------------
+        b.Entity<OperatorEntity>(e =>
+        {
+            e.ToTable("TblOperator");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.OperatorName)
+                .HasMaxLength(150)
+                .IsRequired()
+                .HasColumnName("Operator");
+
+            // UniqueCode removed per latest requirements
+
+            e.Property(x => x.VendorId).IsRequired();
+            e.Property(x => x.CountryId).IsRequired();
+
+            e.Property(x => x.IsDeleted).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VendorEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VendorId)
+                .HasConstraintName("FK_TblOperator_TblVendor")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<CountryEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.CountryId)
+                .HasConstraintName("FK_TblOperator_TblCountry")
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
     }
