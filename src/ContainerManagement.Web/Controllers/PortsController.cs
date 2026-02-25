@@ -19,15 +19,15 @@ namespace ContainerManagement.Web.Controllers
             _regionService = regionService;
         }
 
-        private async Task PopulateLookupsAsync(string? selectedCountry, string? selectedRegion, CancellationToken ct)
+        private async Task PopulateLookupsAsync(Guid? selectedCountryId, Guid? selectedRegionId, CancellationToken ct)
         {
             var countries = await _countryService.GetAllAsync(ct);
             ViewBag.Countries = countries
                 .Select(c => new SelectListItem
                 {
-                    Value = c.CountryName ?? string.Empty,
+                    Value = c.Id.ToString(),
                     Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.CountryName : $"{c.CountryCode} - {c.CountryName}",
-                    Selected = !string.IsNullOrWhiteSpace(selectedCountry) && string.Equals(c.CountryName, selectedCountry, StringComparison.OrdinalIgnoreCase)
+                    Selected = selectedCountryId.HasValue && c.Id == selectedCountryId.Value
                 })
                 .ToList();
 
@@ -35,9 +35,9 @@ namespace ContainerManagement.Web.Controllers
             ViewBag.Regions = regions
                 .Select(r => new SelectListItem
                 {
-                    Value = r.RegionName ?? string.Empty,
+                    Value = r.Id.ToString(),
                     Text = string.IsNullOrWhiteSpace(r.RegionCode) ? r.RegionName : $"{r.RegionCode} - {r.RegionName}",
-                    Selected = !string.IsNullOrWhiteSpace(selectedRegion) && string.Equals(r.RegionName, selectedRegion, StringComparison.OrdinalIgnoreCase)
+                    Selected = selectedRegionId.HasValue && r.Id == selectedRegionId.Value
                 })
                 .ToList();
         }
@@ -62,7 +62,7 @@ namespace ContainerManagement.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
+                await PopulateLookupsAsync(dto.CountryId, dto.RegionId, ct);
                 return View(dto);
             }
 
@@ -70,7 +70,7 @@ namespace ContainerManagement.Web.Controllers
             if (!Guid.TryParse(userIdStr, out var userId))
             {
                 ModelState.AddModelError("", "Invalid user session. Please login again.");
-                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
+                await PopulateLookupsAsync(dto.CountryId, dto.RegionId, ct);
                 return View(dto);
             }
 
@@ -85,7 +85,7 @@ namespace ContainerManagement.Web.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
-                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
+                await PopulateLookupsAsync(dto.CountryId, dto.RegionId, ct);
                 return View(dto);
             }
         }
@@ -104,12 +104,11 @@ namespace ContainerManagement.Web.Controllers
                 Id = port.Id,
                 PortCode = port.PortCode,
                 FullName = port.FullName,
-                Country = port.Country,
-                Region = port.Region,
-                RegionCode = port.RegionCode
+                CountryId = port.CountryId,
+                RegionId = port.RegionId
             };
 
-            await PopulateLookupsAsync(dto.Country, dto.Region, ct);
+            await PopulateLookupsAsync(dto.CountryId, dto.RegionId, ct);
             return View(dto);
         }
 
@@ -119,7 +118,7 @@ namespace ContainerManagement.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
+                await PopulateLookupsAsync(dto.CountryId, dto.RegionId, ct);
                 return View(dto);
             }
 
@@ -138,7 +137,7 @@ namespace ContainerManagement.Web.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
-                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
+                await PopulateLookupsAsync(dto.CountryId, dto.RegionId, ct);
                 return View(dto);
             }
         }
@@ -157,4 +156,3 @@ namespace ContainerManagement.Web.Controllers
         }
     }
 }
-

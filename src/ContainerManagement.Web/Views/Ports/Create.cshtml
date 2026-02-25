@@ -26,18 +26,16 @@
                         <span asp-validation-for="FullName" class="text-danger"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Country" class="form-label">Country</label>
-                        <select asp-for="Country" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Countries"></select>
-                        <span asp-validation-for="Country" class="text-danger"></span>
+                        <label asp-for="CountryId" class="form-label">Country</label>
+                        <select asp-for="CountryId" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Countries"></select>
+                        <span asp-validation-for="CountryId" class="text-danger"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Region" class="form-label">Region</label>
-                        <select asp-for="Region" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Regions"></select>
+                        <label asp-for="RegionId" class="form-label">Region</label>
+                        <select asp-for="RegionId" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Regions"></select>
+                        <span asp-validation-for="RegionId" class="text-danger"></span>
                     </div>
-                    <div class="col-md-6">
-                        <label asp-for="RegionCode" class="form-label"></label>
-                        <input asp-for="RegionCode" class="form-control" />
-                    </div>
+                    
                 </div>
             </div>
             <div class="card-footer text-end">
@@ -51,4 +49,3 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-

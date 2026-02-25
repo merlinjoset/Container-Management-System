@@ -88,24 +88,31 @@ public class AppDbContext : DbContext
             e.HasKey(x => x.Id);
 
             e.Property(x => x.PortCode).HasMaxLength(20);
-
             e.Property(x => x.FullName).HasMaxLength(200).IsRequired();
 
-            e.Property(x => x.Country).HasMaxLength(100).IsRequired();
-
-            e.Property(x => x.Region).HasMaxLength(100);
-
-            e.Property(x => x.RegionCode).HasMaxLength(20);
+            e.Property(x => x.CountryId).IsRequired();
+            e.Property(x => x.RegionId).IsRequired();
 
             e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
-
             e.Property(x => x.CreatedOn).IsRequired();
-
             e.Property(x => x.ModifiedOn).IsRequired();
-
             e.Property(x => x.CreatedBy).IsRequired();
-
             e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<CountryEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.CountryId)
+                .HasConstraintName("FK_TblPorts_TblCountry")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<RegionEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.RegionId)
+                .HasConstraintName("FK_TblPorts_TblRegion")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.CountryId).HasDatabaseName("IX_TblPorts_CountryId");
+            e.HasIndex(x => x.RegionId).HasDatabaseName("IX_TblPorts_RegionId");
         });
 
         // ---------------- TblRegions ----------------

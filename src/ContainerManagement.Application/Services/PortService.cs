@@ -7,24 +7,33 @@ namespace ContainerManagement.Application.Services
     public class PortService
     {
         private readonly IPortsRepository _repository;
+        private readonly ICountriesRepository _countries;
+        private readonly IRegionsRepository _regions;
 
-        public PortService(IPortsRepository repository)
+        public PortService(IPortsRepository repository, ICountriesRepository countries, IRegionsRepository regions)
         {
             _repository = repository;
+            _countries = countries;
+            _regions = regions;
         }
 
         public async Task<List<PortListItemDto>> GetAllAsync(CancellationToken ct = default)
         {
             var ports = await _repository.GetAllAsync(ct);
+            var countryList = await _countries.GetAllAsync(ct);
+            var regionList = await _regions.GetAllAsync(ct);
+            var cById = countryList.ToDictionary(c => c.Id, c => c);
+            var rById = regionList.ToDictionary(r => r.Id, r => r);
 
             return ports.Select(x => new PortListItemDto
             {
                 Id = x.Id,
                 PortCode = x.PortCode,
                 FullName = x.FullName,
-                Country = x.Country,
-                Region = x.Region,
-                RegionCode = x.RegionCode
+                CountryId = x.CountryId,
+                RegionId = x.RegionId,
+                CountryName = cById.TryGetValue(x.CountryId, out var c) ? c.CountryName : null,
+                RegionName = rById.TryGetValue(x.RegionId, out var r) ? r.RegionName : null
             }).ToList();
         }
 
@@ -42,9 +51,8 @@ namespace ContainerManagement.Application.Services
                 Id = Guid.NewGuid(),
                 PortCode = dto.PortCode,
                 FullName = dto.FullName,
-                Country = dto.Country,
-                Region = dto.Region,
-                RegionCode = dto.RegionCode,
+                CountryId = dto.CountryId,
+                RegionId = dto.RegionId,
                 IsDeleted = false,
                 CreatedOn = now,
                 ModifiedOn = now,
@@ -70,9 +78,8 @@ namespace ContainerManagement.Application.Services
 
             port.PortCode = dto.PortCode;
             port.FullName = dto.FullName;
-            port.Country = dto.Country;
-            port.Region = dto.Region;
-            port.RegionCode = dto.RegionCode;
+            port.CountryId = dto.CountryId;
+            port.RegionId = dto.RegionId;
             port.ModifiedOn = DateTime.UtcNow;
             port.ModifiedBy = dto.ModifiedBy;
 

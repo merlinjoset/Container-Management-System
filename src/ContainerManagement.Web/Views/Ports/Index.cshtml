@@ -22,7 +22,6 @@
                         <th>Full Name</th>
                         <th>Country</th>
                         <th>Region</th>
-                        <th>Region Code</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -34,9 +33,8 @@
                             <tr>
                                 <td><strong>@port.PortCode</strong></td>
                                 <td>@port.FullName</td>
-                                <td>@port.Country</td>
-                                <td>@port.Region</td>
-                                <td>@port.RegionCode</td>
+                                <td>@port.CountryName</td>
+                                <td>@port.RegionName</td>
                                 <td class="text-end">
                                     <a asp-action="Edit" asp-route-id="@port.Id"
                                        class="btn btn-sm btn-warning me-2">

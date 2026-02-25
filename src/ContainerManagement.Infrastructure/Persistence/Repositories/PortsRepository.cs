@@ -25,9 +25,8 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                     Id = x.Id,
                     PortCode = x.PortCode,
                     FullName = x.FullName,
-                    Country = x.Country,
-                    Region = x.Region,
-                    RegionCode = x.RegionCode,
+                    CountryId = x.CountryId,
+                    RegionId = x.RegionId,
                     IsDeleted = x.IsDeleted,
                     CreatedOn = x.CreatedOn,
                     ModifiedOn = x.ModifiedOn,
@@ -47,9 +46,8 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                     Id = x.Id,
                     PortCode = x.PortCode,
                     FullName = x.FullName,
-                    Country = x.Country,
-                    Region = x.Region,
-                    RegionCode = x.RegionCode,
+                    CountryId = x.CountryId,
+                    RegionId = x.RegionId,
                     IsDeleted = x.IsDeleted,
                     CreatedOn = x.CreatedOn,
                     ModifiedOn = x.ModifiedOn,
@@ -77,9 +75,8 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                 Id = port.Id == Guid.Empty ? Guid.NewGuid() : port.Id,
                 PortCode = port.PortCode,
                 FullName = port.FullName,
-                Country = port.Country,
-                Region = port.Region,
-                RegionCode = port.RegionCode,
+                CountryId = port.CountryId,
+                RegionId = port.RegionId,
                 IsDeleted = false,
                 CreatedOn = port.CreatedOn == default ? DateTime.UtcNow : port.CreatedOn,
                 ModifiedOn = port.ModifiedOn == default ? DateTime.UtcNow : port.ModifiedOn,
@@ -104,9 +101,8 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
 
             entity.PortCode = port.PortCode;
             entity.FullName = port.FullName;
-            entity.Country = port.Country;
-            entity.Region = port.Region;
-            entity.RegionCode = port.RegionCode;
+            entity.CountryId = port.CountryId;
+            entity.RegionId = port.RegionId;
             entity.ModifiedOn = DateTime.UtcNow;
             entity.ModifiedBy = port.ModifiedBy;
 
