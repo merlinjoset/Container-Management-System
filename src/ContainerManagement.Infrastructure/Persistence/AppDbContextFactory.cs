@@ -23,7 +23,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
                    ?? "Server=(localdb)\\MSSQLLocalDB;Database=ContainerManagementDb;Trusted_Connection=True;TrustServerCertificate=True";
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(conn)
+            .UseNpgsql(conn)
             .Options;
 
         return new AppDbContext(options);

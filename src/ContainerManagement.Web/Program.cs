@@ -7,7 +7,6 @@ using ContainerManagement.Infrastructure.Integrations;
 using ContainerManagement.Infrastructure.Persistence;
 using ContainerManagement.Infrastructure.Persistence.Repositories;
 using ContainerManagement.Infrastructure.Persistence.Uow;
-using ContainerManagement.Infrastructure.Seed;
 using ContainerManagement.Web.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 // JWT Auth
 builder.Services
@@ -144,8 +143,6 @@ app.MapControllerRoute(
 
 app.MapGet("/", () => Results.Redirect("/Account/Login"));
 
-// migrate + seed
-await DbSeeder.SeedAsync(app.Services, builder.Configuration["FakeProvider:BaseUrl"]!);
 
 // recurring retry
 //RecurringJob.AddOrUpdate<ContainerManagement.Web.Jobs.FailedPaymentsRetryRunner>(
