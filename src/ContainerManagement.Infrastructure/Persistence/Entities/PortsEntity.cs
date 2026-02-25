@@ -5,9 +5,8 @@
         public Guid Id { get; set; }
         public string? PortCode { get; set; }
         public string? FullName { get; set; }
-        public string? Country { get; set; }
-        public string? Region { get; set; }
-        public string? RegionCode { get; set; }
+        public Guid CountryId { get; set; }
+        public Guid RegionId { get; set; }
         public bool IsDeleted { get; set; } = false;
         public DateTime CreatedOn { get; set; }
         public DateTime ModifiedOn { get; set; }

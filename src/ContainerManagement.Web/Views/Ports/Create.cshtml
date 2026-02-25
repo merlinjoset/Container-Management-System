@@ -1,4 +1,4 @@
-@model ContainerManagement.Application.Dtos.Ports.PortUpdateDto
+@model ContainerManagement.Application.Dtos.Ports.PortCreateDto
 
 @{
     ViewData["Title"] = "Create Port";
@@ -9,7 +9,6 @@
 
     <form asp-action="Create" method="post">
         @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="Id" />
 
         <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
@@ -27,13 +26,13 @@
                         <span asp-validation-for="FullName" class="text-danger"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Country" class="form-label"></label>
-                        <input asp-for="Country" class="form-control" />
+                        <label asp-for="Country" class="form-label">Country</label>
+                        <select asp-for="Country" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Countries"></select>
                         <span asp-validation-for="Country" class="text-danger"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="Region" class="form-label"></label>
-                        <input asp-for="Region" class="form-control" />
+                        <label asp-for="Region" class="form-label">Region</label>
+                        <select asp-for="Region" class="form-select" asp-items="(IEnumerable<SelectListItem>)ViewBag.Regions"></select>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="RegionCode" class="form-label"></label>
@@ -52,3 +51,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+

@@ -1,6 +1,7 @@
-﻿using ContainerManagement.Application.Dtos.Ports;
+using ContainerManagement.Application.Dtos.Ports;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
 
 namespace ContainerManagement.Web.Controllers
@@ -8,16 +9,44 @@ namespace ContainerManagement.Web.Controllers
     public class PortsController : Controller
     {
         private readonly PortService _portService;
+        private readonly CountryService _countryService;
+        private readonly RegionService _regionService;
 
-        public PortsController(PortService portService)
+        public PortsController(PortService portService, CountryService countryService, RegionService regionService)
         {
             _portService = portService;
+            _countryService = countryService;
+            _regionService = regionService;
+        }
+
+        private async Task PopulateLookupsAsync(string? selectedCountry, string? selectedRegion, CancellationToken ct)
+        {
+            var countries = await _countryService.GetAllAsync(ct);
+            ViewBag.Countries = countries
+                .Select(c => new SelectListItem
+                {
+                    Value = c.CountryName ?? string.Empty,
+                    Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.CountryName : $"{c.CountryCode} - {c.CountryName}",
+                    Selected = !string.IsNullOrWhiteSpace(selectedCountry) && string.Equals(c.CountryName, selectedCountry, StringComparison.OrdinalIgnoreCase)
+                })
+                .ToList();
+
+            var regions = await _regionService.GetAllAsync(ct);
+            ViewBag.Regions = regions
+                .Select(r => new SelectListItem
+                {
+                    Value = r.RegionName ?? string.Empty,
+                    Text = string.IsNullOrWhiteSpace(r.RegionCode) ? r.RegionName : $"{r.RegionCode} - {r.RegionName}",
+                    Selected = !string.IsNullOrWhiteSpace(selectedRegion) && string.Equals(r.RegionName, selectedRegion, StringComparison.OrdinalIgnoreCase)
+                })
+                .ToList();
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create(CancellationToken ct)
         {
-            return View();
+            await PopulateLookupsAsync(null, null, ct);
+            return View(new PortCreateDto());
         }
 
         [HttpGet]
@@ -32,13 +61,16 @@ namespace ContainerManagement.Web.Controllers
         public async Task<IActionResult> Create(PortCreateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid)
+            {
+                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
                 return View(dto);
+            }
 
-            // DB requires CreatedBy/ModifiedBy (NOT NULL)
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId))
             {
                 ModelState.AddModelError("", "Invalid user session. Please login again.");
+                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
                 return View(dto);
             }
 
@@ -53,6 +85,7 @@ namespace ContainerManagement.Web.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
+                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
                 return View(dto);
             }
         }
@@ -60,7 +93,6 @@ namespace ContainerManagement.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(Guid id, CancellationToken ct)
         {
-            // If you later add GetByIdAsync in service, replace this with that call.
             var ports = await _portService.GetAllAsync(ct);
             var port = ports.FirstOrDefault(x => x.Id == id);
 
@@ -77,6 +109,7 @@ namespace ContainerManagement.Web.Controllers
                 RegionCode = port.RegionCode
             };
 
+            await PopulateLookupsAsync(dto.Country, dto.Region, ct);
             return View(dto);
         }
 
@@ -85,7 +118,10 @@ namespace ContainerManagement.Web.Controllers
         public async Task<IActionResult> Edit(PortUpdateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid)
+            {
+                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
                 return View(dto);
+            }
 
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId))
@@ -102,6 +138,7 @@ namespace ContainerManagement.Web.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
+                await PopulateLookupsAsync(dto.Country, dto.Region, ct);
                 return View(dto);
             }
         }
@@ -118,7 +155,6 @@ namespace ContainerManagement.Web.Controllers
             TempData["Success"] = "Port deleted successfully.";
             return RedirectToAction(nameof(Index));
         }
-
-
     }
 }
+
