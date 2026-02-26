@@ -211,43 +211,22 @@
                         <div class="sidebar-title">Navigation</div>
                     </div>
 
-                    <div class="text-muted small mb-3">Master Data</div>
-
-                    <nav class="nav nav-pills flex-column gap-1">
-                        <a class="nav-link @(isRegions ? "active" : "")"
-                           asp-controller="Regions" asp-action="Index">
-                            <span>Regions</span>
+                    <nav class="nav flex-column gap-1">
+                        <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#mastersCollapse" role="button" aria-expanded="true" aria-controls="mastersCollapse">
+                            <span>Masters</span>
+                            <i class="bi bi-chevron-down"></i>
                         </a>
-
-                        <a class="nav-link @(isCountries ? "active" : "")"
-                           asp-controller="Countries" asp-action="Index">
-                            <span>Countries</span>
-                        </a>
-
-                        <a class="nav-link @(isPorts ? "active" : "")"
-                           asp-controller="Ports" asp-action="Index">
-                            <span>Ports</span>
-                        </a>
-
-                        <a class="nav-link @(isTerminals ? "active" : "")"
-                           asp-controller="Terminals" asp-action="Index">
-                            <span>Terminals</span>
-                        </a>
-
-                        <a class="nav-link @(isVessels ? "active" : "")"
-                           asp-controller="Vessels" asp-action="Index">
-                            <span>Vessels</span>
-                        </a>
-
-                        <a class="nav-link @(isVendors ? "active" : "")"
-                           asp-controller="Vendors" asp-action="Index">
-                            <span>Vendors</span>
-                        </a>
-
-                        <a class="nav-link @(isOperators ? "active" : "")"
-                           asp-controller="Operators" asp-action="Index">
-                            <span>Operators</span>
-                        </a>
+                        <div class="collapse show" id="mastersCollapse">
+                            <nav class="nav flex-column ms-3 gap-1">
+                                <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
+                                <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
+                                <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
+                                <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
+                                <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
+                                <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
+                                <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
+                            </nav>
+                        </div>
                     </nav>
                    
                 </aside>
@@ -285,14 +264,24 @@
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
-                <nav class="nav nav-pills flex-column gap-1">
-                    <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
-                    <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
-                    <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
-                    <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
-                    <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
-                    <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
-                    <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
+                <nav class="nav flex-column gap-1">
+                    <a class="nav-link d-flex justify-content-between align-items-center"
+                       data-bs-toggle="collapse" href="#mastersCollapseMobile" role="button"
+                       aria-expanded="true" aria-controls="mastersCollapseMobile">
+                        <span>Masters</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse show" id="mastersCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
+                            <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
+                            <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
+                            <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
+                            <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
+                            <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
+                            <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
+                        </nav>
+                    </div>
                 </nav>
             </div>
         </div>
