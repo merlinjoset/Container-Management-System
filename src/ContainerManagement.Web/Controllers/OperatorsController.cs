@@ -25,7 +25,16 @@ namespace ContainerManagement.Web.Controllers
         public async Task<IActionResult> Index(CancellationToken ct)
         {
             var list = await _operatorService.GetAllAsync(ct);
+            await PopulateLookupsAsync(null, null, ct);
             return View(list);
+        }
+
+        // Route to serve the UI-style Operator page at /Operator (plural controller)
+        [HttpGet("/Operator")]
+        public IActionResult Operator()
+        {
+            // Backward-compat: redirect singular path to Operators index
+            return RedirectToAction(nameof(Index));
         }
 
         private async Task PopulateLookupsAsync(Guid? vendorId, Guid? countryId, CancellationToken ct)
@@ -194,7 +203,7 @@ namespace ContainerManagement.Web.Controllers
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
             var (added, updated, skipped) = await _operatorService.ImportAsync(rows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Operator));
         }
 
         [HttpGet]
@@ -211,6 +220,55 @@ namespace ContainerManagement.Web.Controllers
             using var ms = new MemoryStream();
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "OperatorsTemplate.xlsx");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] ContainerManagement.Application.Dtos.Operators.OperatorUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
+            dto.ModifiedBy = userId;
+            await _operatorService.UpdateAsync(dto, ct);
+
+            var vendors = await _vendorService.GetAllAsync(ct);
+            var countries = await _countryService.GetAllAsync(ct);
+            var vendorName = vendors.FirstOrDefault(v => v.Id == dto.VendorId)?.VendorName;
+            var countryName = countries.FirstOrDefault(c => c.Id == dto.CountryId)?.CountryName;
+
+            return Ok(new { success = true, operatorName = dto.OperatorName, vendorName, countryName });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _operatorService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Operators");
+            ws.Cell(1, 1).Value = "Operator Name";
+            ws.Cell(1, 2).Value = "Vendor";
+            ws.Cell(1, 3).Value = "Country";
+            ws.Range(1, 1, 1, 3).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, 3).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var row = 2;
+            foreach (var item in list)
+            {
+                ws.Cell(row, 1).Value = item.OperatorName;
+                ws.Cell(row, 2).Value = item.VendorName;
+                ws.Cell(row, 3).Value = item.CountryName;
+                row++;
+            }
+            ws.Columns(1, 3).AdjustToContents();
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Operators.xlsx");
         }
     }
 }

@@ -55,6 +55,7 @@ namespace ContainerManagement.Web.Controllers
         public async Task<IActionResult> Index(CancellationToken ct)
         {
             var ports = await _portService.GetAllAsync(ct);
+            await PopulateLookupsAsync(null, null, ct);
             return View(ports);
         }
 
@@ -224,6 +225,40 @@ namespace ContainerManagement.Web.Controllers
             using var ms = new MemoryStream();
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PortsTemplate.xlsx");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] PortUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.ModifiedBy = userId;
+            await _portService.UpdateAsync(dto, ct);
+            var countries = await _countryService.GetAllAsync(ct);
+            var regions = await _regionService.GetAllAsync(ct);
+            var countryName = countries.FirstOrDefault(c=>c.Id==dto.CountryId)?.CountryName;
+            var regionName = regions.FirstOrDefault(r=>r.Id==dto.RegionId)?.RegionName;
+            return Ok(new { success=true, fullName=dto.FullName, portCode=dto.PortCode, countryName, regionName });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _portService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Ports");
+            ws.Cell(1,1).Value = "Port Code";
+            ws.Cell(1,2).Value = "Full Name";
+            ws.Cell(1,3).Value = "Country";
+            ws.Cell(1,4).Value = "Region";
+            ws.Range(1,1,1,4).Style.Font.Bold = true;
+            ws.Range(1,1,1,4).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var r=2; foreach (var it in list){ ws.Cell(r,1).Value=it.PortCode; ws.Cell(r,2).Value=it.FullName; ws.Cell(r,3).Value=it.CountryName; ws.Cell(r,4).Value=it.RegionName; r++; }
+            ws.Columns(1,4).AdjustToContents();
+            using var ms=new MemoryStream(); wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Ports.xlsx");
         }
     }
 }

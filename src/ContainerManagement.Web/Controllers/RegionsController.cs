@@ -190,5 +190,34 @@ namespace ContainerManagement.Web.Controllers
             const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             return File(bytes, contentType, "RegionsTemplate.xlsx");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] RegionUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.ModifiedBy = userId;
+            await _regionService.UpdateAsync(dto, ct);
+            return Ok(new { success = true, regionName = dto.RegionName, regionCode = dto.RegionCode });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _regionService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Regions");
+            ws.Cell(1,1).Value = "Region Name";
+            ws.Cell(1,2).Value = "Region Code";
+            ws.Range(1,1,1,2).Style.Font.Bold = true;
+            ws.Range(1,1,1,2).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var r = 2;
+            foreach (var item in list){ ws.Cell(r,1).Value = item.RegionName; ws.Cell(r,2).Value = item.RegionCode; r++; }
+            ws.Columns(1,2).AdjustToContents();
+            using var ms = new MemoryStream(); wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Regions.xlsx");
+        }
     }
 }

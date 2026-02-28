@@ -142,6 +142,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+// Enable controller-only paths like '/operators' to map to 'Index'
+app.MapControllerRoute(
+    name: "controller-only",
+    pattern: "{controller}",
+    defaults: new { action = "Index" }
+);
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}"

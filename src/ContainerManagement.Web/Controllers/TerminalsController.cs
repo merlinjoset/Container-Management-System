@@ -23,6 +23,7 @@ namespace ContainerManagement.Web.Controllers
         public async Task<IActionResult> Index(CancellationToken ct)
         {
             var list = await _terminalService.GetAllAsync(ct);
+            await PopulatePortsAsync(null, ct);
             return View(list);
         }
 
@@ -207,6 +208,37 @@ namespace ContainerManagement.Web.Controllers
             using var ms = new MemoryStream();
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "TerminalsTemplate.xlsx");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] TerminalUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.ModifiedBy = userId;
+            await _terminalService.UpdateAsync(dto, ct);
+            var ports = await _portService.GetAllAsync(ct);
+            var portName = ports.FirstOrDefault(p=>p.Id==dto.PortId)?.FullName;
+            return Ok(new { success=true, terminalName=dto.TerminalName, terminalCode=dto.TerminalCode, portName });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _terminalService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Terminals");
+            ws.Cell(1,1).Value = "Terminal Name";
+            ws.Cell(1,2).Value = "Terminal Code";
+            ws.Cell(1,3).Value = "Port";
+            ws.Range(1,1,1,3).Style.Font.Bold = true;
+            ws.Range(1,1,1,3).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var r=2; foreach (var t in list){ ws.Cell(r,1).Value=t.TerminalName; ws.Cell(r,2).Value=t.TerminalCode; ws.Cell(r,3).Value=t.PortName; r++; }
+            ws.Columns(1,3).AdjustToContents();
+            using var ms = new MemoryStream(); wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Terminals.xlsx");
         }
     }
 }

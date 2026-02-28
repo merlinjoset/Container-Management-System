@@ -1,4 +1,4 @@
-﻿@using System.Security.Claims
+@using System.Security.Claims
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ContainerManagement.Web.styles.css" asp-append-version="true" />
+
 
     <style>
         .app-navbar {
@@ -36,6 +37,29 @@
                 color: #fff !important;
                 font-weight: 600;
                 letter-spacing: .2px;
+            }
+
+        /* Logo slot styles */
+        .app-logo-slot {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .5rem;
+            background: rgba(255,255,255,.10);
+            border: 1px solid rgba(255,255,255,.18);
+            color: #fff;
+            font-weight: 700;
+            font-size: .9rem;
+        }
+
+            .app-logo-slot img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                border-radius: .4rem;
+                display: block;
             }
 
         .user-pill {
@@ -89,6 +113,7 @@
                 display: flex;
                 align-items: center;
                 gap: .6rem;
+                font-size: .875rem; /* slightly smaller side menu font */
             }
 
                 .app-sidebar .nav-link:hover {
@@ -105,6 +130,31 @@
             min-width: 0;
         }
 
+        /* Sticky table header utility */
+        table.sticky thead th {
+            position: sticky;
+            top: 0;
+            background: #1e293b;
+            color: #fff;
+            z-index: 1;
+        }
+        table.sticky thead tr.filter-row th {
+            position: sticky;
+            top: 42px;
+            background: #eef2f7;
+            color: #111827;
+            z-index: 1;
+            border-bottom: 1px solid #d1d5db;
+        }
+        table.sticky thead tr.filter-row input,
+        table.sticky thead tr.filter-row select {
+            width: 100%;
+            padding: .25rem .4rem;
+            border: 1px solid #cbd5e1;
+            border-radius: .25rem;
+            font-size: .875rem;
+        }
+
         @@media (max-width: 767.98px) {
             .app-shell { flex-direction: column; }
             .app-sidebar { display: none; }
@@ -115,7 +165,11 @@
                 max-width: 100% !important;
             }
         }
-    </style>
+            /* Grid data font sizing */
+        .operator-page .table { font-size: .875rem; }
+        .operator-page .table .btn { font-size: .8125rem; }
+        .operator-page .table .form-control, .operator-page .table .form-select { font-size: .875rem; padding: .25rem .4rem; }    </style>
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-light">
 
@@ -132,6 +186,16 @@
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
 
+        // ERP module routes (placeholder paths)
+        var isSales = path.StartsWith("/sales");
+        var isPurchases = path.StartsWith("/purchases") || path.StartsWith("/procurement");
+        var isInventory = path.StartsWith("/inventory") || path.StartsWith("/warehouse");
+        var isAccounting = path.StartsWith("/accounting") || path.StartsWith("/finance");
+        var isHR = path.StartsWith("/hr") || path.StartsWith("/human-resources");
+        var isProjects = path.StartsWith("/projects");
+        var isManufacturing = path.StartsWith("/manufacturing") || path.StartsWith("/production");
+        var isReports = path.StartsWith("/reports") || path.StartsWith("/analytics");
+
         var display =
         User.FindFirstValue(ClaimTypes.Email)
         ?? User.Identity?.Name
@@ -140,62 +204,37 @@
     }
 
     <header>
-        <nav class="navbar navbar-expand-lg app-navbar shadow-sm">
+        <nav class="navbar app-navbar shadow-sm">
             <div class="container-fluid px-3">
-                <a class="navbar-brand d-flex align-items-center gap-2" asp-controller="Payments" asp-action="Index">
-                    Container Processing & Customer Compliance System
+                <a class="navbar-brand d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+                    <span class="app-logo-slot me-1">CM</span>
+                    <span>Container Processing & Customer Compliance System</span>
                 </a>
 
-                <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
-                        aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <div class="collapse navbar-collapse" id="navbarMain">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item d-md-none me-2">
-                            <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar">
-                                <i class="bi bi-list"></i> Menu
-                            </button>
+                <ul class="navbar-nav ms-auto align-items-center gap-2 flex-row">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <li class="nav-item my-2 my-lg-0">
+                            <span class="user-pill">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                                <span>Signed in</span>
+                                <strong class="ms-1">@display</strong>
+                            </span>
                         </li>
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
-                            </li>
-                        }
-                    </ul>
-
-                    <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item my-2 my-lg-0">
-                                <span class="user-pill">
-                                    <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
-                                    <span>Signed in</span>
-                                    <strong class="ms-1">@display</strong>
-                                </span>
-                            </li>
-
-                            <li class="nav-item">
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-outline-light btn-sm">
-                                        Logout
-                                    </button>
-                                </form>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="btn btn-outline-light btn-sm @(isAccount ? "active" : "")" asp-controller="Account" asp-action="Login">
-                                    Login
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                </div>
+                        <li class="nav-item">
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                            </form>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="btn btn-outline-light btn-sm" asp-controller="Account" asp-action="Login">Login</a>
+                        </li>
+                    }
+                </ul>
             </div>
         </nav>
     </header>
@@ -212,23 +251,118 @@
                     </div>
 
                     <nav class="nav flex-column gap-1">
-                        <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#mastersCollapse" role="button" aria-expanded="true" aria-controls="mastersCollapse">
-                            <span>Masters</span>
+                        @{ var settingsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Settings);
+                           var mastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Masters);
+                           var globalMastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.GlobalMasters);
+                           var operatorUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Operator);
+                           var regionsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Regions);
+                           var portsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports);
+                           var terminalsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals);
+                           var vendorsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors);
+                           var restrictionUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Restriction);
+                           var systemToolsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools);
+                           var userAccessSecurityUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity);
+
+                           var mastersActive =
+                                path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase);
+
+                           var globalMastersActive =
+                                path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase);
+
+                           var settingsActive = path.StartsWith(settingsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(restrictionUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(systemToolsUrl, StringComparison.OrdinalIgnoreCase)
+                                || path.StartsWith(userAccessSecurityUrl, StringComparison.OrdinalIgnoreCase);
+                        }
+                        <a class="nav-link d-flex justify-content-between align-items-center @(settingsActive ? "active" : "")" data-bs-toggle="collapse" href="#settingsCollapse" role="button" aria-expanded="@(settingsActive.ToString().ToLower())" aria-controls="settingsCollapse">
+                            <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Settings.GetDisplayName()</span>
                             <i class="bi bi-chevron-down"></i>
                         </a>
-                        <div class="collapse show" id="mastersCollapse">
+                        <div class="collapse @(settingsActive ? "show" : "")" id="settingsCollapse">
                             <nav class="nav flex-column ms-3 gap-1">
-                                <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
-                                <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
-                                <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
-                                <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
-                                <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
-                                <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
-                                <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
+                                <a class="nav-link @(mastersActive ? "active" : "")" data-bs-toggle="collapse" href="#mastersCollapse" role="button" aria-expanded="@(mastersActive.ToString().ToLower())" aria-controls="mastersCollapse">
+                                    @ContainerManagement.Web.Models.Navigation.ModulePage.Masters.GetDisplayName()
+                                </a>
+                                <div class="collapse ms-3 @(mastersActive ? "show" : "")" id="mastersCollapse">
+                                    <a class="nav-link @(globalMastersActive ? "active" : "")" data-bs-toggle="collapse" href="#globalMastersCollapse" role="button" aria-expanded="@(globalMastersActive.ToString().ToLower())" aria-controls="globalMastersCollapse">
+                                        @ContainerManagement.Web.Models.Navigation.ModulePage.GlobalMasters.GetDisplayName()
+                                    </a>
+                                    <div class="collapse ms-3 @(globalMastersActive ? "show" : "")" id="globalMastersCollapse">
+                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Regions)">@ContainerManagement.Web.Models.Navigation.ModulePage.Regions.GetDisplayName()</a>
+                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports)">@ContainerManagement.Web.Models.Navigation.ModulePage.Ports.GetDisplayName()</a>
+                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals)">@ContainerManagement.Web.Models.Navigation.ModulePage.Terminals.GetDisplayName()</a>
+                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors)">@ContainerManagement.Web.Models.Navigation.ModulePage.Vendors.GetDisplayName()</a>
+                                        <a class="nav-link" href="@operatorUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.Operator.GetDisplayName()</a>
+                                    </div>
+                                </div>
+                                <a class="nav-link" href="@restrictionUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.Restriction.GetDisplayName()</a>
+                                <a class="nav-link" href="@systemToolsUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools.GetDisplayName()</a>
+                                <a class="nav-link" href="@userAccessSecurityUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity.GetDisplayName()</a>
                             </nav>
                         </div>
+
+                        @{ var schedulesUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Schedules);
+                           var scheduleViewerUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer);
+                           var schedulesActive = path.StartsWith(schedulesUrl, StringComparison.OrdinalIgnoreCase) || path.StartsWith(scheduleViewerUrl, StringComparison.OrdinalIgnoreCase);
+                        }
+                                                @{ var operationsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Operations);
+                           var vesselsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vessels);
+                           var operationsActive = path.StartsWith(operationsUrl, StringComparison.OrdinalIgnoreCase) || path.StartsWith(vesselsUrl, StringComparison.OrdinalIgnoreCase);
+                        }
+                        <a class="nav-link d-flex justify-content-between align-items-center @(operationsActive ? "active" : "")" data-bs-toggle="collapse" href="#operationsCollapse" role="button" aria-expanded="@(operationsActive.ToString().ToLower())" aria-controls="operationsCollapse"> 
+                            <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Operations.GetDisplayName()</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </a>
+                        <div class="collapse @(operationsActive ? "show" : "")" id="operationsCollapse">
+                            <nav class="nav flex-column ms-3 gap-1">
+                                <a class="nav-link @(isVessels ? "active" : "")" href="@vesselsUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.Vessels.GetDisplayName()</a>
+                            </nav>
+                        </div><a class="nav-link d-flex justify-content-between align-items-center @(schedulesActive ? "active" : "")" data-bs-toggle="collapse" href="#schedulesCollapse" role="button" aria-expanded="@(schedulesActive.ToString().ToLower())" aria-controls="schedulesCollapse">
+                            <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Schedules.GetDisplayName()</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </a>
+                        <div class="collapse @(schedulesActive ? "show" : "")" id="schedulesCollapse">
+                            <nav class="nav flex-column ms-3 gap-1">
+                                <a class="nav-link @(schedulesActive ? "active" : "")" href="@scheduleViewerUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer.GetDisplayName()</a>
+                            </nav>
+                        </div>
+
+                        @{ var others = new [] {
+                                ContainerManagement.Web.Models.Navigation.MainMenu.Commercial,
+                                ContainerManagement.Web.Models.Navigation.MainMenu.CustomerService,
+                                ContainerManagement.Web.Models.Navigation.MainMenu.Documentation,
+                                ContainerManagement.Web.Models.Navigation.MainMenu.Operations,
+                                ContainerManagement.Web.Models.Navigation.MainMenu.Contract,
+                                ContainerManagement.Web.Models.Navigation.MainMenu.EMS,
+                                ContainerManagement.Web.Models.Navigation.MainMenu.EDI
+                            };
+                           foreach (var m in others)
+                           {
+                               var url = Url.NavigateToMainMenu(m);
+                               var active = path.StartsWith(url, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                        <a class="nav-link @active" href="@url">@m.GetDisplayName()</a>
+                           }
+                        }
                     </nav>
-                   
+
                 </aside>
             }
 
@@ -253,6 +387,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 
@@ -265,13 +400,125 @@
             </div>
             <div class="offcanvas-body">
                 <nav class="nav flex-column gap-1">
-                    <a class="nav-link d-flex justify-content-between align-items-center"
-                       data-bs-toggle="collapse" href="#mastersCollapseMobile" role="button"
-                       aria-expanded="true" aria-controls="mastersCollapseMobile">
-                        <span>Masters</span>
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#salesCollapseMobile" role="button" aria-expanded="false" aria-controls="salesCollapseMobile">
+                        <span>Sales</span>
                         <i class="bi bi-chevron-down"></i>
                     </a>
-                    <div class="collapse show" id="mastersCollapseMobile">
+                    <div class="collapse" id="salesCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/sales/quotes">Quotes</a>
+                            <a class="nav-link" href="/sales/orders">Sales Orders</a>
+                            <a class="nav-link" href="/sales/invoices">Invoices</a>
+                            <a class="nav-link" href="/sales/customers">Customers</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#purchasesCollapseMobile" role="button" aria-expanded="false" aria-controls="purchasesCollapseMobile">
+                        <span>Purchases</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="purchasesCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/purchases/requisitions">Requisitions</a>
+                            <a class="nav-link" href="/purchases/orders">Purchase Orders</a>
+                            <a class="nav-link" href="/purchases/bills">Bills</a>
+                            <a class="nav-link" href="/purchases/vendors">Vendors</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#inventoryCollapseMobile" role="button" aria-expanded="false" aria-controls="inventoryCollapseMobile">
+                        <span>Inventory</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="inventoryCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/inventory/items">Items</a>
+                            <a class="nav-link" href="/inventory/movements">Stock Movements</a>
+                            <a class="nav-link" href="/inventory/adjustments">Adjustments</a>
+                            <a class="nav-link" href="/warehouse/locations">Warehouses</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#accountingCollapseMobile" role="button" aria-expanded="false" aria-controls="accountingCollapseMobile">
+                        <span>Accounting</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="accountingCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/accounting/chart-of-accounts">Chart of Accounts</a>
+                            <a class="nav-link" href="/accounting/journals">Journal Entries</a>
+                            <a class="nav-link" href="/accounting/payments">Payments</a>
+                            <a class="nav-link" href="/reports/finance">Financial Reports</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#hrCollapseMobile" role="button" aria-expanded="false" aria-controls="hrCollapseMobile">
+                        <span>HR</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="hrCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/hr/employees">Employees</a>
+                            <a class="nav-link" href="/hr/attendance">Attendance</a>
+                            <a class="nav-link" href="/hr/payroll">Payroll</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#projectsCollapseMobile" role="button" aria-expanded="false" aria-controls="projectsCollapseMobile">
+                        <span>Projects</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="projectsCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/projects/list">Projects</a>
+                            <a class="nav-link" href="/projects/tasks">Tasks</a>
+                            <a class="nav-link" href="/projects/timesheets">Timesheets</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#manufacturingCollapseMobile" role="button" aria-expanded="false" aria-controls="manufacturingCollapseMobile">
+                        <span>Manufacturing</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="manufacturingCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/manufacturing/bom">BOM</a>
+                            <a class="nav-link" href="/manufacturing/work-orders">Work Orders</a>
+                            <a class="nav-link" href="/manufacturing/production">Production</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#reportsCollapseMobile" role="button" aria-expanded="false" aria-controls="reportsCollapseMobile">
+                        <span>Reports</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="reportsCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link" href="/reports/dashboards">Dashboards</a>
+                            <a class="nav-link" href="/reports/kpi">KPIs</a>
+                            <a class="nav-link" href="/reports/custom">Custom Reports</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#adminCollapseMobile" role="button" aria-expanded="false" aria-controls="adminCollapseMobile">
+                        <span>Administration</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse" id="adminCollapseMobile">
+                        <nav class="nav flex-column ms-3 gap-1">
+                            <a class="nav-link @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
+                            <a class="nav-link" href="/admin/roles">Roles</a>
+                            <a class="nav-link" href="/admin/settings">Settings</a>
+                        </nav>
+                    </div>
+
+                    <a class="nav-link d-flex justify-content-between align-items-center"
+                       data-bs-toggle="collapse" href="#setupCollapseMobile" role="button"
+                       aria-expanded="true" aria-controls="setupCollapseMobile">
+                        <span>Data Setup</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </a>
+                    <div class="collapse show" id="setupCollapseMobile">
                         <nav class="nav flex-column ms-3 gap-1">
                             <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
                             <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
@@ -288,3 +535,6 @@
     }
 </body>
 </html>
+
+
+

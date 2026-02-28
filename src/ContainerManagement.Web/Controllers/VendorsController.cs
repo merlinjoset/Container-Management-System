@@ -23,6 +23,7 @@ namespace ContainerManagement.Web.Controllers
         public async Task<IActionResult> Index(CancellationToken ct)
         {
             var vendors = await _vendorService.GetAllAsync(ct);
+            await PopulateCountriesAsync(null, ct);
             return View(vendors);
         }
 
@@ -201,6 +202,37 @@ namespace ContainerManagement.Web.Controllers
             using var ms = new MemoryStream();
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "VendorsTemplate.xlsx");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] VendorUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.ModifiedBy = userId;
+            await _vendorService.UpdateAsync(dto, ct);
+            var countries = await _countryService.GetAllAsync(ct);
+            var countryName = countries.FirstOrDefault(c=>c.Id==dto.CountryId)?.CountryName;
+            return Ok(new { success=true, vendorName=dto.VendorName, vendorCode=dto.VendorCode, countryName });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _vendorService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Vendors");
+            ws.Cell(1,1).Value = "Vendor Name";
+            ws.Cell(1,2).Value = "Vendor Code";
+            ws.Cell(1,3).Value = "Country";
+            ws.Range(1,1,1,3).Style.Font.Bold = true;
+            ws.Range(1,1,1,3).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var r=2; foreach (var v in list){ ws.Cell(r,1).Value=v.VendorName; ws.Cell(r,2).Value=v.VendorCode; ws.Cell(r,3).Value=v.CountryName; r++; }
+            ws.Columns(1,3).AdjustToContents();
+            using var ms = new MemoryStream(); wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Vendors.xlsx");
         }
     }
 }

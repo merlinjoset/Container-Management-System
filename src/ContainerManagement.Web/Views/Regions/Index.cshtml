@@ -1,142 +1,123 @@
-@model List<ContainerManagement.Application.Dtos.Regions.RegionListItemDto>
+@model IEnumerable<ContainerManagement.Application.Dtos.Regions.RegionListItemDto>
 
 @{
     ViewData["Title"] = "Regions";
 }
 
-<div class="container mt-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-        <h2 class="fw-bold mb-0">Regions</h2>
-        <div class="w-100 w-md-auto" style="min-width:480px;">
-            <div class="input-group">
-                <span class="input-group-text">Name</span>
-                <input id="regionSearch" class="form-control" placeholder="Filter by name..." />
-                <select id="regionPageSize" class="form-select" style="max-width: 120px;">
-                    <option value="10" selected>10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="0">All</option>
-                </select>
-                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Region</a>
-                <a asp-action="Import" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Import</a>
-            </div>
-        </div>
-    </div>
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        .op-toast { position: fixed; right: 1rem; bottom: 1rem; background: #111827; color: #fff; padding: .5rem .75rem; border-radius: .375rem; opacity: 0; transition: opacity .2s ease; }
+        .op-toast.show { opacity: .95; }
+    </style>
+}
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+<div class="operator-page">
+    <div class="page-header">Regions</div>
+    @await Html.PartialAsync("_GridToolbar")
 
-            <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle" id="regionsTable">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Region Name</th>
-                        <th>Region Code</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Any())
-                    {
-                        foreach (var r in Model)
-                        {
+    <div class="content">
+        <div class="left-grid">
+            <div class="grid-card">
+                <div class="grid-header">
+                    <div>Region Data</div>
+                    <span class="badge badge-count" id="rg-total">@Model?.Count() ?? 0</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table table-sm mb-0 sticky" id="regionsTable">
+                        <thead>
                             <tr>
-                                <td>@r.RegionName</td>
-                                <td>@r.RegionCode</td>
-                                <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@r.Id" class="btn btn-sm btn-warning me-2">Edit</a>
-                                    <button type="button"
-                                            class="btn btn-sm btn-danger"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteRegionModal"
-                                            data-id="@r.Id"
-                                            data-name="@r.RegionName"
-                                            data-code="@r.RegionCode">
-                                        Delete
-                                    </button>
-                                </td>
+                                <th>Region Name</th>
+                                <th>Region Code</th>
+                                <th style="width:120px;">Actions</th>
                             </tr>
+                            <tr class="filter-row">
+                                <th><input id="cf-name" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-code" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="rg-grid-body">
+                        @if (Model?.Any() == true)
+                        {
+                            foreach (var r in Model)
+                            {
+                                <tr data-id="@r.Id">
+                                    <td class="col-name">
+                                        <span class="disp">@r.RegionName</span>
+                                        <input class="form-control form-control-sm edit d-none" value="@r.RegionName" />
+                                    </td>
+                                    <td class="col-code">
+                                        <span class="disp">@r.RegionCode</span>
+                                        <input class="form-control form-control-sm edit d-none" value="@r.RegionCode" />
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
+                                            <button type="button" class="btn btn-sm btn-success d-none btn-save" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                            <form asp-action="Delete" method="post" class="d-inline m-0">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@r.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Delete" onclick="return confirm('Delete this region?');"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
-                    }
-                    else
-                    {
-                        <tr data-empty-row="1">
-                            <td colspan="3" class="text-center text-muted">No regions available.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteRegionModal" tabindex="-1" aria-labelledby="deleteRegionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteRegionModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">Are you sure you want to delete this region?</p>
-                <div class="border rounded p-2 bg-light">
-                    <div><strong>Region Name:</strong> <span id="delRegionName"></span></div>
-                    <div><strong>Region Code:</strong> <span id="delRegionCode"></span></div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteRegionForm" asp-action="Delete" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" id="delRegionId" />
-                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                </form>
-            </div>
         </div>
+        <div class="right-blank"></div>
     </div>
 </div>
 
-@section Scripts {
-    <script>
-        const search = document.getElementById('regionSearch');
-        const table = document.getElementById('regionsTable');
-        const pageSize = document.getElementById('regionPageSize');
-        function applyRegionFilter() {
-            const q = (search?.value || '').toLowerCase();
-            const rows = Array.from(table.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
-            rows.forEach(tr => {
-                const text = tr.innerText.toLowerCase();
-                tr.dataset.match = text.includes(q) ? '1' : '0';
-            });
-            paginateRegion();
-        }
-        function paginateRegion() {
-            const size = parseInt(pageSize?.value || '25', 10);
-            const matched = Array.from(table.querySelectorAll('tbody tr')).filter(tr => tr.dataset.match !== '0' && !tr.dataset.emptyRow);
-            const all = Array.from(table.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
-            all.forEach(tr => tr.style.display = 'none');
-            if (size === 0) matched.forEach(tr => tr.style.display = '');
-            else matched.slice(0, size).forEach(tr => tr.style.display = '');
+<div id="rg-toast" class="op-toast" role="status" aria-live="polite"></div>
+<form id="rg-af">@Html.AntiForgeryToken()</form>
 
-            const emptyRow = table.querySelector('tbody tr[data-empty-row="1"]');
-            if (emptyRow) emptyRow.style.display = matched.length === 0 ? '' : 'none';
-        }
-        search?.addEventListener('input', applyRegionFilter);
-        pageSize?.addEventListener('change', paginateRegion);
-        // init
-        Array.from(table.querySelectorAll('tbody tr')).forEach(tr => { if (!tr.dataset.emptyRow) tr.dataset.match = '1'; });
-        paginateRegion();
-        const deleteModal = document.getElementById('deleteRegionModal');
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const id = button.getAttribute('data-id');
-            const name = button.getAttribute('data-name');
-            const code = button.getAttribute('data-code');
-            document.getElementById('delRegionId').value = id;
-            document.getElementById('delRegionName').textContent = name || '';
-            document.getElementById('delRegionCode').textContent = code || '';
-        });
+@section Scripts{
+    <script>
+        (function(){
+            const q = (s)=>document.querySelector(s);
+            const rows = Array.from(document.querySelectorAll('#rg-grid-body tr'));
+            const total = q('#rg-total');
+            const refreshBtn = q('#grid-refresh');
+            const toast = q('#rg-toast');
+            function showToast(msg){ if (!toast) return; toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+            function applyFilter(){
+                const name = (q('#cf-name')?.value || '').toLowerCase();
+                const code = (q('#cf-code')?.value || '').toLowerCase();
+                let count=0;
+                rows.forEach(r=>{
+                    const n = r.querySelector('.col-name .disp').textContent.toLowerCase();
+                    const c = (r.querySelector('.col-code .disp').textContent||'').toLowerCase();
+                    const show = (!name||n.includes(name)) && (!code||c.includes(code));
+                    r.style.display = show? '':'none';
+                    if (show) count++;
+                });
+                if (total) total.textContent = count;
+            }
+            ['#cf-name','#cf-code'].forEach(id=>{ const e=q(id); if(e) e.addEventListener('input', applyFilter);});
+            refreshBtn?.addEventListener('click', ()=>{ applyFilter(); showToast('Grid refreshed'); });
+            function token(){ const el=document.querySelector('#rg-af input[name="__RequestVerificationToken"]'); return el?el.value:''; }
+            rows.forEach(r=>{
+                const edit=r.querySelector('.btn-edit'); const save=r.querySelector('.btn-save'); const cancel=r.querySelector('.btn-cancel');
+                const toggle=()=>{ r.querySelectorAll('.disp').forEach(e=>e.classList.toggle('d-none')); r.querySelectorAll('.edit').forEach(e=>e.classList.toggle('d-none')); edit.classList.toggle('d-none'); save.classList.toggle('d-none'); cancel.classList.toggle('d-none'); };
+                let orig=null;
+                edit?.addEventListener('click',()=>{ orig={name:r.querySelector('.col-name input').value, code:r.querySelector('.col-code input').value}; toggle(); });
+                cancel?.addEventListener('click',()=>{ if(orig){ r.querySelector('.col-name input').value=orig.name; r.querySelector('.col-code input').value=orig.code;} toggle(); });
+                save?.addEventListener('click', async ()=>{
+                    const payload = { id: r.getAttribute('data-id'), regionName: r.querySelector('.col-name input').value, regionCode: r.querySelector('.col-code input').value };
+                    const resp = await fetch('/Regions/InlineUpdate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload)});
+                    if (resp.ok){ const data=await resp.json(); r.querySelector('.col-name .disp').textContent = data.regionName||payload.regionName; r.querySelector('.col-code .disp').textContent = data.regionCode||payload.regionCode; toggle(); showToast('Saved'); }
+                    else alert('Failed to save changes');
+                });
+            });
+            applyFilter();
+        })();
     </script>
 }

@@ -1,124 +1,147 @@
-﻿@model List<ContainerManagement.Application.Dtos.Ports.PortListItemDto>
+@model IEnumerable<ContainerManagement.Application.Dtos.Ports.PortListItemDto>
 
 @{
     ViewData["Title"] = "Ports";
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="fw-bold">Ports</h2>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Add Port
-        </a>
-        <a asp-action="Import" class="btn btn-outline-secondary">
-            <i class="bi bi-upload"></i> Import
-        </a>
-    </div>
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        .op-toast { position: fixed; right: 1rem; bottom: 1rem; background: #111827; color: #fff; padding: .5rem .75rem; border-radius: .375rem; opacity: 0; transition: opacity .2s ease; }
+        .op-toast.show { opacity: .95; }
+    </style>
+}
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Port Code</th>
-                        <th>Full Name</th>
-                        <th>Country</th>
-                        <th>Region</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Any())
-                    {
-                        foreach (var port in Model)
-                        {
+<div class="operator-page">
+    <div class="page-header">Ports</div>
+    @await Html.PartialAsync("_GridToolbar")
+
+    <div class="content">
+        <div class="left-grid">
+            <div class="grid-card">
+                <div class="grid-header">
+                    <div>Port Data</div>
+                    <span class="badge badge-count" id="pt-total">@Model?.Count() ?? 0</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table table-sm mb-0 sticky" id="portsTable">
+                        <thead>
                             <tr>
-                                <td><strong>@port.PortCode</strong></td>
-                                <td>@port.FullName</td>
-                                <td>@port.CountryName</td>
-                                <td>@port.RegionName</td>
-                                <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@port.Id"
-                                       class="btn btn-sm btn-warning me-2">
-                                        Edit
-                                    </a>
-                                   <button type="button"
-                                        class="btn btn-sm btn-danger"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#deletePortModal"
-                                        data-id="@port.Id"
-                                        data-code="@port.PortCode"
-                                        data-name="@port.FullName">
-                                    Delete
-                                </button>
-                                </td>
+                                <th>Port Code</th>
+                                <th>Full Name</th>
+                                <th>Country</th>
+                                <th>Region</th>
+                                <th style="width:130px;">Actions</th>
                             </tr>
+                            <tr class="filter-row">
+                                <th><input id="cf-code" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-name" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-country" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-region" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="pt-grid-body">
+                        @if (Model?.Any() == true)
+                        {
+                            foreach (var port in Model)
+                            {
+                                <tr data-id="@port.Id">
+                                    <td class="col-code">
+                                        <span class="disp">@port.PortCode</span>
+                                        <input class="form-control form-control-sm edit d-none" value="@port.PortCode" maxlength="5" />
+                                    </td>
+                                    <td class="col-name">
+                                        <span class="disp">@port.FullName</span>
+                                        <input class="form-control form-control-sm edit d-none" value="@port.FullName" />
+                                    </td>
+                                    <td class="col-country">
+                                        <span class="disp">@port.CountryName</span>
+                                        <select class="form-select form-select-sm edit d-none">
+                                            @if (ViewBag.Countries is IEnumerable<SelectListItem> countries)
+                                            { foreach (var c in countries){ <option value="@c.Value" selected="@(port.CountryId.ToString()==c.Value)">@c.Text</option>; } }
+                                        </select>
+                                    </td>
+                                    <td class="col-region">
+                                        <span class="disp">@port.RegionName</span>
+                                        <select class="form-select form-select-sm edit d-none">
+                                            @if (ViewBag.Regions is IEnumerable<SelectListItem> regions)
+                                            { foreach (var r in regions){ <option value="@r.Value" selected="@(port.RegionId.ToString()==r.Value)">@r.Text</option>; } }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
+                                            <button type="button" class="btn btn-sm btn-success d-none btn-save" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                            <form asp-action="Delete" method="post" class="d-inline m-0">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@port.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Delete" onclick="return confirm('Delete this port?');"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">
-                                No ports available.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-
-<div class="modal fade" id="deletePortModal" tabindex="-1" aria-labelledby="deletePortModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deletePortModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body">
-                <p class="mb-2">Are you sure you want to delete this port?</p>
-
-                <div class="border rounded p-2 bg-light">
-                    <div><strong>Port Code:</strong> <span id="delPortCode"></span></div>
-                    <div><strong>Full Name:</strong> <span id="delPortName"></span></div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-
-                <form id="deletePortForm" asp-action="Delete" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" id="delPortId" />
-                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                </form>
-            </div>
-
         </div>
+        <div class="right-blank"></div>
     </div>
 </div>
+
+<div id="pt-toast" class="op-toast" role="status" aria-live="polite"></div>
+<form id="ports-af">@Html.AntiForgeryToken()</form>
+
 @section Scripts {
     <script>
-        const deleteModal = document.getElementById('deletePortModal');
-
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-
-            const id = button.getAttribute('data-id');
-            const code = button.getAttribute('data-code');
-            const name = button.getAttribute('data-name');
-
-            document.getElementById('delPortId').value = id;
-            document.getElementById('delPortCode').textContent = code || '';
-            document.getElementById('delPortName').textContent = name || '';
-        });
+        (function(){
+            const q=(s)=>document.querySelector(s);
+            const rows = Array.from(document.querySelectorAll('#pt-grid-body tr'));
+            const total = q('#pt-total');
+            const refreshBtn = q('#grid-refresh');
+            const toast = q('#pt-toast');
+            function showToast(msg){ if(!toast) return; toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+            function filter(){
+                const fcode=(q('#cf-code')?.value||'').toLowerCase();
+                const fname=(q('#cf-name')?.value||'').toLowerCase();
+                const fcountry=(q('#cf-country')?.value||'').toLowerCase();
+                const fregion=(q('#cf-region')?.value||'').toLowerCase();
+                let count=0;
+                rows.forEach(r=>{
+                    const code=r.querySelector('.col-code .disp').textContent.toLowerCase();
+                    const name=r.querySelector('.col-name .disp').textContent.toLowerCase();
+                    const country=r.querySelector('.col-country .disp').textContent.toLowerCase();
+                    const region=r.querySelector('.col-region .disp').textContent.toLowerCase();
+                    const show=(!fcode||code.includes(fcode))&&(!fname||name.includes(fname))&&(!fcountry||country.includes(fcountry))&&(!fregion||region.includes(fregion));
+                    r.style.display = show? '':'none';
+                    if (show) count++;
+                });
+                if (total) total.textContent = count;
+            }
+            ['#cf-code','#cf-name','#cf-country','#cf-region'].forEach(id=>{ const e=q(id); if(e) e.addEventListener('input', filter);}); filter();
+            function token(){ const el=document.querySelector('#ports-af input[name="__RequestVerificationToken"]'); return el?el.value:''; }
+            rows.forEach(r=>{
+                const edit=r.querySelector('.btn-edit'); const save=r.querySelector('.btn-save'); const cancel=r.querySelector('.btn-cancel');
+                const toggle=()=>{ r.querySelectorAll('.disp').forEach(e=>e.classList.toggle('d-none')); r.querySelectorAll('.edit').forEach(e=>e.classList.toggle('d-none')); edit.classList.toggle('d-none'); save.classList.toggle('d-none'); cancel.classList.toggle('d-none'); };
+                let orig=null;
+                edit?.addEventListener('click',()=>{ orig={ code:r.querySelector('.col-code input').value, name:r.querySelector('.col-name input').value, country:r.querySelector('.col-country select').value, region:r.querySelector('.col-region select').value}; toggle(); });
+                cancel?.addEventListener('click',()=>{ if(orig){ r.querySelector('.col-code input').value=orig.code; r.querySelector('.col-name input').value=orig.name; r.querySelector('.col-country select').value=orig.country; r.querySelector('.col-region select').value=orig.region; } toggle();});
+                save?.addEventListener('click', async ()=>{
+                    const payload={ id:r.getAttribute('data-id'), portCode:r.querySelector('.col-code input').value, fullName:r.querySelector('.col-name input').value, countryId:r.querySelector('.col-country select').value, regionId:r.querySelector('.col-region select').value };
+                    const resp=await fetch('/Ports/InlineUpdate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload)});
+                    if (resp.ok){ const data=await resp.json(); r.querySelector('.col-code .disp').textContent=data.portCode||payload.portCode; r.querySelector('.col-name .disp').textContent=data.fullName||payload.fullName; r.querySelector('.col-country .disp').textContent=data.countryName||''; r.querySelector('.col-region .disp').textContent=data.regionName||''; toggle(); showToast('Saved'); } else alert('Failed to save changes');
+                });
+            });
+            refreshBtn?.addEventListener('click', ()=>{ filter(); showToast('Grid refreshed'); });
+        })();
     </script>
 }
+
+
+
 

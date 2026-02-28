@@ -1,0 +1,36 @@
+@*
+  Reusable icon-only toolbar for list pages.
+  Uses current controller; actions default to Create/Export/Import.
+  Optional ViewData flags:
+    ViewData["ShowNew"] (bool, default true)
+    ViewData["ShowExport"] (bool, default true)
+    ViewData["ShowImport"] (bool, default true)
+*@
+@{
+    var showNew = ViewData["ShowNew"] as bool? ?? true;
+    var showExport = ViewData["ShowExport"] as bool? ?? true;
+    var showImport = ViewData["ShowImport"] as bool? ?? true;
+}
+<div class="d-flex gap-2 toolbar align-items-center">
+    @if (showNew)
+    {
+        <a class="btn btn-outline-secondary btn-sm" asp-action="Create" data-bs-toggle="tooltip" title="New">
+            <i class="bi bi-plus-square"></i>
+        </a>
+    }
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="grid-refresh" data-bs-toggle="tooltip" title="Refresh">
+        <i class="bi bi-arrow-clockwise"></i>
+    </button>
+    @if (showExport)
+    {
+        <a class="btn btn-outline-secondary btn-sm" asp-action="Export" data-bs-toggle="tooltip" title="Export">
+            <i class="bi bi-box-arrow-down"></i>
+        </a>
+    }
+    @if (showImport)
+    {
+        <a class="btn btn-primary btn-sm" asp-action="Import" data-bs-toggle="tooltip" title="Import">
+            <i class="bi bi-upload"></i>
+        </a>
+    }
+</div>

@@ -182,5 +182,57 @@ namespace ContainerManagement.Web.Controllers
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "VesselsTemplate.xlsx");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] VesselUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.ModifiedBy = userId;
+            await _vesselService.UpdateAsync(dto, ct);
+            return Ok(new {
+                success = true,
+                vesselName = dto.VesselName,
+                vesselCode = dto.VesselCode,
+                imoCode = dto.ImoCode,
+                teus = dto.Teus,
+                nrt = dto.NRT,
+                grt = dto.GRT,
+                flag = dto.Flag,
+                speed = dto.Speed,
+                buildYear = dto.BuildYear
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _vesselService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Vessels");
+            var headers = new[] { "Vessel Name", "Vessel Code", "Imo Code", "TEUs", "NRT", "GRT", "Flag", "Speed", "Build Year" };
+            for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
+            ws.Range(1, 1, 1, headers.Length).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, headers.Length).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var r = 2;
+            foreach (var v in list)
+            {
+                ws.Cell(r,1).Value = v.VesselName;
+                ws.Cell(r,2).Value = v.VesselCode;
+                ws.Cell(r,3).Value = v.ImoCode;
+                ws.Cell(r,4).Value = v.Teus;
+                ws.Cell(r,5).Value = v.NRT;
+                ws.Cell(r,6).Value = v.GRT;
+                ws.Cell(r,7).Value = v.Flag;
+                ws.Cell(r,8).Value = v.Speed;
+                ws.Cell(r,9).Value = v.BuildYear;
+                r++;
+            }
+            ws.Columns(1, headers.Length).AdjustToContents();
+            using var ms = new MemoryStream(); wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Vessels.xlsx");
+        }
     }
 }
