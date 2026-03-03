@@ -10,3 +10,7 @@ src/ContainerManagement.Domain/obj
 .vscode
 /src/ContainerManagement.Integration/obj
 /src/ContainerManagement.Integration/bin/Debug
+
+# Secrets — never commit real credentials
+**/appsettings.Local.json
+**/appsettings.Production.json

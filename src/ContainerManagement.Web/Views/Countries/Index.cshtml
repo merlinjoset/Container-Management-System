@@ -1,141 +1,189 @@
-@model List<ContainerManagement.Application.Dtos.Countries.CountryListItemDto>
+@model IEnumerable<ContainerManagement.Application.Dtos.Countries.CountryListItemDto>
 
 @{
     ViewData["Title"] = "Countries";
+    ViewData["ShowNew"] = false;
 }
 
-<div class="container mt-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-        <h2 class="fw-bold mb-0">Countries</h2>
-        <div class="w-100 w-md-auto" style="min-width:480px;">
-            <div class="input-group">
-                <span class="input-group-text">Name</span>
-                <input id="countrySearch" class="form-control" placeholder="Filter by name..." />
-                <select id="countryPageSize" class="form-select" style="max-width: 120px;">
-                    <option value="10" selected>10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="0">All</option>
-                </select>
-                <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Country</a>
-                <a asp-action="Import" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Import</a>
-            </div>
-        </div>
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        .op-toast { position: fixed; right: 1rem; bottom: 1rem; background: #111827; color: #fff; padding: .5rem .75rem; border-radius: .375rem; opacity: 0; transition: opacity .2s ease; }
+        .op-toast.show { opacity: .95; }
+    </style>
+}
+
+<div class="operator-page">
+    <div class="page-header">Countries</div>
+    <div class="d-flex gap-2 toolbar align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-new-country" data-bs-toggle="tooltip" title="New">
+            <i class="bi bi-plus-square"></i>
+        </button>
+        @await Html.PartialAsync("_GridToolbar")
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+    <div class="content">
+        <div class="left-grid">
+            <div class="grid-card">
+                <div class="grid-header">
+                    <div>Country Data</div>
+                    <span class="badge badge-count" id="ct-total">@(Model?.Count() ?? 0)</span>
+                </div>
 
-            <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle" id="countriesTable">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Country Name</th>
-                        <th>Country Code</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Any())
-                    {
-                        foreach (var c in Model)
-                        {
+                <div class="table-wrapper">
+                    <table class="table table-sm mb-0 sticky" id="countriesTable">
+                        <thead>
                             <tr>
-                                <td>@c.CountryName</td>
-                                <td>@c.CountryCode</td>
-                                <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-warning me-2">Edit</a>
-                                    <button type="button"
-                                            class="btn btn-sm btn-danger"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteCountryModal"
-                                            data-id="@c.Id"
-                                            data-name="@c.CountryName"
-                                            data-code="@c.CountryCode">
-                                        Delete
-                                    </button>
-                                </td>
+                                <th>Country Name</th>
+                                <th>Country Code</th>
+                                <th style="width:130px;">Actions</th>
                             </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr data-empty-row="1">
-                            <td colspan="3" class="text-center text-muted">No countries available.</td>
+                            <tr class="filter-row">
+                                <th><input id="cf-name" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-code" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ct-grid-body">
+                        @* ── Inline create row (hidden by default) ── *@
+                        <tr id="new-row" class="table-info d-none">
+                            <td class="col-name">
+                                <input class="form-control form-control-sm" id="new-name" placeholder="Country Name" />
+                            </td>
+                            <td class="col-code">
+                                <input class="form-control form-control-sm" id="new-code" placeholder="Country Code" maxlength="20" />
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-success" id="btn-save-new" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btn-cancel-new" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </td>
                         </tr>
-                    }
-                </tbody>
-            </table>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteCountryModal" tabindex="-1" aria-labelledby="deleteCountryModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteCountryModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">Are you sure you want to delete this country?</p>
-                <div class="border rounded p-2 bg-light">
-                    <div><strong>Country Name:</strong> <span id="delCountryName"></span></div>
-                    <div><strong>Country Code:</strong> <span id="delCountryCode"></span></div>
+                        @if (Model?.Any() == true)
+                        {
+                            foreach (var country in Model)
+                            {
+                                <tr data-id="@country.Id">
+                                    <td class="col-name">
+                                        <span class="disp">@country.CountryName</span>
+                                        <input class="form-control form-control-sm edit d-none" value="@country.CountryName" />
+                                    </td>
+                                    <td class="col-code">
+                                        <span class="disp">@country.CountryCode</span>
+                                        <input class="form-control form-control-sm edit d-none" value="@country.CountryCode" maxlength="20" />
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
+                                            <button type="button" class="btn btn-sm btn-success d-none btn-save" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                            <form asp-action="Delete" method="post" class="d-inline m-0">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@country.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Delete" onclick="return confirm('Delete this country?');"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteCountryForm" asp-action="Delete" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" id="delCountryId" />
-                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                </form>
-            </div>
         </div>
+        <div class="right-blank"></div>
     </div>
 </div>
+
+<div id="ct-toast" class="op-toast" role="status" aria-live="polite"></div>
+<form id="countries-af">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
     <script>
-        const cSearch = document.getElementById('countrySearch');
-        const cTable = document.getElementById('countriesTable');
-        const cSize = document.getElementById('countryPageSize');
-        function applyCountryFilter() {
-            const q = (cSearch?.value || '').toLowerCase();
-            const rows = Array.from(cTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
-            rows.forEach(tr => {
-                const text = tr.innerText.toLowerCase();
-                tr.dataset.match = text.includes(q) ? '1' : '0';
-            });
-            paginateCountries();
-        }
-        function paginateCountries() {
-            const size = parseInt(cSize?.value || '25', 10);
-            const matched = Array.from(cTable.querySelectorAll('tbody tr')).filter(tr => tr.dataset.match !== '0' && !tr.dataset.emptyRow);
-            const all = Array.from(cTable.querySelectorAll('tbody tr')).filter(r => !r.dataset.emptyRow);
-            all.forEach(tr => tr.style.display = 'none');
-            if (size === 0) matched.forEach(tr => tr.style.display = '');
-            else matched.slice(0, size).forEach(tr => tr.style.display = '');
+        (function(){
+            const q=(s)=>document.querySelector(s);
+            const rows = Array.from(document.querySelectorAll('#ct-grid-body tr[data-id]'));
+            const total = q('#ct-total');
+            const refreshBtn = q('#grid-refresh');
+            const toast = q('#ct-toast');
+            function showToast(msg){ if(!toast) return; toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+            function filter(){
+                const fname=(q('#cf-name')?.value||'').toLowerCase();
+                const fcode=(q('#cf-code')?.value||'').toLowerCase();
+                let count=0;
+                rows.forEach(r=>{
+                    const name=r.querySelector('.col-name .disp').textContent.toLowerCase();
+                    const code=r.querySelector('.col-code .disp').textContent.toLowerCase();
+                    const show=(!fname||name.includes(fname))&&(!fcode||code.includes(fcode));
+                    r.style.display = show? '':'none';
+                    if (show) count++;
+                });
+                if (total) total.textContent = count;
+            }
+            ['#cf-name','#cf-code'].forEach(id=>{ const e=q(id); if(e) e.addEventListener('input', filter);}); filter();
+            function token(){ const el=document.querySelector('#countries-af input[name="__RequestVerificationToken"]'); return el?el.value:''; }
+            rows.forEach(r=> wireEditRow(r));
+            refreshBtn?.addEventListener('click', ()=>{ filter(); showToast('Grid refreshed'); });
 
-            const emptyRow = cTable.querySelector('tbody tr[data-empty-row="1"]');
-            if (emptyRow) emptyRow.style.display = matched.length === 0 ? '' : 'none';
-        }
-        cSearch?.addEventListener('input', applyCountryFilter);
-        cSize?.addEventListener('change', paginateCountries);
-        Array.from(cTable.querySelectorAll('tbody tr')).forEach(tr => { if (!tr.dataset.emptyRow) tr.dataset.match = '1'; });
-        paginateCountries();
-        const deleteModal = document.getElementById('deleteCountryModal');
-        deleteModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const id = button.getAttribute('data-id');
-            const name = button.getAttribute('data-name');
-            const code = button.getAttribute('data-code');
-            document.getElementById('delCountryId').value = id;
-            document.getElementById('delCountryName').textContent = name || '';
-            document.getElementById('delCountryCode').textContent = code || '';
-        });
+            // ── Inline Create ──
+            const newRow = q('#new-row');
+            const btnNew = q('#btn-new-country');
+            const btnSaveNew = q('#btn-save-new');
+            const btnCancelNew = q('#btn-cancel-new');
+
+            function showNewRow(){ newRow.classList.remove('d-none'); q('#new-name')?.focus(); }
+            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-name').value=''; q('#new-code').value=''; }
+
+            btnNew?.addEventListener('click', showNewRow);
+            btnCancelNew?.addEventListener('click', hideNewRow);
+
+            btnSaveNew?.addEventListener('click', async ()=>{
+                const name = q('#new-name').value.trim();
+                const code = q('#new-code').value.trim();
+                if(!name||!code){ alert('Country Name and Country Code are required.'); return; }
+                const payload = { countryName:name, countryCode:code };
+                const resp = await fetch('/Countries/InlineCreate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload) });
+                if(resp.ok){
+                    const data = await resp.json();
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-id', data.id);
+                    tr.innerHTML = `
+                        <td class="col-name"><span class="disp">${data.countryName||''}</span><input class="form-control form-control-sm edit d-none" value="${data.countryName||''}" /></td>
+                        <td class="col-code"><span class="disp">${data.countryCode||''}</span><input class="form-control form-control-sm edit d-none" value="${data.countryCode||''}" maxlength="20" /></td>
+                        <td><div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-success d-none btn-save" title="Save"><i class="bi bi-check-lg"></i></button>
+                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                            <form action="/Countries/Delete" method="post" class="d-inline m-0">
+                                <input type="hidden" name="__RequestVerificationToken" value="${token()}" />
+                                <input type="hidden" name="id" value="${data.id}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this country?');"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div></td>`;
+                    newRow.after(tr);
+                    wireEditRow(tr);
+                    rows.push(tr);
+                    hideNewRow();
+                    if(total) total.textContent = parseInt(total.textContent||'0',10)+1;
+                    showToast('Country created');
+                } else { const err = await resp.text(); alert('Failed to create: ' + err); }
+            });
+
+            // Extracted so new rows can reuse the edit wiring
+            function wireEditRow(r){
+                const edit=r.querySelector('.btn-edit'); const save=r.querySelector('.btn-save'); const cancel=r.querySelector('.btn-cancel');
+                const toggle=()=>{ r.querySelectorAll('.disp').forEach(e=>e.classList.toggle('d-none')); r.querySelectorAll('.edit').forEach(e=>e.classList.toggle('d-none')); edit.classList.toggle('d-none'); save.classList.toggle('d-none'); cancel.classList.toggle('d-none'); };
+                let orig=null;
+                edit?.addEventListener('click',()=>{ orig={ name:r.querySelector('.col-name input').value, code:r.querySelector('.col-code input').value }; toggle(); });
+                cancel?.addEventListener('click',()=>{ if(orig){ r.querySelector('.col-name input').value=orig.name; r.querySelector('.col-code input').value=orig.code; } toggle();});
+                save?.addEventListener('click', async ()=>{
+                    const payload={ id:r.getAttribute('data-id'), countryName:r.querySelector('.col-name input').value, countryCode:r.querySelector('.col-code input').value };
+                    const resp=await fetch('/Countries/InlineUpdate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload)});
+                    if (resp.ok){ const data=await resp.json(); r.querySelector('.col-name .disp').textContent=data.countryName||payload.countryName; r.querySelector('.col-code .disp').textContent=data.countryCode||payload.countryCode; toggle(); showToast('Saved'); } else alert('Failed to save changes');
+                });
+            }
+        })();
     </script>
 }

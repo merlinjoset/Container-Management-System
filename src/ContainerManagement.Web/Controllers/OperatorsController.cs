@@ -224,6 +224,22 @@ namespace ContainerManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineCreate([FromBody] OperatorCreateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.CreatedBy = userId;
+            var id = await _operatorService.CreateAsync(dto, ct);
+            var vendors = await _vendorService.GetAllAsync(ct);
+            var countries = await _countryService.GetAllAsync(ct);
+            var vendorName = vendors.FirstOrDefault(v => v.Id == dto.VendorId)?.VendorName;
+            var countryName = countries.FirstOrDefault(c => c.Id == dto.CountryId)?.CountryName;
+            return Ok(new { success = true, id, operatorName = dto.OperatorName, vendorName, countryName });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> InlineUpdate([FromBody] ContainerManagement.Application.Dtos.Operators.OperatorUpdateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid)

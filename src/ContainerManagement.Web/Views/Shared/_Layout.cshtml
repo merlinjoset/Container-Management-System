@@ -186,16 +186,6 @@
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
 
-        // ERP module routes (placeholder paths)
-        var isSales = path.StartsWith("/sales");
-        var isPurchases = path.StartsWith("/purchases") || path.StartsWith("/procurement");
-        var isInventory = path.StartsWith("/inventory") || path.StartsWith("/warehouse");
-        var isAccounting = path.StartsWith("/accounting") || path.StartsWith("/finance");
-        var isHR = path.StartsWith("/hr") || path.StartsWith("/human-resources");
-        var isProjects = path.StartsWith("/projects");
-        var isManufacturing = path.StartsWith("/manufacturing") || path.StartsWith("/production");
-        var isReports = path.StartsWith("/reports") || path.StartsWith("/analytics");
-
         var display =
         User.FindFirstValue(ClaimTypes.Email)
         ?? User.Identity?.Name
@@ -250,98 +240,106 @@
                         <div class="sidebar-title">Navigation</div>
                     </div>
 
-                    <nav class="nav flex-column gap-1">
-                        @{ var settingsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Settings);
-                           var mastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Masters);
-                           var globalMastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.GlobalMasters);
-                           var operatorUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Operator);
-                           var regionsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Regions);
-                           var portsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports);
-                           var terminalsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals);
-                           var vendorsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors);
-                           var restrictionUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Restriction);
-                           var systemToolsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools);
-                           var userAccessSecurityUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity);
+                                        <nav class="nav flex-column gap-1">
+                        @{
+    var settingsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Settings);
+    var mastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Masters);
+    var globalMastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.GlobalMasters);
+    var operatorUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Operator);
+    var regionsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Regions);
+    var portsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports);
+    var terminalsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals);
+    var vendorsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors);
+    var restrictionUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Restriction);
+    var systemToolsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools);
+    var userAccessSecurityUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity);
 
-                           var mastersActive =
-                                path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase);
+    var globalMastersActive =
+         path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
+         || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
+         || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
+         || isCountries
+         || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
+         || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
+         || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase);
 
-                           var globalMastersActive =
-                                path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase);
+    var mastersActive =
+         path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
+         || globalMastersActive;
 
-                           var settingsActive = path.StartsWith(settingsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(restrictionUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(systemToolsUrl, StringComparison.OrdinalIgnoreCase)
-                                || path.StartsWith(userAccessSecurityUrl, StringComparison.OrdinalIgnoreCase);
-                        }
+    var settingsActive = path.StartsWith(settingsUrl, StringComparison.OrdinalIgnoreCase)
+         || mastersActive
+         || path.StartsWith(restrictionUrl, StringComparison.OrdinalIgnoreCase)
+         || path.StartsWith(systemToolsUrl, StringComparison.OrdinalIgnoreCase)
+         || path.StartsWith(userAccessSecurityUrl, StringComparison.OrdinalIgnoreCase);
+}
                         <a class="nav-link d-flex justify-content-between align-items-center @(settingsActive ? "active" : "")" data-bs-toggle="collapse" href="#settingsCollapse" role="button" aria-expanded="@(settingsActive.ToString().ToLower())" aria-controls="settingsCollapse">
-                            <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Settings.GetDisplayName()</span>
+                            <span>Settings</span>
                             <i class="bi bi-chevron-down"></i>
                         </a>
                         <div class="collapse @(settingsActive ? "show" : "")" id="settingsCollapse">
                             <nav class="nav flex-column ms-3 gap-1">
-                                <a class="nav-link @(mastersActive ? "active" : "")" data-bs-toggle="collapse" href="#mastersCollapse" role="button" aria-expanded="@(mastersActive.ToString().ToLower())" aria-controls="mastersCollapse">
-                                    @ContainerManagement.Web.Models.Navigation.ModulePage.Masters.GetDisplayName()
+
+                                @* ── Masters ── *@
+                                <a class="nav-link d-flex justify-content-between align-items-center @(mastersActive ? "active" : "")" data-bs-toggle="collapse" href="#mastersCollapse" role="button" aria-expanded="@(mastersActive.ToString().ToLower())" aria-controls="mastersCollapse">
+                                    <span>Masters</span>
+                                    <i class="bi bi-chevron-down"></i>
                                 </a>
-                                <div class="collapse ms-3 @(mastersActive ? "show" : "")" id="mastersCollapse">
-                                    <a class="nav-link @(globalMastersActive ? "active" : "")" data-bs-toggle="collapse" href="#globalMastersCollapse" role="button" aria-expanded="@(globalMastersActive.ToString().ToLower())" aria-controls="globalMastersCollapse">
-                                        @ContainerManagement.Web.Models.Navigation.ModulePage.GlobalMasters.GetDisplayName()
-                                    </a>
-                                    <div class="collapse ms-3 @(globalMastersActive ? "show" : "")" id="globalMastersCollapse">
-                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Regions)">@ContainerManagement.Web.Models.Navigation.ModulePage.Regions.GetDisplayName()</a>
-                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports)">@ContainerManagement.Web.Models.Navigation.ModulePage.Ports.GetDisplayName()</a>
-                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals)">@ContainerManagement.Web.Models.Navigation.ModulePage.Terminals.GetDisplayName()</a>
-                                        <a class="nav-link" href="@Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors)">@ContainerManagement.Web.Models.Navigation.ModulePage.Vendors.GetDisplayName()</a>
-                                        <a class="nav-link" href="@operatorUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.Operator.GetDisplayName()</a>
-                                    </div>
+                                <div class="collapse @(mastersActive ? "show" : "")" id="mastersCollapse">
+                                    <nav class="nav flex-column ms-3 gap-1">
+
+                                        @* ── Global Masters ── *@
+                                        <a class="nav-link d-flex justify-content-between align-items-center @(globalMastersActive ? "active" : "")" data-bs-toggle="collapse" href="#globalMastersCollapse" role="button" aria-expanded="@(globalMastersActive.ToString().ToLower())" aria-controls="globalMastersCollapse">
+                                            <span>Global Masters</span>
+                                            <i class="bi bi-chevron-down"></i>
+                                        </a>
+                                        <div class="collapse @(globalMastersActive ? "show" : "")" id="globalMastersCollapse">
+                                            <nav class="nav flex-column ms-3 gap-1">
+                                                <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operator</a>
+                                                <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
+                                                <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
+                                                <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
+                                                <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
+                                                <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
+                                            </nav>
+                                        </div>
+
+                                    </nav>
                                 </div>
-                                <a class="nav-link" href="@restrictionUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.Restriction.GetDisplayName()</a>
-                                <a class="nav-link" href="@systemToolsUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools.GetDisplayName()</a>
-                                <a class="nav-link" href="@userAccessSecurityUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity.GetDisplayName()</a>
+
+                                @* ── Settings direct children ── *@
+                                <a class="nav-link" href="@restrictionUrl">Restriction</a>
+                                <a class="nav-link" href="@systemToolsUrl">System Tools</a>
+                                <a class="nav-link" href="@userAccessSecurityUrl">User Access Security</a>
+
                             </nav>
                         </div>
-
-                        @{ var schedulesUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Schedules);
+                                            @{ var schedulesUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Schedules);
                            var scheduleViewerUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer);
                            var schedulesActive = path.StartsWith(schedulesUrl, StringComparison.OrdinalIgnoreCase) || path.StartsWith(scheduleViewerUrl, StringComparison.OrdinalIgnoreCase);
                         }
-                                                @{ var operationsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Operations);
-                           var vesselsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vessels);
-                           var operationsActive = path.StartsWith(operationsUrl, StringComparison.OrdinalIgnoreCase) || path.StartsWith(vesselsUrl, StringComparison.OrdinalIgnoreCase);
-                        }
-                        <a class="nav-link d-flex justify-content-between align-items-center @(operationsActive ? "active" : "")" data-bs-toggle="collapse" href="#operationsCollapse" role="button" aria-expanded="@(operationsActive.ToString().ToLower())" aria-controls="operationsCollapse"> 
-                            <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Operations.GetDisplayName()</span>
-                            <i class="bi bi-chevron-down"></i>
-                        </a>
-                        <div class="collapse @(operationsActive ? "show" : "")" id="operationsCollapse">
-                            <nav class="nav flex-column ms-3 gap-1">
-                                <a class="nav-link @(isVessels ? "active" : "")" href="@vesselsUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.Vessels.GetDisplayName()</a>
-                            </nav>
-                        </div><a class="nav-link d-flex justify-content-between align-items-center @(schedulesActive ? "active" : "")" data-bs-toggle="collapse" href="#schedulesCollapse" role="button" aria-expanded="@(schedulesActive.ToString().ToLower())" aria-controls="schedulesCollapse">
+                        <a class="nav-link d-flex justify-content-between align-items-center @(schedulesActive ? "active" : "")" data-bs-toggle="collapse" href="#schedulesCollapse" role="button" aria-expanded="@(schedulesActive.ToString().ToLower())" aria-controls="schedulesCollapse">
                             <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Schedules.GetDisplayName()</span>
                             <i class="bi bi-chevron-down"></i>
                         </a>
                         <div class="collapse @(schedulesActive ? "show" : "")" id="schedulesCollapse">
                             <nav class="nav flex-column ms-3 gap-1">
-                                <a class="nav-link @(schedulesActive ? "active" : "")" href="@scheduleViewerUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer.GetDisplayName()</a>
+                                <a class="nav-link" href="@scheduleViewerUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer.GetDisplayName()</a>
+                            </nav>
+                        </div>
+
+                        @{
+                            var operationsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Operations);
+                            var vesselsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vessels);
+                            var operationsActive = path.StartsWith(operationsUrl, StringComparison.OrdinalIgnoreCase) || isVessels;
+                        }
+                        <a class="nav-link d-flex justify-content-between align-items-center @(operationsActive ? "active" : "")" data-bs-toggle="collapse" href="#operationsCollapse" role="button" aria-expanded="@(operationsActive.ToString().ToLower())" aria-controls="operationsCollapse">
+                            <span>Operations</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </a>
+                        <div class="collapse @(operationsActive ? "show" : "")" id="operationsCollapse">
+                            <nav class="nav flex-column ms-3 gap-1">
+                                <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
                             </nav>
                         </div>
 
@@ -349,7 +347,6 @@
                                 ContainerManagement.Web.Models.Navigation.MainMenu.Commercial,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.CustomerService,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.Documentation,
-                                ContainerManagement.Web.Models.Navigation.MainMenu.Operations,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.Contract,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.EMS,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.EDI
@@ -360,10 +357,7 @@
                                var active = path.StartsWith(url, StringComparison.OrdinalIgnoreCase) ? "active" : "";
                         <a class="nav-link @active" href="@url">@m.GetDisplayName()</a>
                            }
-                        }
-                    </nav>
-
-                </aside>
+                        }</nav></aside>
             }
 
             @* Main content *@
@@ -535,6 +529,5 @@
     }
 </body>
 </html>
-
 
 

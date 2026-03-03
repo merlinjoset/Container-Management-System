@@ -1,4 +1,4 @@
-﻿@model ContainerManagement.Application.Dtos.Auth.LoginRequestDto
+@model ContainerManagement.Application.Dtos.Auth.LoginRequestDto
 
 @{
     ViewData["Title"] = "Login";
@@ -27,7 +27,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">Password</label>
-                            <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+                            <input asp-for="Password" type="password" class="form-control" placeholder="********" />
                             <span asp-validation-for="Password" class="text-danger small"></span>
                         </div>
 
@@ -37,7 +37,7 @@
                     </form>
 
                     <div class="text-center mt-3 text-muted small">
-                        © @DateTime.UtcNow.Year ContainerManagement
+                        &copy; @DateTime.UtcNow.Year ContainerManagement
                     </div>
                 </div>
             </div>

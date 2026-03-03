@@ -16,7 +16,12 @@ public class AccountController : Controller
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult Login() => View();
+    public IActionResult Login()
+{
+    if (User?.Identity?.IsAuthenticated == true)
+        return RedirectToAction("Index", "Home");
+    return View();
+}
 
     [AllowAnonymous]
     [HttpPost]

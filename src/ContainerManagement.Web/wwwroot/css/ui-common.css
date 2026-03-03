@@ -3,8 +3,9 @@
 .operator-page .toolbar { gap: .4rem; padding: .5rem 1rem; border-bottom: 1px solid #e5e7eb; background: #ffffff; }
 .operator-page .toolbar .btn { padding: .25rem .5rem; font-size: .875rem; }
 
-.operator-page .content { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; padding: 1rem; }
-.operator-page .right-blank { background: #ffffff; border: 1px solid #e5e7eb; border-radius: .5rem; min-height: 400px; }
+.operator-page .content { display: flex; justify-content: flex-start; padding: 1rem; }
+.operator-page .left-grid { width: 100%; max-width: 1100px; }
+.operator-page .right-blank { display: none; }
 
 .operator-page .grid-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: .5rem; overflow: hidden; display: flex; flex-direction: column; }
 .operator-page .grid-header { display: flex; align-items: center; justify-content: space-between; padding: .5rem .75rem; background: #1e3a8a; color: #fff; }
@@ -16,14 +17,14 @@
 
 .operator-page .table-wrapper { max-height: 540px; overflow: auto; }
 .operator-page table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.operator-page thead th { position: sticky; top: 0; background: #1e3a8a; color: #fff; padding: .5rem; border-bottom: 1px solid #0f2769; z-index: 1; }
+.operator-page thead th { position: sticky; top: 0; background: #1e3a8a; color: #fff; padding: .5rem; border-bottom: 1px solid #0f2769; z-index: 1; text-align: left; vertical-align: middle; }
 .operator-page thead tr.filter-row th { position: sticky; top: 34px; background: #eee; color: #111; border-bottom: 1px solid #ddd; z-index: 1; }
 .operator-page thead tr.filter-row input, .operator-page thead tr.filter-row select { width: 100%; padding: .25rem .4rem; border: 1px solid #cbd5e1; border-radius: .25rem; font-size: .875rem; }
-.operator-page tbody td { padding: .45rem .5rem; border-bottom: 1px solid #e5e7eb; }
+.operator-page tbody td { padding: .45rem .5rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; text-align: left; }
 .operator-page tbody tr:nth-child(odd) { background: #f8fafc; }
 .operator-page tbody tr:nth-child(even) { background: #ffffff; }
 
 @media (max-width: 991.98px) {
-  .operator-page .content { grid-template-columns: 1fr; }
+  .operator-page .left-grid { max-width: 100%; }
 }
 

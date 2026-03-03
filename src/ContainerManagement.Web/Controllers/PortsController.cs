@@ -229,6 +229,22 @@ namespace ContainerManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineCreate([FromBody] PortCreateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.CreatedBy = userId;
+            var id = await _portService.CreateAsync(dto, ct);
+            var countries = await _countryService.GetAllAsync(ct);
+            var regions = await _regionService.GetAllAsync(ct);
+            var countryName = countries.FirstOrDefault(c => c.Id == dto.CountryId)?.CountryName;
+            var regionName = regions.FirstOrDefault(r => r.Id == dto.RegionId)?.RegionName;
+            return Ok(new { success = true, id, portCode = dto.PortCode, fullName = dto.FullName, countryName, regionName });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> InlineUpdate([FromBody] PortUpdateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

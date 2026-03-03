@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Vendors";
+    ViewData["ShowNew"] = false;
 }
 
 @section Styles{
@@ -14,14 +15,19 @@
 
 <div class="operator-page">
     <div class="page-header">Vendors</div>
-    @await Html.PartialAsync("_GridToolbar")
+    <div class="d-flex gap-2 toolbar align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-new-vendor" data-bs-toggle="tooltip" title="New">
+            <i class="bi bi-plus-square"></i>
+        </button>
+        @await Html.PartialAsync("_GridToolbar")
+    </div>
 
     <div class="content">
         <div class="left-grid">
             <div class="grid-card">
                 <div class="grid-header">
                     <div>Vendor Data</div>
-                    <span class="badge badge-count" id="vd-total">@Model?.Count() ?? 0</span>
+                    <span class="badge badge-count" id="vd-total">@(Model?.Count() ?? 0)</span>
                 </div>
 
                 <div class="table-wrapper">
@@ -41,6 +47,28 @@
                             </tr>
                         </thead>
                         <tbody id="vd-grid-body">
+                        @* ── Inline create row (hidden by default) ── *@
+                        <tr id="new-row" class="table-info d-none">
+                            <td class="col-name">
+                                <input class="form-control form-control-sm" id="new-name" placeholder="Vendor Name" />
+                            </td>
+                            <td class="col-code">
+                                <input class="form-control form-control-sm" id="new-code" placeholder="Vendor Code" maxlength="50" />
+                            </td>
+                            <td class="col-country">
+                                <select class="form-select form-select-sm" id="new-country">
+                                    <option value="">-- Country --</option>
+                                    @if (ViewBag.Countries is IEnumerable<SelectListItem> newCountries)
+                                    { foreach (var c in newCountries){ <option value="@c.Value">@c.Text</option> } }
+                                </select>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-success" id="btn-save-new" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btn-cancel-new" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </td>
+                        </tr>
                         @if (Model?.Any() == true)
                         {
                             foreach (var v in Model)
@@ -84,7 +112,7 @@
     <script>
         (function(){
             const q=(s)=>document.querySelector(s);
-            const rows = Array.from(document.querySelectorAll('#vd-grid-body tr'));
+            const rows = Array.from(document.querySelectorAll('#vd-grid-body tr[data-id]'));
             const total = q('#vd-total');
             const refreshBtn = q('#grid-refresh');
             const toast = q('#vd-toast');
@@ -106,7 +134,58 @@
             }
             ['#cf-name','#cf-code','#cf-country'].forEach(id=>{ const e=q(id); if(e) e.addEventListener('input', filter);}); filter();
             function token(){ const el=document.querySelector('#vnd-af input[name="__RequestVerificationToken"]'); return el?el.value:''; }
-            rows.forEach(r=>{
+            rows.forEach(r=> wireEditRow(r));
+            refreshBtn?.addEventListener('click', ()=>{ filter(); showToast('Grid refreshed'); });
+
+            // ── Inline Create ──
+            const newRow = q('#new-row');
+            const btnNew = q('#btn-new-vendor');
+            const btnSaveNew = q('#btn-save-new');
+            const btnCancelNew = q('#btn-cancel-new');
+
+            function showNewRow(){ newRow.classList.remove('d-none'); q('#new-name')?.focus(); }
+            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-name').value=''; q('#new-code').value=''; q('#new-country').value=''; }
+
+            btnNew?.addEventListener('click', showNewRow);
+            btnCancelNew?.addEventListener('click', hideNewRow);
+
+            btnSaveNew?.addEventListener('click', async ()=>{
+                const name = q('#new-name').value.trim();
+                const code = q('#new-code').value.trim();
+                const countryId = q('#new-country').value;
+                if(!name||!code||!countryId){ alert('All fields are required.'); return; }
+                const payload = { vendorName:name, vendorCode:code, countryId };
+                const resp = await fetch('/Vendors/InlineCreate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload) });
+                if(resp.ok){
+                    const data = await resp.json();
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-id', data.id);
+                    tr.innerHTML = `
+                        <td class="col-name"><span class="disp">${data.vendorName||''}</span><input class="form-control form-control-sm edit d-none" value="${data.vendorName||''}" /></td>
+                        <td class="col-code"><span class="disp">${data.vendorCode||''}</span><input class="form-control form-control-sm edit d-none" value="${data.vendorCode||''}" /></td>
+                        <td class="col-country"><span class="disp">${data.countryName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-country').innerHTML}</select></td>
+                        <td><div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-success d-none btn-save" title="Save"><i class="bi bi-check-lg"></i></button>
+                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                            <form action="/Vendors/Delete" method="post" class="d-inline m-0">
+                                <input type="hidden" name="__RequestVerificationToken" value="${token()}" />
+                                <input type="hidden" name="id" value="${data.id}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this vendor?');"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div></td>`;
+                    if(countryId) tr.querySelector('.col-country select').value = countryId;
+                    newRow.after(tr);
+                    wireEditRow(tr);
+                    rows.push(tr);
+                    hideNewRow();
+                    if(total) total.textContent = parseInt(total.textContent||'0',10)+1;
+                    showToast('Vendor created');
+                } else { const err = await resp.text(); alert('Failed to create: ' + err); }
+            });
+
+            // Extracted so new rows can reuse the edit wiring
+            function wireEditRow(r){
                 const edit=r.querySelector('.btn-edit'); const save=r.querySelector('.btn-save'); const cancel=r.querySelector('.btn-cancel');
                 const toggle=()=>{ r.querySelectorAll('.disp').forEach(e=>e.classList.toggle('d-none')); r.querySelectorAll('.edit').forEach(e=>e.classList.toggle('d-none')); edit.classList.toggle('d-none'); save.classList.toggle('d-none'); cancel.classList.toggle('d-none'); };
                 let orig=null;
@@ -117,8 +196,7 @@
                     const resp=await fetch('/Vendors/InlineUpdate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload)});
                     if (resp.ok){ const data=await resp.json(); r.querySelector('.col-name .disp').textContent=data.vendorName||payload.vendorName; r.querySelector('.col-code .disp').textContent=data.vendorCode||payload.vendorCode; r.querySelector('.col-country .disp').textContent=data.countryName||''; toggle(); showToast('Saved'); } else alert('Failed to save changes');
                 });
-            });
-            refreshBtn?.addEventListener('click', ()=>{ filter(); showToast('Grid refreshed'); });
+            }
         })();
     </script>
 }

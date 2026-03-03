@@ -193,6 +193,18 @@ namespace ContainerManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineCreate([FromBody] RegionCreateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.CreatedBy = userId;
+            var id = await _regionService.CreateAsync(dto, ct);
+            return Ok(new { success = true, id, regionName = dto.RegionName, regionCode = dto.RegionCode });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> InlineUpdate([FromBody] RegionUpdateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

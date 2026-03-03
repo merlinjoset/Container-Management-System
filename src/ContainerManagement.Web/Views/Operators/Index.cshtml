@@ -1,6 +1,7 @@
 @model IEnumerable<ContainerManagement.Application.Dtos.Operators.OperatorListItemDto>
 @{
     ViewData["Title"] = "Operator";
+    ViewData["ShowNew"] = false;
 }
 @section Styles{
     <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
@@ -12,15 +13,19 @@
 
 <div class="operator-page">
     <div class="page-header">Operator</div>
-    @await Html.PartialAsync("_GridToolbar")
-    
+    <div class="d-flex gap-2 toolbar align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-new-operator" data-bs-toggle="tooltip" title="New">
+            <i class="bi bi-plus-square"></i>
+        </button>
+        @await Html.PartialAsync("_GridToolbar")
+    </div>
 
     <div class="content">
         <div class="left-grid">
             <div class="grid-card">
                 <div class="grid-header">
                     <div>Operator Data</div>
-                    <span class="badge badge-count" id="op-total">@Model?.Count() ?? 0</span>
+                    <span class="badge badge-count" id="op-total">@(Model?.Count() ?? 0)</span>
                 </div>
                 <div class="table-wrapper">
                     <table class="table table-sm mb-0 sticky">
@@ -39,6 +44,32 @@
                             </tr>
                         </thead>
                         <tbody id="op-grid-body">
+                        @* ── Inline create row (hidden by default) ── *@
+                        <tr id="new-row" class="table-info d-none">
+                            <td class="col-name">
+                                <input class="form-control form-control-sm" id="new-name" placeholder="Operator Name" />
+                            </td>
+                            <td class="col-vendor">
+                                <select class="form-select form-select-sm" id="new-vendor">
+                                    <option value="">-- Vendor --</option>
+                                    @if (ViewBag.Vendors is IEnumerable<SelectListItem> newVendors)
+                                    { foreach (var v in newVendors){ <option value="@v.Value">@v.Text</option> } }
+                                </select>
+                            </td>
+                            <td class="col-country">
+                                <select class="form-select form-select-sm" id="new-country">
+                                    <option value="">-- Country --</option>
+                                    @if (ViewBag.Countries is IEnumerable<SelectListItem> newCountries)
+                                    { foreach (var c in newCountries){ <option value="@c.Value">@c.Text</option> } }
+                                </select>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-success" id="btn-save-new" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btn-cancel-new" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </td>
+                        </tr>
                         @if (Model != null)
                         {
                             foreach (var item in Model)
@@ -102,7 +133,7 @@
         </div>
         <div class="right-blank"></div>
     </div>
-    
+
 </div>
 
 <div id="op-toast" class="op-toast" role="status" aria-live="polite"></div>
@@ -112,8 +143,11 @@
     <script>
         (function(){
             const q = (s) => document.querySelector(s);
-            const rows = Array.from(document.querySelectorAll('#op-grid-body tr'));
+            const rows = Array.from(document.querySelectorAll('#op-grid-body tr[data-id]'));
             const total = q('#op-total');
+            const refreshBtn = q('#grid-refresh');
+            const toast = q('#op-toast');
+            function showToast(msg){ if(!toast) return; toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
             function applyFilter(){
                 const fName = (q('#cf-name')?.value || '').toLowerCase();
                 const fVendor = (q('#cf-vendor')?.value || '').toLowerCase();
@@ -135,12 +169,63 @@
             });
             applyFilter();
 
-            // Inline edit wiring
             function getToken(){
                 const el = document.querySelector('#op-af-form input[name="__RequestVerificationToken"]');
                 return el ? el.value : '';
             }
-            rows.forEach(r => {
+            rows.forEach(r => wireEditRow(r));
+            refreshBtn?.addEventListener('click', ()=>{ applyFilter(); showToast('Grid refreshed'); });
+
+            // ── Inline Create ──
+            const newRow = q('#new-row');
+            const btnNew = q('#btn-new-operator');
+            const btnSaveNew = q('#btn-save-new');
+            const btnCancelNew = q('#btn-cancel-new');
+
+            function showNewRow(){ newRow.classList.remove('d-none'); q('#new-name')?.focus(); }
+            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-name').value=''; q('#new-vendor').value=''; q('#new-country').value=''; }
+
+            btnNew?.addEventListener('click', showNewRow);
+            btnCancelNew?.addEventListener('click', hideNewRow);
+
+            btnSaveNew?.addEventListener('click', async ()=>{
+                const name = q('#new-name').value.trim();
+                const vendorId = q('#new-vendor').value;
+                const countryId = q('#new-country').value;
+                if(!name||!vendorId||!countryId){ alert('All fields are required.'); return; }
+                const payload = { operatorName:name, vendorId, countryId };
+                const resp = await fetch('/Operators/InlineCreate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': getToken() }, body: JSON.stringify(payload) });
+                if(resp.ok){
+                    const data = await resp.json();
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-id', data.id);
+                    tr.innerHTML = `
+                        <td class="col-name"><span class="disp">${data.operatorName||''}</span><input class="form-control form-control-sm edit d-none" value="${data.operatorName||''}" /></td>
+                        <td class="col-vendor"><span class="disp">${data.vendorName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-vendor').innerHTML}</select></td>
+                        <td class="col-country"><span class="disp">${data.countryName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-country').innerHTML}</select></td>
+                        <td><div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-success d-none btn-save" title="Save"><i class="bi bi-check-lg"></i></button>
+                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                            <form action="/Operators/Delete" method="post" class="d-inline m-0">
+                                <input type="hidden" name="__RequestVerificationToken" value="${getToken()}" />
+                                <input type="hidden" name="id" value="${data.id}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this operator?');"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div></td>`;
+                    if(vendorId) tr.querySelector('.col-vendor select').value = vendorId;
+                    if(countryId) tr.querySelector('.col-country select').value = countryId;
+                    newRow.after(tr);
+                    wireEditRow(tr);
+                    rows.push(tr);
+                    hideNewRow();
+                    if(total) total.textContent = parseInt(total.textContent||'0',10)+1;
+                    showToast('Operator created');
+                } else { const err = await resp.text(); alert('Failed to create: ' + err); }
+            });
+
+            // Extracted so new rows can reuse the edit wiring
+            function wireEditRow(r){
                 const btnEdit = r.querySelector('.btn-edit');
                 const btnSave = r.querySelector('.btn-save');
                 const btnCancel = r.querySelector('.btn-cancel');
@@ -190,13 +275,12 @@
                         r.querySelector('.col-vendor .disp').textContent = data.vendorName || '';
                         r.querySelector('.col-country .disp').textContent = data.countryName || '';
                         toggles();
+                        showToast('Saved');
                     } else {
                         alert('Failed to save changes');
                     }
                 });
-            });
+            }
         })();
     </script>
 }
-
-

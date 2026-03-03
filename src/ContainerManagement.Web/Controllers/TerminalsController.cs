@@ -212,6 +212,20 @@ namespace ContainerManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineCreate([FromBody] TerminalCreateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.CreatedBy = userId;
+            var id = await _terminalService.CreateAsync(dto, ct);
+            var ports = await _portService.GetAllAsync(ct);
+            var portName = ports.FirstOrDefault(p => p.Id == dto.PortId)?.FullName;
+            return Ok(new { success = true, id, terminalName = dto.TerminalName, terminalCode = dto.TerminalCode, portName });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> InlineUpdate([FromBody] TerminalUpdateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

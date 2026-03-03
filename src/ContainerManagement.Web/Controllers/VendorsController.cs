@@ -206,6 +206,20 @@ namespace ContainerManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineCreate([FromBody] VendorCreateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.CreatedBy = userId;
+            var id = await _vendorService.CreateAsync(dto, ct);
+            var countries = await _countryService.GetAllAsync(ct);
+            var countryName = countries.FirstOrDefault(c => c.Id == dto.CountryId)?.CountryName;
+            return Ok(new { success = true, id, vendorName = dto.VendorName, vendorCode = dto.VendorCode, countryName });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> InlineUpdate([FromBody] VendorUpdateDto dto, CancellationToken ct)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

@@ -178,5 +178,52 @@ namespace ContainerManagement.Web.Controllers
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "CountriesTemplate.xlsx");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineCreate([FromBody] CountryCreateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.CreatedBy = userId;
+            var id = await _countryService.CreateAsync(dto, ct);
+            return Ok(new { success = true, id, countryName = dto.CountryName, countryCode = dto.CountryCode });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InlineUpdate([FromBody] CountryUpdateDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+            dto.ModifiedBy = userId;
+            await _countryService.UpdateAsync(dto, ct);
+            return Ok(new { success = true, countryName = dto.CountryName, countryCode = dto.CountryCode });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(CancellationToken ct)
+        {
+            var list = await _countryService.GetAllAsync(ct);
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("Countries");
+            ws.Cell(1, 1).Value = "Country Name";
+            ws.Cell(1, 2).Value = "Country Code";
+            ws.Range(1, 1, 1, 2).Style.Font.Bold = true;
+            ws.Range(1, 1, 1, 2).Style.Fill.BackgroundColor = XLColor.LightGray;
+            var r = 2;
+            foreach (var it in list)
+            {
+                ws.Cell(r, 1).Value = it.CountryName;
+                ws.Cell(r, 2).Value = it.CountryCode;
+                r++;
+            }
+            ws.Columns(1, 2).AdjustToContents();
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Countries.xlsx");
+        }
     }
 }

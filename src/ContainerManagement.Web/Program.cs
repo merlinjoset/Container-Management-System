@@ -1,4 +1,4 @@
-﻿using ContainerManagement.Application.Abstractions;
+using ContainerManagement.Application.Abstractions;
 using ContainerManagement.Application.Security;
 using ContainerManagement.Application.Services;
 using ContainerManagement.Infrastructure;
@@ -14,17 +14,34 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using static System.Text.Encoding;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load User Secrets (no-op in production where secrets.json won't exist on the host)
+builder.Configuration.AddUserSecrets("738c52ac-8455-48a6-ab69-9d2de8ffef8e");
 
 builder.Services.AddControllersWithViews();
 
 // Excel (code pages) support for ExcelDataReader
 RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
+// ─── Validate required secrets at startup ───
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException(
+        "Missing configuration: 'ConnectionStrings:Default'. " +
+        "In Development, run: dotnet user-secrets set \"ConnectionStrings:Default\" \"<your-connection-string>\" " +
+        "In Production, set the environment variable: ConnectionStrings__Default");
+
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "Missing configuration: 'Jwt:Key'. " +
+        "In Development, run: dotnet user-secrets set \"Jwt:Key\" \"<your-signing-key>\" " +
+        "In Production, set the environment variable: Jwt__Key");
+
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    opt.UseNpgsql(connectionString));
 
 // JWT Auth
 builder.Services
@@ -41,7 +58,7 @@ builder.Services
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            Encoding.UTF8.GetBytes(jwtKey)),
         RoleClaimType = ClaimTypes.Role,
         NameClaimType = ClaimTypes.NameIdentifier
     };
@@ -113,10 +130,7 @@ builder.Services.AddHttpClient<IFakeProviderClient, FakeProviderClient>(c =>
     c.BaseAddress = new Uri(builder.Configuration["FakeProvider:BaseUrl"]!);
 });
 
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add<ExceptionHandlingFilter>();
-});
+builder.Services.AddControllersWithViews(options => { options.Filters.Add<ExceptionHandlingFilter>(); options.Filters.Add(new AuthorizeFilter()); });
 
 
 builder.Services.AddSignalR();
@@ -140,6 +154,14 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+// Redirect unauthenticated users to Login page
+app.Use(async (ctx, next) => {
+    await next();
+    if (ctx.Response.StatusCode == 401 && !ctx.Request.Path.StartsWithSegments("/account"))
+    {
+        ctx.Response.Redirect("/Account/Login");
+    }
+});
 
 app.MapControllers();
 // Enable controller-only paths like '/operators' to map to 'Index'

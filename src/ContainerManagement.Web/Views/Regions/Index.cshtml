@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Regions";
+    ViewData["ShowNew"] = false;
 }
 
 @section Styles{
@@ -14,14 +15,19 @@
 
 <div class="operator-page">
     <div class="page-header">Regions</div>
-    @await Html.PartialAsync("_GridToolbar")
+    <div class="d-flex gap-2 toolbar align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-new-region" data-bs-toggle="tooltip" title="New">
+            <i class="bi bi-plus-square"></i>
+        </button>
+        @await Html.PartialAsync("_GridToolbar")
+    </div>
 
     <div class="content">
         <div class="left-grid">
             <div class="grid-card">
                 <div class="grid-header">
                     <div>Region Data</div>
-                    <span class="badge badge-count" id="rg-total">@Model?.Count() ?? 0</span>
+                    <span class="badge badge-count" id="rg-total">@(Model?.Count() ?? 0)</span>
                 </div>
 
                 <div class="table-wrapper">
@@ -39,6 +45,21 @@
                             </tr>
                         </thead>
                         <tbody id="rg-grid-body">
+                        @* ── Inline create row (hidden by default) ── *@
+                        <tr id="new-row" class="table-info d-none">
+                            <td class="col-name">
+                                <input class="form-control form-control-sm" id="new-name" placeholder="Region Name" />
+                            </td>
+                            <td class="col-code">
+                                <input class="form-control form-control-sm" id="new-code" placeholder="Region Code" maxlength="20" />
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-success" id="btn-save-new" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btn-cancel-new" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </td>
+                        </tr>
                         @if (Model?.Any() == true)
                         {
                             foreach (var r in Model)
@@ -83,7 +104,7 @@
     <script>
         (function(){
             const q = (s)=>document.querySelector(s);
-            const rows = Array.from(document.querySelectorAll('#rg-grid-body tr'));
+            const rows = Array.from(document.querySelectorAll('#rg-grid-body tr[data-id]'));
             const total = q('#rg-total');
             const refreshBtn = q('#grid-refresh');
             const toast = q('#rg-toast');
@@ -104,7 +125,55 @@
             ['#cf-name','#cf-code'].forEach(id=>{ const e=q(id); if(e) e.addEventListener('input', applyFilter);});
             refreshBtn?.addEventListener('click', ()=>{ applyFilter(); showToast('Grid refreshed'); });
             function token(){ const el=document.querySelector('#rg-af input[name="__RequestVerificationToken"]'); return el?el.value:''; }
-            rows.forEach(r=>{
+            rows.forEach(r=> wireEditRow(r));
+            applyFilter();
+
+            // ── Inline Create ──
+            const newRow = q('#new-row');
+            const btnNew = q('#btn-new-region');
+            const btnSaveNew = q('#btn-save-new');
+            const btnCancelNew = q('#btn-cancel-new');
+
+            function showNewRow(){ newRow.classList.remove('d-none'); q('#new-name')?.focus(); }
+            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-name').value=''; q('#new-code').value=''; }
+
+            btnNew?.addEventListener('click', showNewRow);
+            btnCancelNew?.addEventListener('click', hideNewRow);
+
+            btnSaveNew?.addEventListener('click', async ()=>{
+                const name = q('#new-name').value.trim();
+                const code = q('#new-code').value.trim();
+                if(!name||!code){ alert('Region Name and Region Code are required.'); return; }
+                const payload = { regionName:name, regionCode:code };
+                const resp = await fetch('/Regions/InlineCreate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload) });
+                if(resp.ok){
+                    const data = await resp.json();
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-id', data.id);
+                    tr.innerHTML = `
+                        <td class="col-name"><span class="disp">${data.regionName||''}</span><input class="form-control form-control-sm edit d-none" value="${data.regionName||''}" /></td>
+                        <td class="col-code"><span class="disp">${data.regionCode||''}</span><input class="form-control form-control-sm edit d-none" value="${data.regionCode||''}" /></td>
+                        <td><div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-success d-none btn-save" title="Save"><i class="bi bi-check-lg"></i></button>
+                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                            <form action="/Regions/Delete" method="post" class="d-inline m-0">
+                                <input type="hidden" name="__RequestVerificationToken" value="${token()}" />
+                                <input type="hidden" name="id" value="${data.id}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this region?');"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div></td>`;
+                    newRow.after(tr);
+                    wireEditRow(tr);
+                    rows.push(tr);
+                    hideNewRow();
+                    if(total) total.textContent = parseInt(total.textContent||'0',10)+1;
+                    showToast('Region created');
+                } else { const err = await resp.text(); alert('Failed to create: ' + err); }
+            });
+
+            // Extracted so new rows can reuse the edit wiring
+            function wireEditRow(r){
                 const edit=r.querySelector('.btn-edit'); const save=r.querySelector('.btn-save'); const cancel=r.querySelector('.btn-cancel');
                 const toggle=()=>{ r.querySelectorAll('.disp').forEach(e=>e.classList.toggle('d-none')); r.querySelectorAll('.edit').forEach(e=>e.classList.toggle('d-none')); edit.classList.toggle('d-none'); save.classList.toggle('d-none'); cancel.classList.toggle('d-none'); };
                 let orig=null;
@@ -116,8 +185,7 @@
                     if (resp.ok){ const data=await resp.json(); r.querySelector('.col-name .disp').textContent = data.regionName||payload.regionName; r.querySelector('.col-code .disp').textContent = data.regionCode||payload.regionCode; toggle(); showToast('Saved'); }
                     else alert('Failed to save changes');
                 });
-            });
-            applyFilter();
+            }
         })();
     </script>
 }
