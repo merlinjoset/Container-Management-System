@@ -15,6 +15,8 @@ namespace ContainerManagement.Infrastructure
             services.AddScoped<IVesselsRepository, VesselsRepository>();
             services.AddScoped<IVendorsRepository, VendorsRepository>();
             services.AddScoped<IOperatorsRepository, OperatorsRepository>();
+            services.AddScoped<IServicesRepository, ServicesRepository>();
+            services.AddScoped<IRoutesRepository, RoutesRepository>();
 
             return services;
         }

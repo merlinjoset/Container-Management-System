@@ -34,6 +34,8 @@ public static class NavigationMap
         { ModulePage.Ports, "/ports" },
         { ModulePage.Terminals, "/terminals" },
         { ModulePage.Vendors, "/vendors" },
+        { ModulePage.Services, "/servicemasters" },
+        { ModulePage.Routes, "/routemasters" },
         { ModulePage.Restriction, "/settings/restriction" },
         { ModulePage.SystemTools, "/settings/system-tools" },
         { ModulePage.UserAccessSecurity, "/settings/user-access-security" },

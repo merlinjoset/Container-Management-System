@@ -1,0 +1,301 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Schedule Viewer";
+    ViewData["ShowNew"] = false;
+    ViewData["ShowExport"] = false;
+    ViewData["ShowImport"] = false;
+}
+
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        /* ── Schedule Viewer ── */
+        .sv-tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; background: #fff; }
+        .sv-tabs .sv-tab { padding: .5rem 1.25rem; font-size: .8rem; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+        .sv-tabs .sv-tab:hover { color: #1e3a8a; }
+        .sv-tabs .sv-tab.active { color: #1e3a8a; border-bottom-color: #1e3a8a; font-weight: 600; }
+
+        .sv-section-header { background: linear-gradient(135deg, #312e81, #4338ca); color: #fff; padding: .4rem .75rem; font-size: .8rem; font-weight: 600; border-radius: .25rem .25rem 0 0; }
+
+        .sv-filter-panel { background: #fff; border: 1px solid #e5e7eb; border-top: none; padding: .75rem 1rem; display: flex; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap; }
+
+        .sv-routing fieldset { border: 1px solid #f97316; border-radius: .25rem; padding: .4rem .6rem; }
+        .sv-routing legend { font-size: .7rem; color: #f97316; font-weight: 600; padding: 0 .25rem; width: auto; margin: 0; float: none; }
+        .sv-routing label { font-size: .75rem; cursor: pointer; }
+        .sv-routing input[type="radio"] { accent-color: #2563eb; }
+
+        .sv-fields { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; flex: 1; }
+        .sv-field { display: flex; align-items: center; gap: .35rem; }
+        .sv-field label { font-size: .75rem; font-weight: 500; color: #374151; white-space: nowrap; }
+        .sv-field input, .sv-field select { font-size: .75rem; padding: .3rem .5rem; border: 1px solid #cbd5e1; border-radius: .25rem; background: #e0f2fe; }
+        .sv-field input[type="date"] { min-width: 120px; }
+        .sv-field select { min-width: 220px; background: #e0f2fe; }
+
+        .sv-swap-btn { background: none; border: 1px solid #7c3aed; color: #7c3aed; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .7rem; }
+        .sv-swap-btn:hover { background: #7c3aed; color: #fff; }
+
+        .sv-actions { display: flex; gap: .5rem; align-items: center; }
+        .sv-btn-show { background: #f97316; color: #fff; border: none; padding: .35rem .85rem; border-radius: .25rem; font-size: .75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: .3rem; }
+        .sv-btn-show:hover { background: #ea580c; }
+        .sv-btn-clear { background: #6b7280; color: #fff; border: none; padding: .35rem .85rem; border-radius: .25rem; font-size: .75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: .3rem; }
+        .sv-btn-clear:hover { background: #4b5563; }
+
+        .sv-grid-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: .5rem; padding: .4rem .75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: .75rem; color: #374151; }
+        .sv-grid-toolbar .sv-total { font-weight: 600; }
+        .sv-grid-toolbar .sv-icon-btn { width: 22px; height: 22px; border-radius: .2rem; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-size: .7rem; color: #fff; }
+
+        .sv-drag-row { padding: .35rem .75rem; font-size: .7rem; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
+        .sv-drag-row i { margin-right: .25rem; }
+
+        .sv-tab-content { display: none; }
+        .sv-tab-content.active { display: block; }
+    </style>
+}
+
+<div class="operator-page">
+    <div class="page-header">Schedule Viewer</div>
+
+    <div class="content" style="flex-direction: column; max-width: 100%;">
+        <div style="width: 100%;">
+
+            @* ── Tabs ── *@
+            <div class="sv-tabs">
+                <div class="sv-tab active" data-tab="byDate">By Date</div>
+                <div class="sv-tab" data-tab="byService">By Service</div>
+                <div class="sv-tab" data-tab="byPort">By Port</div>
+                <div class="sv-tab" data-tab="byPolPod">By POL/POD</div>
+                <div class="sv-tab" data-tab="byRoute">By Route</div>
+            </div>
+
+            @* ── By Date ── *@
+            <div class="sv-tab-content active" id="tab-byDate">
+                <div class="sv-section-header">Date Details</div>
+                <div class="sv-filter-panel">
+                    <div class="sv-fields">
+                        <div class="sv-field">
+                            <label>From Date</label>
+                            <input type="date" id="date-from" />
+                        </div>
+                        <div class="sv-field">
+                            <label>To Date</label>
+                            <input type="date" id="date-to" />
+                        </div>
+                    </div>
+                    <div class="sv-actions">
+                        <button class="sv-btn-show" onclick="showSchedule()"><i class="bi bi-play-fill"></i> Show</button>
+                        <button class="sv-btn-clear" onclick="clearFilters(this)"><i class="bi bi-arrow-counterclockwise"></i> Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── By Service ── *@
+            <div class="sv-tab-content" id="tab-byService">
+                <div class="sv-section-header">Service Details</div>
+                <div class="sv-filter-panel">
+                    <div class="sv-fields">
+                        <div class="sv-field">
+                            <label>From Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>To Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>Service</label>
+                            <select>
+                                <option value="">-- Select Service --</option>
+                                @if (ViewBag.Services is IEnumerable<SelectListItem> serviceItems)
+                                { foreach (var s in serviceItems){ <option value="@s.Value">@s.Text</option> } }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sv-actions">
+                        <button class="sv-btn-show" onclick="showSchedule()"><i class="bi bi-play-fill"></i> Show</button>
+                        <button class="sv-btn-clear" onclick="clearFilters(this)"><i class="bi bi-arrow-counterclockwise"></i> Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── By Port ── *@
+            <div class="sv-tab-content" id="tab-byPort">
+                <div class="sv-section-header">Port Details</div>
+                <div class="sv-filter-panel">
+                    <div class="sv-fields">
+                        <div class="sv-field">
+                            <label>From Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>To Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>Port</label>
+                            <select>
+                                <option value="">-- Select Port --</option>
+                                @if (ViewBag.Ports is IEnumerable<SelectListItem> portItems)
+                                { foreach (var p in portItems){ <option value="@p.Value">@p.Text</option> } }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sv-actions">
+                        <button class="sv-btn-show" onclick="showSchedule()"><i class="bi bi-play-fill"></i> Show</button>
+                        <button class="sv-btn-clear" onclick="clearFilters(this)"><i class="bi bi-arrow-counterclockwise"></i> Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── By POL/POD ── *@
+            <div class="sv-tab-content" id="tab-byPolPod">
+                <div class="sv-section-header">POL/POD Details</div>
+                <div class="sv-filter-panel">
+                    <div class="sv-routing">
+                        <fieldset>
+                            <legend>Routing Type</legend>
+                            <div class="d-flex flex-column gap-1">
+                                <label><input type="radio" name="routingType" value="direct" checked /> Direct</label>
+                                <label><input type="radio" name="routingType" value="transhipment" /> Transhipment</label>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div class="sv-fields">
+                        <div class="sv-field">
+                            <label>From Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>To Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>POL</label>
+                            <select id="sv-pol">
+                                <option value="">-- Select POL --</option>
+                                @if (ViewBag.Ports is IEnumerable<SelectListItem> polItems)
+                                { foreach (var p in polItems){ <option value="@p.Value">@p.Text</option> } }
+                            </select>
+                        </div>
+                        <button type="button" class="sv-swap-btn" title="Swap POL/POD" onclick="swapPolPod()"><i class="bi bi-arrow-down-up"></i></button>
+                        <div class="sv-field">
+                            <label>POD</label>
+                            <select id="sv-pod">
+                                <option value="">-- Select POD --</option>
+                                @if (ViewBag.Ports is IEnumerable<SelectListItem> podItems)
+                                { foreach (var p in podItems){ <option value="@p.Value">@p.Text</option> } }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sv-actions">
+                        <button class="sv-btn-show" onclick="showSchedule()"><i class="bi bi-play-fill"></i> Show</button>
+                        <button class="sv-btn-clear" onclick="clearFilters(this)"><i class="bi bi-arrow-counterclockwise"></i> Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── By Route ── *@
+            <div class="sv-tab-content" id="tab-byRoute">
+                <div class="sv-section-header">Route Details</div>
+                <div class="sv-filter-panel">
+                    <div class="sv-fields">
+                        <div class="sv-field">
+                            <label>From Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>To Date</label>
+                            <input type="date" />
+                        </div>
+                        <div class="sv-field">
+                            <label>Route</label>
+                            <select>
+                                <option value="">-- Select Route --</option>
+                                @if (ViewBag.Routes is IEnumerable<SelectListItem> routeItems)
+                                { foreach (var r in routeItems){ <option value="@r.Value">@r.Text</option> } }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="sv-actions">
+                        <button class="sv-btn-show" onclick="showSchedule()"><i class="bi bi-play-fill"></i> Show</button>
+                        <button class="sv-btn-clear" onclick="clearFilters(this)"><i class="bi bi-arrow-counterclockwise"></i> Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Grid ── *@
+            <div class="grid-card" style="margin-top: .75rem;">
+                <div class="sv-grid-toolbar">
+                    <span class="sv-total">Total Records : <span id="sv-total-count">0</span></span>
+                    <button class="sv-icon-btn" style="background:#f97316;" title="Filter"><i class="bi bi-funnel-fill"></i></button>
+                    <button class="sv-icon-btn" style="background:#ef4444;" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    <button class="sv-icon-btn" style="background:#22c55e;" title="Export Excel"><i class="bi bi-file-earmark-excel"></i></button>
+                    <button class="sv-icon-btn" style="background:#3b82f6;" title="Export PDF"><i class="bi bi-file-earmark-pdf"></i></button>
+                    <button class="sv-icon-btn" style="background:#8b5cf6;" title="Chart"><i class="bi bi-bar-chart-fill"></i></button>
+                    <button class="sv-icon-btn" style="background:#06b6d4;" title="Columns"><i class="bi bi-layout-three-columns"></i></button>
+                </div>
+                <div class="sv-drag-row"><i class="bi bi-grip-horizontal"></i> Drag here to set row groups</div>
+                <div class="table-wrapper">
+                    <table class="table table-sm mb-0 sticky">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Vessel Code</th>
+                                <th>Vessel Name</th>
+                                <th>Voyage</th>
+                                <th>Bound</th>
+                                <th>POL</th>
+                                <th>POL Terminal</th>
+                                <th>POD</th>
+                                <th>POD Terminal</th>
+                                <th>ETD</th>
+                                <th>ETA</th>
+                                <th>Transit Days</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sv-grid-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function(){
+            // Tab switching
+            document.querySelectorAll('.sv-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.sv-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.sv-tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    const target = document.getElementById('tab-' + tab.dataset.tab);
+                    if (target) target.classList.add('active');
+                });
+            });
+        })();
+
+        function swapPolPod(){
+            const pol = document.getElementById('sv-pol');
+            const pod = document.getElementById('sv-pod');
+            const tmp = pol.value;
+            pol.value = pod.value;
+            pod.value = tmp;
+        }
+
+        function clearFilters(btn){
+            const panel = btn.closest('.sv-filter-panel');
+            if (!panel) return;
+            panel.querySelectorAll('input[type="date"]').forEach(i => i.value = '');
+            panel.querySelectorAll('select').forEach(s => s.value = '');
+            const direct = panel.querySelector('input[value="direct"]');
+            if (direct) direct.checked = true;
+        }
+
+        function showSchedule(){
+            // Placeholder — will fetch data when backend is ready
+        }
+    </script>
+}

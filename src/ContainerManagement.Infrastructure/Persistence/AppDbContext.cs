@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<VesselEntity> Vessels => Set<VesselEntity>();
     public DbSet<VendorEntity> Vendors => Set<VendorEntity>();
     public DbSet<OperatorEntity> Operators => Set<OperatorEntity>();
+    public DbSet<ServiceEntity> Services => Set<ServiceEntity>();
+    public DbSet<RouteEntity> Routes => Set<RouteEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -288,6 +290,60 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.CountryId)
                 .HasConstraintName("FK_TblOperator_TblCountry")
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // ---------------- TblService ----------------
+        b.Entity<ServiceEntity>(e =>
+        {
+            e.ToTable("TblService");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.ServiceCode).HasMaxLength(50);
+            e.HasIndex(x => x.ServiceCode).IsUnique().HasDatabaseName("UQ_TblService_ServiceCode");
+
+            e.Property(x => x.ServiceName).HasMaxLength(150);
+
+            e.Property(x => x.IsDeleted).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblRoute ----------------
+        b.Entity<RouteEntity>(e =>
+        {
+            e.ToTable("TblRoute");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.RouteName).HasMaxLength(150);
+            e.HasIndex(x => x.RouteName).IsUnique().HasDatabaseName("UQ_TblRoute_RouteName");
+
+            e.Property(x => x.PortOfOriginId).IsRequired();
+            e.Property(x => x.FinalDestinationId).IsRequired();
+
+            e.Property(x => x.IsDeleted).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.PortOfOriginId)
+                .HasConstraintName("FK_TblRoute_TblPorts_Origin")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.FinalDestinationId)
+                .HasConstraintName("FK_TblRoute_TblPorts_Destination")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.PortOfOriginId).HasDatabaseName("IX_TblRoute_PortOfOriginId");
+            e.HasIndex(x => x.FinalDestinationId).HasDatabaseName("IX_TblRoute_FinalDestinationId");
         });
 
     }

@@ -18,6 +18,8 @@ public enum ModulePage
     [Display(Name = "Ports")] Ports,
     [Display(Name = "Terminals")] Terminals,
     [Display(Name = "Vendors")] Vendors,
+    [Display(Name = "Services")] Services,
+    [Display(Name = "Routes")] Routes,
     [Display(Name = "Restriction")] Restriction,
     [Display(Name = "System Tools")] SystemTools,
     [Display(Name = "User Access Security")] UserAccessSecurity,

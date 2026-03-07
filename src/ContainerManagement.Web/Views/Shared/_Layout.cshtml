@@ -166,12 +166,19 @@
             }
         }
             /* Grid data font sizing */
-        .operator-page .table { font-size: .875rem; }
-        .operator-page .table .btn { font-size: .8125rem; }
-        .operator-page .table .form-control, .operator-page .table .form-select { font-size: .875rem; padding: .25rem .4rem; }    </style>
+        .operator-page .table { font-size: .75rem; }
+        .operator-page .table .btn { font-size: .7rem; padding: .15rem .35rem; }
+        .operator-page .table .btn i { font-size: .7rem; }
+        .operator-page .table .form-control, .operator-page .table .form-select { font-size: .75rem; padding: .2rem .35rem; }    </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-light">
+    <div id="globalPageLoader" class="global-page-loader" aria-live="polite" aria-busy="false">
+        <div class="global-page-loader__panel" role="status">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <span class="global-page-loader__text">Loading...</span>
+        </div>
+    </div>
 
     @{
         var path = Context?.Request?.Path.Value?.ToLowerInvariant() ?? "";
@@ -182,6 +189,8 @@
         var isVessels = path.StartsWith("/vessels");
         var isVendors = path.StartsWith("/vendors");
         var isOperators = path.StartsWith("/operators");
+        var isServices = path.StartsWith("/servicemasters");
+        var isRoutes = path.StartsWith("/routemasters");
         var isProviders = path.StartsWith("/providers");
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
@@ -250,6 +259,8 @@
     var portsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports);
     var terminalsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals);
     var vendorsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors);
+    var servicesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Services);
+    var routesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Routes);
     var restrictionUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Restriction);
     var systemToolsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools);
     var userAccessSecurityUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity);
@@ -261,7 +272,9 @@
          || isCountries
          || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
          || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase);
+         || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase)
+         || isServices
+         || isRoutes;
 
     var mastersActive =
          path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
@@ -301,6 +314,8 @@
                                                 <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
                                                 <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
                                                 <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
+                                                <a class="nav-link @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a>
+                                                <a class="nav-link @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a>
                                             </nav>
                                         </div>
 
@@ -521,6 +536,8 @@
                             <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
                             <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
                             <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
+                            <a class="nav-link @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a>
+                            <a class="nav-link @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a>
                         </nav>
                     </div>
                 </nav>
