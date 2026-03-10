@@ -17,6 +17,9 @@ namespace ContainerManagement.Application
             services.AddScoped<OperatorService>();
             services.AddScoped<ServiceMasterService>();
             services.AddScoped<RouteMasterService>();
+            services.AddScoped<DistanceMasterService>();
+            services.AddScoped<SlotMasterService>();
+            services.AddScoped<VoyageService>();
 
             return services;
         }

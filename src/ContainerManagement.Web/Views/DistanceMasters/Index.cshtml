@@ -1,0 +1,230 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model IEnumerable<ContainerManagement.Application.Dtos.Distances.DistanceListItemDto>
+
+@{
+    ViewData["Title"] = "Distances";
+    ViewData["ShowNew"] = false;
+}
+
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        .op-toast { position: fixed; right: 1rem; bottom: 1rem; background: #111827; color: #fff; padding: .5rem .75rem; border-radius: .375rem; opacity: 0; transition: opacity .2s ease; }
+        .op-toast.show { opacity: .95; }
+        .dist-validation { color: #dc3545; font-size: .75rem; padding: .25rem .5rem; display: none; }
+        .dist-validation.show { display: block; }
+    </style>
+}
+
+<div class="operator-page">
+    <div class="page-header">Distances</div>
+    <div class="d-flex gap-2 toolbar align-items-center">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-new-distance" data-bs-toggle="tooltip" title="New">
+            <i class="bi bi-plus-square"></i>
+        </button>
+        @await Html.PartialAsync("_GridToolbar")
+    </div>
+
+    <div class="content">
+        <div class="left-grid">
+            <div class="grid-card">
+                <div class="grid-header">
+                    <div>Distance Data</div>
+                    <span class="badge badge-count" id="dist-total">@(Model?.Count() ?? 0)</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table table-sm mb-0 sticky" id="distancesTable">
+                        <thead>
+                            <tr>
+                                <th>From Port</th>
+                                <th>To Port</th>
+                                <th>Distance</th>
+                                <th style="width:130px;">Actions</th>
+                            </tr>
+                            <tr class="filter-row">
+                                <th><input id="cf-from" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-to" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th><input id="cf-dist" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="dist-grid-body">
+                        @* -- Inline create row (hidden by default) -- *@
+                        <tr id="new-row" class="table-info d-none">
+                            <td class="col-from">
+                                <select class="form-select form-select-sm" id="new-from">
+                                    <option value="">-- From Port --</option>
+                                    @if (ViewBag.Ports is IEnumerable<SelectListItem> fromPorts)
+                                    { foreach (var p in fromPorts){ <option value="@p.Value">@p.Text</option> } }
+                                </select>
+                            </td>
+                            <td class="col-to">
+                                <select class="form-select form-select-sm" id="new-to">
+                                    <option value="">-- To Port --</option>
+                                    @if (ViewBag.Ports is IEnumerable<SelectListItem> toPorts)
+                                    { foreach (var p in toPorts){ <option value="@p.Value">@p.Text</option> } }
+                                </select>
+                            </td>
+                            <td class="col-dist">
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="new-dist" placeholder="Distance" />
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-success" id="btn-save-new" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btn-cancel-new" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                        @if (Model?.Any() == true)
+                        {
+                            foreach (var d in Model)
+                            {
+                                <tr data-id="@d.Id">
+                                    <td class="col-from">
+                                        <span class="disp">@d.FromPortName</span>
+                                        <select class="form-select form-select-sm edit d-none">
+                                            @if (ViewBag.Ports is IEnumerable<SelectListItem> fPorts)
+                                            { foreach (var p in fPorts){ <option value="@p.Value" selected="@(d.FromPortId.ToString()==p.Value)">@p.Text</option>; } }
+                                        </select>
+                                    </td>
+                                    <td class="col-to">
+                                        <span class="disp">@d.ToPortName</span>
+                                        <select class="form-select form-select-sm edit d-none">
+                                            @if (ViewBag.Ports is IEnumerable<SelectListItem> tPorts)
+                                            { foreach (var p in tPorts){ <option value="@p.Value" selected="@(d.ToPortId.ToString()==p.Value)">@p.Text</option>; } }
+                                        </select>
+                                    </td>
+                                    <td class="col-dist">
+                                        <span class="disp">@d.Distance</span>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm edit d-none" value="@d.Distance" />
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
+                                            <button type="button" class="btn btn-sm btn-success d-none btn-save" data-bs-toggle="tooltip" title="Save"><i class="bi bi-check-lg"></i></button>
+                                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" data-bs-toggle="tooltip" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                                            <form asp-action="Delete" method="post" class="d-inline m-0">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@d.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Delete" onclick="return confirm('Delete this distance?');"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div id="dist-validation" class="dist-validation"></div>
+            </div>
+        </div>
+        <div class="right-blank"></div>
+    </div>
+</div>
+
+<div id="dist-toast" class="op-toast" role="status" aria-live="polite"></div>
+<form id="dist-af">@Html.AntiForgeryToken()</form>
+
+@section Scripts{
+    <script>
+        (function(){
+            const q = (s)=>document.querySelector(s);
+            const rows = Array.from(document.querySelectorAll('#dist-grid-body tr[data-id]'));
+            const total = q('#dist-total');
+            const refreshBtn = q('#grid-refresh');
+            const toast = q('#dist-toast');
+            function showToast(msg){ if(!toast) return; toast.textContent = msg; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'), 1500); }
+            const valMsg = q('#dist-validation');
+            function showValidation(msg){ if(!valMsg) return; valMsg.textContent = msg; valMsg.classList.add('show'); }
+            function hideValidation(){ if(!valMsg) return; valMsg.textContent=''; valMsg.classList.remove('show'); }
+            function applyFilter(){
+                const ffrom = (q('#cf-from')?.value||'').toLowerCase();
+                const fto = (q('#cf-to')?.value||'').toLowerCase();
+                const fdist = (q('#cf-dist')?.value||'').toLowerCase();
+                let count=0;
+                rows.forEach(r=>{
+                    const from = r.querySelector('.col-from .disp').textContent.toLowerCase();
+                    const to = r.querySelector('.col-to .disp').textContent.toLowerCase();
+                    const dist = r.querySelector('.col-dist .disp').textContent.toLowerCase();
+                    const show = (!ffrom||from.includes(ffrom)) && (!fto||to.includes(fto)) && (!fdist||dist.includes(fdist));
+                    r.style.display = show? '':'none';
+                    if (show) count++;
+                });
+                if (total) total.textContent = count;
+            }
+            ['#cf-from','#cf-to','#cf-dist'].forEach(id=>{ const e=q(id); if(e) e.addEventListener('input', applyFilter);}); applyFilter();
+            function token(){ const el=document.querySelector('#dist-af input[name="__RequestVerificationToken"]'); return el?el.value:''; }
+            rows.forEach(r=> wireEditRow(r));
+            refreshBtn?.addEventListener('click', ()=>{ applyFilter(); showToast('Grid refreshed'); });
+
+            // -- Inline Create --
+            const newRow = q('#new-row');
+            const btnNew = q('#btn-new-distance');
+            const btnSaveNew = q('#btn-save-new');
+            const btnCancelNew = q('#btn-cancel-new');
+
+            function showNewRow(){ newRow.classList.remove('d-none'); q('#new-from')?.focus(); }
+            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-from').value=''; q('#new-to').value=''; q('#new-dist').value=''; hideValidation(); }
+
+            btnNew?.addEventListener('click', showNewRow);
+            btnCancelNew?.addEventListener('click', hideNewRow);
+
+            btnSaveNew?.addEventListener('click', async ()=>{
+                const fromId = q('#new-from').value;
+                const toId = q('#new-to').value;
+                const dist = q('#new-dist').value;
+                hideValidation();
+                if(!fromId||!toId||!dist){ showValidation('All fields are required.'); return; }
+                if(fromId === toId){ showValidation('From Port and To Port cannot be the same.'); return; }
+                const payload = { fromPortId:fromId, toPortId:toId, distance:parseFloat(dist) };
+                const resp = await fetch('/DistanceMasters/InlineCreate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload) });
+                if(resp.ok){
+                    const data = await resp.json();
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-id', data.id);
+                    tr.innerHTML = `
+                        <td class="col-from"><span class="disp">${data.fromPortName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-from').innerHTML}</select></td>
+                        <td class="col-to"><span class="disp">${data.toPortName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-to').innerHTML}</select></td>
+                        <td class="col-dist"><span class="disp">${data.distance||''}</span><input type="number" step="0.01" min="0" class="form-control form-control-sm edit d-none" value="${data.distance||''}" /></td>
+                        <td><div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-edit" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-sm btn-success d-none btn-save" title="Save"><i class="bi bi-check-lg"></i></button>
+                            <button type="button" class="btn btn-sm btn-secondary d-none btn-cancel" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                            <form action="/DistanceMasters/Delete" method="post" class="d-inline m-0">
+                                <input type="hidden" name="__RequestVerificationToken" value="${token()}" />
+                                <input type="hidden" name="id" value="${data.id}" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Delete this distance?');"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div></td>`;
+                    if(fromId) tr.querySelector('.col-from select').value = fromId;
+                    if(toId) tr.querySelector('.col-to select').value = toId;
+                    newRow.after(tr);
+                    wireEditRow(tr);
+                    rows.push(tr);
+                    hideNewRow();
+                    if(total) total.textContent = parseInt(total.textContent||'0',10)+1;
+                    showToast('Distance created');
+                } else { const err = await resp.text(); showValidation(err); }
+            });
+
+            // Extracted so new rows can reuse the edit wiring
+            function wireEditRow(r){
+                const edit=r.querySelector('.btn-edit'); const save=r.querySelector('.btn-save'); const cancel=r.querySelector('.btn-cancel');
+                const toggle=()=>{ r.querySelectorAll('.disp').forEach(e=>e.classList.toggle('d-none')); r.querySelectorAll('.edit').forEach(e=>e.classList.toggle('d-none')); edit.classList.toggle('d-none'); save.classList.toggle('d-none'); cancel.classList.toggle('d-none'); };
+                let orig=null;
+                edit?.addEventListener('click',()=>{ orig={ from:r.querySelector('.col-from select').value, to:r.querySelector('.col-to select').value, dist:r.querySelector('.col-dist input').value }; toggle(); });
+                cancel?.addEventListener('click',()=>{ if(orig){ r.querySelector('.col-from select').value=orig.from; r.querySelector('.col-to select').value=orig.to; r.querySelector('.col-dist input').value=orig.dist; } toggle(); hideValidation(); });
+                save?.addEventListener('click', async ()=>{
+                    hideValidation();
+                    const payload = { id:r.getAttribute('data-id'), fromPortId:r.querySelector('.col-from select').value, toPortId:r.querySelector('.col-to select').value, distance:parseFloat(r.querySelector('.col-dist input').value) };
+                    if(payload.fromPortId === payload.toPortId){ showValidation('From Port and To Port cannot be the same.'); return; }
+                    const resp = await fetch('/DistanceMasters/InlineUpdate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': token() }, body: JSON.stringify(payload)});
+                    if (resp.ok){ const data=await resp.json(); r.querySelector('.col-from .disp').textContent=data.fromPortName||''; r.querySelector('.col-to .disp').textContent=data.toPortName||''; r.querySelector('.col-dist .disp').textContent=data.distance||''; toggle(); showToast('Saved'); }
+                    else { const err = await resp.text(); showValidation(err); }
+                });
+            }
+        })();
+    </script>
+}

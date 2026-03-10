@@ -191,6 +191,9 @@
         var isOperators = path.StartsWith("/operators");
         var isServices = path.StartsWith("/servicemasters");
         var isRoutes = path.StartsWith("/routemasters");
+        var isDistances = path.StartsWith("/distancemasters");
+        var isSlots = path.StartsWith("/slotmasters");
+        var isVoyages = path.StartsWith("/voyages");
         var isProviders = path.StartsWith("/providers");
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
@@ -261,6 +264,8 @@
     var vendorsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors);
     var servicesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Services);
     var routesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Routes);
+    var distancesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Distances);
+    var slotsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Slots);
     var restrictionUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Restriction);
     var systemToolsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools);
     var userAccessSecurityUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity);
@@ -274,7 +279,9 @@
          || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
          || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase)
          || isServices
-         || isRoutes;
+         || isRoutes
+         || isDistances
+         || isSlots;
 
     var mastersActive =
          path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
@@ -316,6 +323,8 @@
                                                 <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
                                                 <a class="nav-link @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a>
                                                 <a class="nav-link @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a>
+                                                <a class="nav-link @(isDistances ? "active" : "")" asp-controller="DistanceMasters" asp-action="Index">Distances</a>
+                                                <a class="nav-link @(isSlots ? "active" : "")" asp-controller="SlotMasters" asp-action="Index">Slots</a>
                                             </nav>
                                         </div>
 
@@ -346,7 +355,8 @@
                         @{
                             var operationsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Operations);
                             var vesselsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vessels);
-                            var operationsActive = path.StartsWith(operationsUrl, StringComparison.OrdinalIgnoreCase) || isVessels;
+                            var voyagesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Voyages);
+                            var operationsActive = path.StartsWith(operationsUrl, StringComparison.OrdinalIgnoreCase) || isVessels || isVoyages;
                         }
                         <a class="nav-link d-flex justify-content-between align-items-center @(operationsActive ? "active" : "")" data-bs-toggle="collapse" href="#operationsCollapse" role="button" aria-expanded="@(operationsActive.ToString().ToLower())" aria-controls="operationsCollapse">
                             <span>Operations</span>
@@ -355,6 +365,7 @@
                         <div class="collapse @(operationsActive ? "show" : "")" id="operationsCollapse">
                             <nav class="nav flex-column ms-3 gap-1">
                                 <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
+                                <a class="nav-link @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a>
                             </nav>
                         </div>
 
@@ -534,10 +545,13 @@
                             <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
                             <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
                             <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
+                            <a class="nav-link @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a>
                             <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
                             <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
                             <a class="nav-link @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a>
                             <a class="nav-link @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a>
+                            <a class="nav-link @(isDistances ? "active" : "")" asp-controller="DistanceMasters" asp-action="Index">Distances</a>
+                            <a class="nav-link @(isSlots ? "active" : "")" asp-controller="SlotMasters" asp-action="Index">Slots</a>
                         </nav>
                     </div>
                 </nav>

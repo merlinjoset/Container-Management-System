@@ -12,14 +12,22 @@ namespace ContainerManagement.Web.Controllers
         private readonly VesselService _vesselService;
         private readonly ServiceMasterService _serviceMasterService;
         private readonly RouteMasterService _routeMasterService;
+        private readonly VoyageService _voyageService;
 
-        public SchedulesController(PortService portService, TerminalService terminalService, VesselService vesselService, ServiceMasterService serviceMasterService, RouteMasterService routeMasterService)
+        public SchedulesController(
+            PortService portService,
+            TerminalService terminalService,
+            VesselService vesselService,
+            ServiceMasterService serviceMasterService,
+            RouteMasterService routeMasterService,
+            VoyageService voyageService)
         {
             _portService = portService;
             _terminalService = terminalService;
             _vesselService = vesselService;
             _serviceMasterService = serviceMasterService;
             _routeMasterService = routeMasterService;
+            _voyageService = voyageService;
         }
 
         [HttpGet("viewer")]
@@ -57,6 +65,42 @@ namespace ContainerManagement.Web.Controllers
                 .ToList();
 
             return View();
+        }
+
+        [HttpGet("api/schedule")]
+        public async Task<IActionResult> GetSchedule(
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate,
+            [FromQuery] Guid? serviceId,
+            [FromQuery] Guid? portId,
+            [FromQuery] Guid? polId,
+            [FromQuery] Guid? podId,
+            [FromQuery] Guid? routeId,
+            CancellationToken ct)
+        {
+            try
+            {
+                // If routeId is provided, resolve to POL/POD
+                if (routeId.HasValue)
+                {
+                    var routes = await _routeMasterService.GetAllAsync(ct);
+                    var route = routes.FirstOrDefault(r => r.Id == routeId.Value);
+                    if (route != null)
+                    {
+                        polId = route.PortOfOriginId;
+                        podId = route.FinalDestinationId;
+                    }
+                }
+
+                var rows = await _voyageService.GetScheduleRowsAsync(
+                    fromDate, toDate, serviceId, portId, polId, podId, ct);
+
+                return Json(rows);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
     }
 }

@@ -19,6 +19,10 @@ public class AppDbContext : DbContext
     public DbSet<OperatorEntity> Operators => Set<OperatorEntity>();
     public DbSet<ServiceEntity> Services => Set<ServiceEntity>();
     public DbSet<RouteEntity> Routes => Set<RouteEntity>();
+    public DbSet<DistanceEntity> Distances => Set<DistanceEntity>();
+    public DbSet<SlotEntity> Slots => Set<SlotEntity>();
+    public DbSet<VoyageEntity> Voyages => Set<VoyageEntity>();
+    public DbSet<VoyagePortEntity> VoyagePorts => Set<VoyagePortEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -344,6 +348,139 @@ public class AppDbContext : DbContext
 
             e.HasIndex(x => x.PortOfOriginId).HasDatabaseName("IX_TblRoute_PortOfOriginId");
             e.HasIndex(x => x.FinalDestinationId).HasDatabaseName("IX_TblRoute_FinalDestinationId");
+        });
+
+        // ---------------- TblPortDistance ----------------
+        b.Entity<DistanceEntity>(e =>
+        {
+            e.ToTable("TblPortDistance");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.FromPortId).IsRequired();
+            e.Property(x => x.ToPortId).IsRequired();
+            e.Property(x => x.Distance).HasColumnType("decimal(10,2)").IsRequired();
+
+            e.Property(x => x.IsDeleted).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasIndex(x => new { x.FromPortId, x.ToPortId })
+                .IsUnique()
+                .HasDatabaseName("UQ_TblDistance_FromTo");
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.FromPortId)
+                .HasConstraintName("FK_TblDistance_TblPorts_From")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.ToPortId)
+                .HasConstraintName("FK_TblDistance_TblPorts_To")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.FromPortId).HasDatabaseName("IX_TblDistance_FromPortId");
+            e.HasIndex(x => x.ToPortId).HasDatabaseName("IX_TblDistance_ToPortId");
+        });
+
+        // ---------------- TblSlot ----------------
+        b.Entity<SlotEntity>(e =>
+        {
+            e.ToTable("TblSlot");
+
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.SlotName).HasMaxLength(150);
+            e.HasIndex(x => x.SlotName).IsUnique().HasDatabaseName("UQ_TblSlot_SlotName");
+
+            e.Property(x => x.IsDeleted).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblVoyage ----------------
+        b.Entity<VoyageEntity>(e =>
+        {
+            e.ToTable("TblVoyage");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VesselId).IsRequired();
+            e.Property(x => x.VoyageType).HasMaxLength(50);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VesselEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VesselId)
+                .HasConstraintName("FK_TblVoyage_TblVessel")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<ServiceEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.ServiceId)
+                .HasConstraintName("FK_TblVoyage_TblService")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<OperatorEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.OperatorId)
+                .HasConstraintName("FK_TblVoyage_TblOperator")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.VesselId).HasDatabaseName("IX_TblVoyage_VesselId");
+            e.HasIndex(x => x.ServiceId).HasDatabaseName("IX_TblVoyage_ServiceId");
+        });
+
+        // ---------------- TblVoyagePort ----------------
+        b.Entity<VoyagePortEntity>(e =>
+        {
+            e.ToTable("TblVoyagePort");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VoyageId).IsRequired();
+            e.Property(x => x.VoyNo).HasMaxLength(50);
+            e.Property(x => x.Bound).HasMaxLength(20);
+            e.Property(x => x.PortId).IsRequired();
+            e.Property(x => x.SeaDay).HasColumnType("decimal(10,2)");
+            e.Property(x => x.Speed).HasColumnType("decimal(10,2)");
+            e.Property(x => x.Distance).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyageEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VoyageId)
+                .HasConstraintName("FK_TblVoyagePort_TblVoyage")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.PortId)
+                .HasConstraintName("FK_TblVoyagePort_TblPorts")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<TerminalEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.TerminalId)
+                .HasConstraintName("FK_TblVoyagePort_TblTerminal")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.VoyageId).HasDatabaseName("IX_TblVoyagePort_VoyageId");
+            e.HasIndex(x => new { x.VoyageId, x.SortOrder }).HasDatabaseName("IX_TblVoyagePort_VoyageId_SortOrder");
         });
 
     }

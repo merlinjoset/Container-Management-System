@@ -1,0 +1,72 @@
+@using ContainerManagement.Application.Dtos.Voyages
+@model List<VoyageListItemDto>
+@{
+    ViewData["Title"] = "Voyages";
+    ViewData["ShowNew"] = false;
+    ViewData["ShowExport"] = false;
+    ViewData["ShowImport"] = false;
+}
+
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+}
+
+<div class="operator-page">
+    <div class="page-header d-flex align-items-center justify-content-between">
+        <span>Voyages</span>
+        <a asp-action="Create" class="btn btn-sm btn-primary" style="font-size:.78rem;"><i class="bi bi-plus-lg"></i> New Voyage</a>
+    </div>
+
+    <div class="content" style="flex-direction: column; max-width: 100%;">
+        <div style="width: 100%;">
+            <div class="grid-card">
+                <div class="table-wrapper">
+                    <table class="table table-sm mb-0 sticky">
+                        <thead>
+                            <tr>
+                                <th>Vessel</th>
+                                <th>Service Code</th>
+                                <th>Service Name</th>
+                                <th>Operator</th>
+                                <th>Slot</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                foreach (var v in Model)
+                                {
+                                    <tr>
+                                        <td>@v.VesselName</td>
+                                        <td>@v.ServiceCode</td>
+                                        <td>@v.ServiceName</td>
+                                        <td>@v.OperatorName</td>
+                                        <td>@v.VoyageType</td>
+                                        <td>@v.CreatedOn.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            <a asp-action="Edit" asp-route-id="@v.Id" class="btn btn-sm btn-outline-primary" style="font-size:.7rem; padding:.15rem .4rem;">
+                                                <i class="bi bi-pencil"></i> Edit
+                                            </a>
+                                            <form asp-action="Delete" asp-route-id="@v.Id" method="post" style="display:inline;" onsubmit="return confirm('Delete this voyage?');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:.7rem; padding:.15rem .4rem;">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No voyages found. Click "New Voyage" to create one.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

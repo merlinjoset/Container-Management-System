@@ -14,3 +14,4 @@ src/ContainerManagement.Domain/obj
 # Secrets — never commit real credentials
 **/appsettings.Local.json
 **/appsettings.Production.json
+/nul

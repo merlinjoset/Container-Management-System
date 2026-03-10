@@ -20,10 +20,13 @@ public enum ModulePage
     [Display(Name = "Vendors")] Vendors,
     [Display(Name = "Services")] Services,
     [Display(Name = "Routes")] Routes,
+    [Display(Name = "Distances")] Distances,
+    [Display(Name = "Slots")] Slots,
     [Display(Name = "Restriction")] Restriction,
     [Display(Name = "System Tools")] SystemTools,
     [Display(Name = "User Access Security")] UserAccessSecurity,
 
     // Operations sub-menus
-    [Display(Name = "Vessels")] Vessels
+    [Display(Name = "Vessels")] Vessels,
+    [Display(Name = "Voyages")] Voyages
 }

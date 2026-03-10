@@ -17,6 +17,10 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using static System.Text.Encoding;
 
+// Allow Npgsql to accept DateTime with any DateTimeKind (Unspecified/Local/Utc)
+// for both 'timestamp with time zone' and 'timestamp without time zone' columns.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Load User Secrets (no-op in production where secrets.json won't exist on the host)

@@ -36,12 +36,15 @@ public static class NavigationMap
         { ModulePage.Vendors, "/vendors" },
         { ModulePage.Services, "/servicemasters" },
         { ModulePage.Routes, "/routemasters" },
+        { ModulePage.Distances, "/distancemasters" },
+        { ModulePage.Slots, "/slotmasters" },
         { ModulePage.Restriction, "/settings/restriction" },
         { ModulePage.SystemTools, "/settings/system-tools" },
         { ModulePage.UserAccessSecurity, "/settings/user-access-security" },
 
         // Operations
-        { ModulePage.Vessels, "/vessels" }
+        { ModulePage.Vessels, "/vessels" },
+        { ModulePage.Voyages, "/voyages" }
     };
 
     public static string GetMainMenuUrl(MainMenu menu) => MainMenuRoutes.TryGetValue(menu, out var url) ? url : "/";

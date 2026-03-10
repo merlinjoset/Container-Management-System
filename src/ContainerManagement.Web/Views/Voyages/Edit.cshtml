@@ -1,0 +1,451 @@
+@using ContainerManagement.Application.Dtos.Voyages
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model VoyageListItemDto
+@{
+    ViewData["Title"] = "Edit Voyage";
+    ViewData["ShowNew"] = false;
+    ViewData["ShowExport"] = false;
+    ViewData["ShowImport"] = false;
+}
+
+@section Styles{
+    <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        /* ── Voyage header form ── */
+        .voy-header { background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; padding: 1rem 1.25rem; margin-bottom: .75rem; }
+        .voy-header .voy-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+        .voy-header .voy-field { display: flex; align-items: center; gap: .35rem; }
+        .voy-header .voy-field label { font-size: .75rem; font-weight: 600; color: #1e3a8a; white-space: nowrap; min-width: 90px; }
+        .voy-header .voy-field select,
+        .voy-header .voy-field input { font-size: .75rem; padding: .3rem .5rem; border: 1px solid #cbd5e1; border-radius: .25rem; min-width: 180px; }
+        .voy-header .voy-field select { background: #e0f2fe; }
+        .voy-header .voy-type-highlight { background: #fef08a; font-weight: 600; }
+
+        /* ── Port rotation cards ── */
+        .port-card .form-label { font-size: .75rem; font-weight: 600; color: #374151; margin-bottom: .15rem; }
+        .port-card .form-control-sm, .port-card .form-select-sm { font-size: .78rem; }
+        .port-card .card-header { background: #1e3a8a; color: #fff; padding: .4rem .75rem; font-size: .8rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+        .port-card .btn-remove-port { background: none; border: none; color: #fca5a5; cursor: pointer; font-size: .9rem; padding: .1rem .3rem; }
+        .port-card .btn-remove-port:hover { color: #fef2f2; }
+
+        /* ── Action bar ── */
+        .voy-actions { display: flex; gap: .5rem; padding: .75rem 0; }
+        .voy-btn { padding: .4rem 1rem; border: none; border-radius: .25rem; font-size: .8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: .3rem; }
+        .voy-btn-save { background: #22c55e; color: #fff; }
+        .voy-btn-save:hover { background: #16a34a; }
+        .voy-btn-cancel { background: #6b7280; color: #fff; }
+        .voy-btn-cancel:hover { background: #4b5563; }
+    </style>
+}
+
+<div class="operator-page">
+    <div class="page-header">Edit Voyage</div>
+
+    <div class="content" style="flex-direction: column; max-width: 100%;">
+        <div style="width: 100%;">
+
+            @* ── Header Form ── *@
+            <div class="voy-header">
+                <div class="voy-row">
+                    <div class="voy-field">
+                        <label>Vessel Name</label>
+                        <select id="voy-vessel">
+                            <option value="">-- Select Vessel --</option>
+                            @if (ViewBag.Vessels is IEnumerable<SelectListItem> vesselItems)
+                            { foreach (var v in vesselItems){ <option value="@v.Value" selected="@(v.Value == Model.VesselId.ToString() ? "selected" : null)">@v.Text</option> } }
+                        </select>
+                    </div>
+                    <div class="voy-field">
+                        <label>Service Code</label>
+                        <select id="voy-service">
+                            <option value="">-- Select Service --</option>
+                            @if (ViewBag.Services is IEnumerable<SelectListItem> serviceItems)
+                            { foreach (var s in serviceItems){ <option value="@s.Value" selected="@(Model.ServiceId.HasValue && s.Value == Model.ServiceId.Value.ToString() ? "selected" : null)">@s.Text</option> } }
+                        </select>
+                    </div>
+                    <div class="voy-field">
+                        <label>Service Name</label>
+                        <input type="text" id="voy-service-name" readonly placeholder="(auto)" style="background:#f1f5f9;" value="@(Model.ServiceName ?? "")" />
+                    </div>
+                </div>
+                <div class="voy-row" style="margin-top: .75rem;">
+                    <div class="voy-field">
+                        <label>OPR</label>
+                        <select id="voy-operator">
+                            <option value="">-- Select Operator --</option>
+                            @if (ViewBag.Operators is IEnumerable<SelectListItem> operatorItems)
+                            { foreach (var o in operatorItems){ <option value="@o.Value" selected="@(Model.OperatorId.HasValue && o.Value == Model.OperatorId.Value.ToString() ? "selected" : null)">@o.Text</option> } }
+                        </select>
+                    </div>
+                    <div class="voy-field">
+                        <label>Slot</label>
+                        <select id="voy-type">
+                            <option value="">-- Select --</option>
+                            <option value="Own" selected="@(Model.VoyageType == "Own" ? "selected" : null)">Own</option>
+                            <option value="Third Party" selected="@(Model.VoyageType == "Third Party" ? "selected" : null)">Third Party</option>
+                            <option value="Dead Freight" selected="@(Model.VoyageType == "Dead Freight" ? "selected" : null)">Dead Freight</option>
+                            <option value="Slot Swap" selected="@(Model.VoyageType == "Slot Swap" ? "selected" : null)">Slot Swap</option>
+                            <option value="Vessel Swap" selected="@(Model.VoyageType == "Vessel Swap" ? "selected" : null)">Vessel Swap</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Port Rotation Cards ── *@
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <span class="fw-bold" style="font-size:.9rem; color:#1e3a8a;">Port Rotations</span>
+                <button class="btn btn-sm btn-warning fw-bold" id="btn-add-port"><i class="bi bi-plus-lg"></i> Add Port</button>
+            </div>
+            <div id="voy-port-body"></div>
+
+            @* ── Action Buttons ── *@
+            <div class="voy-actions">
+                <button class="voy-btn voy-btn-save" id="btn-save-voyage"><i class="bi bi-check-lg"></i> Update Voyage</button>
+                <a class="voy-btn voy-btn-cancel" asp-action="Index"><i class="bi bi-x-lg"></i> Cancel</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts{
+    <script>
+        (function() {
+            var portBody = document.getElementById('voy-port-body');
+            var rowCounter = 0;
+            var voyageId = '@Model.Id';
+
+            // Build ports and terminals options HTML once
+            var portsOptions = '<option value="">--</option>';
+            @if (ViewBag.Ports is IEnumerable<SelectListItem> pItems) {
+                foreach (var p in pItems) {
+                    <text>portsOptions += '<option value="@p.Value">@Html.Raw(p.Text?.Replace("'", "\\'"))</option>';</text>
+                }
+            }
+
+            var terminalsOptions = '<option value="">--</option>';
+            @if (ViewBag.Terminals is IEnumerable<SelectListItem> tItems) {
+                foreach (var t in tItems) {
+                    <text>terminalsOptions += '<option value="@t.Value">@Html.Raw(t.Text?.Replace("'", "\\'"))</option>';</text>
+                }
+            }
+
+            // Service name auto-fill
+            var serviceData = {};
+            @if (ViewBag.Services is IEnumerable<SelectListItem> svcItems) {
+                foreach (var s in svcItems) {
+                    <text>serviceData['@s.Value'] = '@Html.Raw(s.Text?.Replace("'", "\\'"))';</text>
+                }
+            }
+            document.getElementById('voy-service').addEventListener('change', function() {
+                var sn = serviceData[this.value] || '';
+                document.getElementById('voy-service-name').value = sn;
+            });
+
+            // ── Helpers for date ↔ datetime-local string ──
+            function toLocal(dt) {
+                if (!dt) return '';
+                var y = dt.getFullYear();
+                var mo = ('0' + (dt.getMonth() + 1)).slice(-2);
+                var d = ('0' + dt.getDate()).slice(-2);
+                var h = ('0' + dt.getHours()).slice(-2);
+                var mi = ('0' + dt.getMinutes()).slice(-2);
+                return y + '-' + mo + '-' + d + 'T' + h + ':' + mi;
+            }
+            function parseLocal(s) {
+                if (!s) return null;
+                var d = new Date(s);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            function formatDateForInput(dateStr) {
+                if (!dateStr) return '';
+                // ISO strings: "2026-01-15T10:00:00", "2026-01-15T10:00:00Z", "2026-01-15T10:00:00+05:30"
+                // datetime-local needs "YYYY-MM-DDTHH:MM" — take first 16 chars to avoid timezone shift
+                if (dateStr.length >= 16 && dateStr[4] === '-' && dateStr[10] === 'T') {
+                    return dateStr.substring(0, 16);
+                }
+                var d = new Date(dateStr);
+                if (isNaN(d.getTime())) return '';
+                return toLocal(d);
+            }
+
+            // ── Formula calculations (exact Excel formulas) ──
+            // I = K/J/24           → Sea Day = Distance / Speed / 24
+            // F = E + 2/24         → ETB = ETA + 2/24
+            // G = F + H            → ETD = ETB + PortStay
+            // E(next) = G + I      → Next ETA = current ETD + current SeaDay
+
+            function calcRow(tr) {
+                var speed = parseFloat(tr.querySelector('.voy-speed').value) || 0;
+                var distance = parseFloat(tr.querySelector('.voy-distance').value) || 0;
+                var seaDayEl = tr.querySelector('.voy-seaday');
+
+                // I = K/J/24  →  Sea Day = Distance / Speed / 24
+                if (speed > 0 && distance > 0) {
+                    seaDayEl.value = distance / speed / 24;
+                }
+
+                var eta = parseLocal(tr.querySelector('.voy-eta').value);
+
+                // F = E + 2/24  →  ETB = ETA + 2/24 days (2 hours)
+                if (eta) {
+                    var etb = new Date(eta.getTime() + (2 / 24) * 86400000);
+                    tr.querySelector('.voy-etb').value = toLocal(etb);
+
+                    // G = F + H  →  ETD = ETB + PortStay
+                    var portStay = parseInt(tr.querySelector('.voy-portstay').value) || 0;
+                    if (portStay > 0) {
+                        var etd = new Date(etb.getTime() + portStay * 86400000);
+                        tr.querySelector('.voy-etd').value = toLocal(etd);
+                    }
+                }
+
+                // Propagate to next row
+                calcNextRowEta(tr);
+            }
+
+            // E(next) = G + I  →  Next ETA = current ETD + current SeaDay
+            function calcNextRowEta(tr) {
+                var rows = Array.prototype.slice.call(portBody.querySelectorAll('.port-card'));
+                var idx = rows.indexOf(tr);
+                if (idx < 0 || idx >= rows.length - 1) return;
+
+                var etd = parseLocal(tr.querySelector('.voy-etd').value);
+                var seaDay = parseFloat(tr.querySelector('.voy-seaday').value) || 0;
+
+                if (etd && seaDay > 0) {
+                    var nextEta = new Date(etd.getTime() + seaDay * 86400000);
+                    var nextTr = rows[idx + 1];
+                    nextTr.querySelector('.voy-eta').value = toLocal(nextEta);
+                    // cascade: recalc the next row too
+                    calcRow(nextTr);
+                }
+            }
+
+            function wireRowEvents(tr) {
+                var fields = ['voy-eta', 'voy-portstay', 'voy-speed', 'voy-distance'];
+                for (var i = 0; i < fields.length; i++) {
+                    var el = tr.querySelector('.' + fields[i]);
+                    if (el) {
+                        el.addEventListener('change', function() { calcRow(tr); });
+                    }
+                }
+                // Also recalc when ETB or ETD manually changed
+                tr.querySelector('.voy-etb').addEventListener('change', function() {
+                    var etb = parseLocal(this.value);
+                    var portStay = parseInt(tr.querySelector('.voy-portstay').value) || 0;
+                    if (etb && portStay > 0) {
+                        var etd = new Date(etb.getTime() + portStay * 86400000);
+                        tr.querySelector('.voy-etd').value = toLocal(etd);
+                    }
+                    calcNextRowEta(tr);
+                });
+                tr.querySelector('.voy-etd').addEventListener('change', function() {
+                    calcNextRowEta(tr);
+                });
+            }
+
+            // ── Add port card (optionally with data) ──
+            function addRow(data) {
+                rowCounter++;
+                var card = document.createElement('div');
+                card.className = 'card port-card shadow-sm mb-3';
+                card.innerHTML =
+                    '<div class="card-header">' +
+                        '<span class="row-num">[' + rowCounter + '] Port Rotation</span>' +
+                        '<button class="btn-remove-port" title="Remove"><i class="bi bi-trash"></i></button>' +
+                    '</div>' +
+                    '<div class="card-body py-2 px-3">' +
+                        '<div class="row g-3 mb-2">' +
+                            '<div class="col-md-3"><label class="form-label">Voy No</label><input type="text" class="form-control form-control-sm voy-no" placeholder="Voy No" /></div>' +
+                            '<div class="col-md-2"><label class="form-label">Bound</label><select class="form-select form-select-sm voy-bound"><option value="">--</option><option value="West">West</option><option value="East">East</option></select></div>' +
+                            '<div class="col-md-4"><label class="form-label">Port</label><select class="form-select form-select-sm voy-port">' + portsOptions + '</select></div>' +
+                            '<div class="col-md-3"><label class="form-label">Terminal</label><select class="form-select form-select-sm voy-terminal">' + terminalsOptions + '</select></div>' +
+                        '</div>' +
+                        '<div class="row g-3 mb-2">' +
+                            '<div class="col-md-3"><label class="form-label">ETA</label><input type="datetime-local" class="form-control form-control-sm voy-eta" /></div>' +
+                            '<div class="col-md-3"><label class="form-label">ETB</label><input type="datetime-local" class="form-control form-control-sm voy-etb" style="background:#f1f5f9;" /></div>' +
+                            '<div class="col-md-3"><label class="form-label">ETD</label><input type="datetime-local" class="form-control form-control-sm voy-etd" style="background:#f1f5f9;" /></div>' +
+                            '<div class="col-md-3"><label class="form-label">Port Stay (days)</label><input type="number" class="form-control form-control-sm voy-portstay" min="0" step="1" placeholder="0" /></div>' +
+                        '</div>' +
+                        '<div class="row g-3">' +
+                            '<div class="col-md-3"><label class="form-label">Speed</label><input type="number" class="form-control form-control-sm voy-speed" min="0" step="0.1" value="14.5" /></div>' +
+                            '<div class="col-md-3"><label class="form-label">Distance</label><input type="number" class="form-control form-control-sm voy-distance" min="0" step="0.01" placeholder="0" /></div>' +
+                            '<div class="col-md-3"><label class="form-label">Sea Day</label><input type="number" class="form-control form-control-sm voy-seaday" min="0" step="any" placeholder="0" readonly style="background:#f1f5f9;" /></div>' +
+                        '</div>' +
+                    '</div>';
+
+                card.querySelector('.btn-remove-port').addEventListener('click', function() {
+                    card.remove();
+                    renumberRows();
+                });
+
+                // If data provided, populate fields (overrides defaults)
+                if (data) {
+                    if (data.voyNo) card.querySelector('.voy-no').value = data.voyNo;
+                    if (data.bound) card.querySelector('.voy-bound').value = data.bound;
+                    if (data.portId) card.querySelector('.voy-port').value = data.portId;
+                    if (data.terminalId) card.querySelector('.voy-terminal').value = data.terminalId;
+                    if (data.eta) card.querySelector('.voy-eta').value = formatDateForInput(data.eta);
+                    if (data.etb) card.querySelector('.voy-etb').value = formatDateForInput(data.etb);
+                    if (data.etd) card.querySelector('.voy-etd').value = formatDateForInput(data.etd);
+                    if (data.portStay != null) card.querySelector('.voy-portstay').value = data.portStay;
+                    if (data.seaDay != null) card.querySelector('.voy-seaday').value = data.seaDay;
+                    if (data.speed != null) card.querySelector('.voy-speed').value = data.speed;
+                    if (data.distance != null) card.querySelector('.voy-distance').value = data.distance;
+                }
+
+                wireRowEvents(card);
+                portBody.appendChild(card);
+
+                // 2nd+ port: ETA is auto-calculated (=prev ETD + prev SeaDay), so readonly
+                updateEtaState();
+
+                // If 2nd+ new card (not loading from DB), carry over Voy No & Bound, calc ETA
+                var allCards = portBody.querySelectorAll('.port-card');
+                if (allCards.length > 1 && !data) {
+                    var prevCard = allCards[allCards.length - 2];
+
+                    // Auto-fill Voy No from previous card
+                    var prevVoyNo = prevCard.querySelector('.voy-no').value;
+                    if (prevVoyNo) card.querySelector('.voy-no').value = prevVoyNo;
+
+                    // Auto-fill Bound from previous card
+                    var prevBound = prevCard.querySelector('.voy-bound').value;
+                    if (prevBound) card.querySelector('.voy-bound').value = prevBound;
+
+                    // Calc ETA = prev ETD + prev SeaDay
+                    var prevEtd = parseLocal(prevCard.querySelector('.voy-etd').value);
+                    var prevSeaDay = parseFloat(prevCard.querySelector('.voy-seaday').value) || 0;
+                    if (prevEtd && prevSeaDay > 0) {
+                        var newEta = new Date(prevEtd.getTime() + prevSeaDay * 86400000);
+                        card.querySelector('.voy-eta').value = toLocal(newEta);
+                        calcRow(card);
+                    }
+                }
+            }
+
+            function updateEtaState() {
+                var cards = portBody.querySelectorAll('.port-card');
+                for (var i = 0; i < cards.length; i++) {
+                    var etaEl = cards[i].querySelector('.voy-eta');
+                    if (i === 0) {
+                        etaEl.readOnly = false;
+                        etaEl.style.background = '';
+                    } else {
+                        etaEl.readOnly = true;
+                        etaEl.style.background = '#f1f5f9';
+                    }
+                }
+            }
+
+            function renumberRows() {
+                var cards = portBody.querySelectorAll('.port-card');
+                for (var i = 0; i < cards.length; i++) {
+                    var numCell = cards[i].querySelector('.row-num');
+                    if (numCell) numCell.textContent = '[' + (i + 1) + '] Port Rotation';
+                }
+                rowCounter = cards.length;
+                updateEtaState();
+            }
+
+            document.getElementById('btn-add-port').addEventListener('click', function() { addRow(null); });
+
+            // Load existing port data via API
+            function loadExistingPorts() {
+                fetch('@Url.Action("GetPorts", "Voyages")?id=' + voyageId)
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        console.log('Edit port data:', data);
+                        if (data && data.length > 0) {
+                            for (var i = 0; i < data.length; i++) {
+                                addRow(data[i]);
+                            }
+                            // Recalculate formula chain: 2nd+ port ETA = prev ETD + prev SeaDay
+                            var cards = portBody.querySelectorAll('.port-card');
+                            if (cards.length > 0) {
+                                calcRow(cards[0]);
+                            }
+                        } else {
+                            addRow(null);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error('Error loading ports:', err);
+                        addRow(null);
+                    });
+            }
+            loadExistingPorts();
+
+            // ── Anti-forgery token ──
+            function token() {
+                var el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : '';
+            }
+
+            // ── Save (Update) Voyage ──
+            document.getElementById('btn-save-voyage').addEventListener('click', function() {
+                var vesselId = document.getElementById('voy-vessel').value;
+                if (!vesselId) { alert('Please select a Vessel.'); return; }
+
+                var serviceId = document.getElementById('voy-service').value || null;
+                var operatorId = document.getElementById('voy-operator').value || null;
+                var voyageType = document.getElementById('voy-type').value || null;
+
+                var ports = [];
+                var rows = portBody.querySelectorAll('.port-card');
+                for (var i = 0; i < rows.length; i++) {
+                    var r = rows[i];
+                    var portId = r.querySelector('.voy-port') ? r.querySelector('.voy-port').value : '';
+                    if (!portId) continue; // skip empty rows
+
+                    ports.push({
+                        voyNo: r.querySelector('.voy-no') ? r.querySelector('.voy-no').value : '',
+                        bound: r.querySelector('.voy-bound') ? r.querySelector('.voy-bound').value : '',
+                        portId: portId,
+                        terminalId: r.querySelector('.voy-terminal') ? r.querySelector('.voy-terminal').value || null : null,
+                        eta: r.querySelector('.voy-eta') ? r.querySelector('.voy-eta').value || null : null,
+                        etb: r.querySelector('.voy-etb') ? r.querySelector('.voy-etb').value || null : null,
+                        etd: r.querySelector('.voy-etd') ? r.querySelector('.voy-etd').value || null : null,
+                        portStay: r.querySelector('.voy-portstay') ? parseInt(r.querySelector('.voy-portstay').value) || null : null,
+                        seaDay: r.querySelector('.voy-seaday') ? parseFloat(r.querySelector('.voy-seaday').value) || null : null,
+                        speed: r.querySelector('.voy-speed') ? parseFloat(r.querySelector('.voy-speed').value) || null : null,
+                        distance: r.querySelector('.voy-distance') ? parseFloat(r.querySelector('.voy-distance').value) || null : null,
+                        sortOrder: i + 1
+                    });
+                }
+
+                var payload = {
+                    id: voyageId,
+                    vesselId: vesselId,
+                    serviceId: serviceId,
+                    operatorId: operatorId,
+                    voyageType: voyageType,
+                    ports: ports
+                };
+
+                fetch('@Url.Action("Edit", "Voyages")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token()
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        alert('Voyage updated successfully!');
+                        window.location.href = '@Url.Action("Index", "Voyages")';
+                    } else {
+                        alert('Error: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(function(err) {
+                    alert('Error updating voyage: ' + err.message);
+                });
+            });
+
+        })();
+    </script>
+}

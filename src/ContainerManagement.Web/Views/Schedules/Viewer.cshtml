@@ -44,8 +44,60 @@
         .sv-grid-toolbar .sv-total { font-weight: 600; }
         .sv-grid-toolbar .sv-icon-btn { width: 22px; height: 22px; border-radius: .2rem; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; font-size: .7rem; color: #fff; }
 
-        .sv-drag-row { padding: .35rem .75rem; font-size: .7rem; color: #9ca3af; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
-        .sv-drag-row i { margin-right: .25rem; }
+        /* ── Drag-to-Group zone ── */
+        .sv-drag-row {
+            padding: .4rem .75rem; font-size: .72rem; color: #9ca3af;
+            border-bottom: 1px solid #e5e7eb; background: #fafafa;
+            min-height: 34px; display: flex; align-items: center; gap: .4rem;
+            flex-wrap: wrap; transition: background .15s, border-color .15s;
+        }
+        .sv-drag-row.drag-over {
+            background: #eff6ff; border-bottom-color: #3b82f6;
+            outline: 2px dashed #3b82f6; outline-offset: -2px;
+        }
+        .sv-drag-row .drag-placeholder { display: flex; align-items: center; gap: .25rem; }
+        .sv-drag-row .drag-placeholder i { margin-right: .15rem; }
+        .sv-drag-row.has-chips .drag-placeholder { display: none; }
+
+        .sv-group-chip {
+            display: inline-flex; align-items: center; gap: .3rem;
+            background: #1e3a8a; color: #fff; padding: .15rem .5rem .15rem .6rem;
+            border-radius: 1rem; font-size: .68rem; font-weight: 500;
+            user-select: none; white-space: nowrap; transition: background .15s;
+        }
+        .sv-group-chip:hover { background: #1e40af; }
+        .sv-group-chip .chip-remove {
+            display: flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: rgba(255,255,255,.25); border: none; color: #fff;
+            font-size: .55rem; cursor: pointer; line-height: 1; padding: 0;
+        }
+        .sv-group-chip .chip-remove:hover { background: rgba(255,255,255,.5); }
+
+        .sv-group-separator { color: #cbd5e1; font-size: .65rem; }
+
+        /* Column headers - grab cursor hint */
+        .sv-header-th { cursor: grab; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+        .sv-header-th:active { cursor: grabbing; }
+        .sv-header-th.col-grouped { background: rgba(255,255,255,.08) !important; opacity: .55; }
+
+        /* Floating ghost while dragging */
+        .sv-drag-ghost {
+            position: fixed; z-index: 99999; pointer-events: none;
+            background: #1e3a8a; color: #fff; padding: 4px 14px;
+            border-radius: 4px; font-size: 12px; font-weight: 600;
+            white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+            opacity: .92; display: none;
+        }
+
+        /* Group rows in grid */
+        .sv-group-header td {
+            background: #f1f5f9 !important; font-weight: 600; font-size: .78rem;
+            color: #1e3a8a; padding: .4rem .75rem !important; cursor: pointer; user-select: none;
+        }
+        .sv-group-header td i { margin-right: .3rem; font-size: .7rem; transition: transform .15s; }
+        .sv-group-header.collapsed td i { transform: rotate(-90deg); }
+        .sv-group-row-hidden { display: none !important; }
 
         .sv-tab-content { display: none; }
         .sv-tab-content.active { display: block; }
@@ -95,15 +147,15 @@
                     <div class="sv-fields">
                         <div class="sv-field">
                             <label>From Date</label>
-                            <input type="date" />
+                            <input type="date" id="svc-date-from" />
                         </div>
                         <div class="sv-field">
                             <label>To Date</label>
-                            <input type="date" />
+                            <input type="date" id="svc-date-to" />
                         </div>
                         <div class="sv-field">
                             <label>Service</label>
-                            <select>
+                            <select id="svc-service">
                                 <option value="">-- Select Service --</option>
                                 @if (ViewBag.Services is IEnumerable<SelectListItem> serviceItems)
                                 { foreach (var s in serviceItems){ <option value="@s.Value">@s.Text</option> } }
@@ -124,15 +176,15 @@
                     <div class="sv-fields">
                         <div class="sv-field">
                             <label>From Date</label>
-                            <input type="date" />
+                            <input type="date" id="port-date-from" />
                         </div>
                         <div class="sv-field">
                             <label>To Date</label>
-                            <input type="date" />
+                            <input type="date" id="port-date-to" />
                         </div>
                         <div class="sv-field">
                             <label>Port</label>
-                            <select>
+                            <select id="port-port">
                                 <option value="">-- Select Port --</option>
                                 @if (ViewBag.Ports is IEnumerable<SelectListItem> portItems)
                                 { foreach (var p in portItems){ <option value="@p.Value">@p.Text</option> } }
@@ -162,11 +214,11 @@
                     <div class="sv-fields">
                         <div class="sv-field">
                             <label>From Date</label>
-                            <input type="date" />
+                            <input type="date" id="polpod-date-from" />
                         </div>
                         <div class="sv-field">
                             <label>To Date</label>
-                            <input type="date" />
+                            <input type="date" id="polpod-date-to" />
                         </div>
                         <div class="sv-field">
                             <label>POL</label>
@@ -200,15 +252,15 @@
                     <div class="sv-fields">
                         <div class="sv-field">
                             <label>From Date</label>
-                            <input type="date" />
+                            <input type="date" id="route-date-from" />
                         </div>
                         <div class="sv-field">
                             <label>To Date</label>
-                            <input type="date" />
+                            <input type="date" id="route-date-to" />
                         </div>
                         <div class="sv-field">
                             <label>Route</label>
-                            <select>
+                            <select id="route-route">
                                 <option value="">-- Select Route --</option>
                                 @if (ViewBag.Routes is IEnumerable<SelectListItem> routeItems)
                                 { foreach (var r in routeItems){ <option value="@r.Value">@r.Text</option> } }
@@ -233,23 +285,25 @@
                     <button class="sv-icon-btn" style="background:#8b5cf6;" title="Chart"><i class="bi bi-bar-chart-fill"></i></button>
                     <button class="sv-icon-btn" style="background:#06b6d4;" title="Columns"><i class="bi bi-layout-three-columns"></i></button>
                 </div>
-                <div class="sv-drag-row"><i class="bi bi-grip-horizontal"></i> Drag here to set row groups</div>
+                <div class="sv-drag-row" id="sv-group-zone">
+                    <span class="drag-placeholder"><i class="bi bi-grip-horizontal"></i> Drag here to set row groups</span>
+                </div>
                 <div class="table-wrapper">
                     <table class="table table-sm mb-0 sticky">
                         <thead>
-                            <tr>
-                                <th>Service</th>
-                                <th>Vessel Code</th>
-                                <th>Vessel Name</th>
-                                <th>Voyage</th>
-                                <th>Bound</th>
-                                <th>POL</th>
-                                <th>POL Terminal</th>
-                                <th>POD</th>
-                                <th>POD Terminal</th>
-                                <th>ETD</th>
-                                <th>ETA</th>
-                                <th>Transit Days</th>
+                            <tr id="sv-header-row">
+                                <th class="sv-header-th" data-col="service">Service</th>
+                                <th class="sv-header-th" data-col="vesselCode">Vessel Code</th>
+                                <th class="sv-header-th" data-col="vesselName">Vessel Name</th>
+                                <th class="sv-header-th" data-col="voyage">Voyage</th>
+                                <th class="sv-header-th" data-col="bound">Bound</th>
+                                <th class="sv-header-th" data-col="pol">POL</th>
+                                <th class="sv-header-th" data-col="polTerminal">POL Terminal</th>
+                                <th class="sv-header-th" data-col="pod">POD</th>
+                                <th class="sv-header-th" data-col="podTerminal">POD Terminal</th>
+                                <th class="sv-header-th" data-col="etd">ETD</th>
+                                <th class="sv-header-th" data-col="eta">ETA</th>
+                                <th class="sv-header-th" data-col="transitDays">Transit Days</th>
                             </tr>
                         </thead>
                         <tbody id="sv-grid-body">
@@ -262,40 +316,397 @@
     </div>
 </div>
 
+@* Ghost element for drag visual - sits outside the table *@
+<div class="sv-drag-ghost" id="sv-ghost"></div>
+
 @section Scripts {
     <script>
-        (function(){
-            // Tab switching
-            document.querySelectorAll('.sv-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.sv-tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.sv-tab-content').forEach(c => c.classList.remove('active'));
-                    tab.classList.add('active');
-                    const target = document.getElementById('tab-' + tab.dataset.tab);
-                    if (target) target.classList.add('active');
-                });
+        // ── Tab switching ──
+        document.querySelectorAll('.sv-tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.sv-tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.sv-tab-content').forEach(function(c) { c.classList.remove('active'); });
+                tab.classList.add('active');
+                var target = document.getElementById('tab-' + tab.getAttribute('data-tab'));
+                if (target) target.classList.add('active');
             });
+        });
+
+        // ══════════════════════════════════════════════════════
+        //  Row grouping via drag from column headers
+        // ══════════════════════════════════════════════════════
+        (function() {
+            var groupZone = document.getElementById('sv-group-zone');
+            var headerRow = document.getElementById('sv-header-row');
+            var gridBody  = document.getElementById('sv-grid-body');
+            var ghostEl   = document.getElementById('sv-ghost');
+            var activeGroups = [];
+
+            // Build label map
+            var colLabels = {};
+            var ths = headerRow.querySelectorAll('th[data-col]');
+            for (var i = 0; i < ths.length; i++) {
+                colLabels[ths[i].getAttribute('data-col')] = ths[i].textContent.trim();
+            }
+
+            // ── Drag state ──
+            var dragging = false;
+            var dragCol = null;
+            var startX = 0, startY = 0;
+
+            // Hit test
+            function hitTest(el, x, y) {
+                var r = el.getBoundingClientRect();
+                return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+            }
+
+            // ── Attach mousedown to each TH ──
+            for (var i = 0; i < ths.length; i++) {
+                (function(th) {
+                    th.addEventListener('mousedown', function(e) {
+                        if (e.button !== 0) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var col = th.getAttribute('data-col');
+                        if (!col) return;
+                        // Already grouped — skip
+                        for (var g = 0; g < activeGroups.length; g++) {
+                            if (activeGroups[g] === col) return;
+                        }
+
+                        startX = e.clientX;
+                        startY = e.clientY;
+                        dragCol = col;
+                        dragging = false;
+
+                        function onMove(ev) {
+                            var dx = Math.abs(ev.clientX - startX);
+                            var dy = Math.abs(ev.clientY - startY);
+                            if (!dragging && (dx + dy) < 5) return;
+
+                            if (!dragging) {
+                                dragging = true;
+                                ghostEl.textContent = colLabels[col] || col;
+                                ghostEl.style.display = 'block';
+                            }
+
+                            ghostEl.style.left = (ev.clientX + 14) + 'px';
+                            ghostEl.style.top  = (ev.clientY - 16) + 'px';
+
+                            if (hitTest(groupZone, ev.clientX, ev.clientY)) {
+                                groupZone.classList.add('drag-over');
+                            } else {
+                                groupZone.classList.remove('drag-over');
+                            }
+                        }
+
+                        function onUp(ev) {
+                            document.removeEventListener('mousemove', onMove, true);
+                            document.removeEventListener('mouseup', onUp, true);
+
+                            ghostEl.style.display = 'none';
+                            groupZone.classList.remove('drag-over');
+
+                            if (dragging && hitTest(groupZone, ev.clientX, ev.clientY)) {
+                                addGroup(dragCol);
+                            } else if (!dragging) {
+                                // Click (no drag) — also add to group
+                                addGroup(dragCol);
+                            }
+
+                            dragging = false;
+                            dragCol = null;
+                        }
+
+                        document.addEventListener('mousemove', onMove, true);
+                        document.addEventListener('mouseup', onUp, true);
+                    });
+                })(ths[i]);
+            }
+
+            // ── Add a group ──
+            function addGroup(col) {
+                for (var g = 0; g < activeGroups.length; g++) {
+                    if (activeGroups[g] === col) return;
+                }
+                activeGroups.push(col);
+                renderChips();
+                applyRowGroups();
+            }
+
+            // ── Render chips ──
+            function renderChips() {
+                // Remove old chips
+                var old = groupZone.querySelectorAll('.sv-group-chip, .sv-group-separator');
+                for (var i = 0; i < old.length; i++) old[i].remove();
+
+                groupZone.classList.toggle('has-chips', activeGroups.length > 0);
+
+                // Update header highlights
+                for (var i = 0; i < ths.length; i++) {
+                    var col = ths[i].getAttribute('data-col');
+                    var isGrouped = false;
+                    for (var g = 0; g < activeGroups.length; g++) {
+                        if (activeGroups[g] === col) { isGrouped = true; break; }
+                    }
+                    if (isGrouped) ths[i].classList.add('col-grouped');
+                    else ths[i].classList.remove('col-grouped');
+                }
+
+                for (var idx = 0; idx < activeGroups.length; idx++) {
+                    var col = activeGroups[idx];
+
+                    if (idx > 0) {
+                        var sep = document.createElement('span');
+                        sep.className = 'sv-group-separator';
+                        sep.textContent = '\u203A';
+                        groupZone.appendChild(sep);
+                    }
+
+                    var chip = document.createElement('span');
+                    chip.className = 'sv-group-chip';
+                    chip.setAttribute('data-col', col);
+                    chip.innerHTML = (colLabels[col] || col) + '<button class="chip-remove" title="Remove group">&times;</button>';
+
+                    (function(c) {
+                        chip.querySelector('.chip-remove').addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            var newGroups = [];
+                            for (var g = 0; g < activeGroups.length; g++) {
+                                if (activeGroups[g] !== c) newGroups.push(activeGroups[g]);
+                            }
+                            activeGroups = newGroups;
+                            renderChips();
+                            applyRowGroups();
+                        });
+                    })(col);
+
+                    groupZone.appendChild(chip);
+                }
+            }
+
+            // ── Column index map ──
+            var colIndex = {};
+            for (var i = 0; i < ths.length; i++) {
+                colIndex[ths[i].getAttribute('data-col')] = i;
+            }
+
+            // ── Apply row grouping ──
+            function applyRowGroups() {
+                // Remove existing group headers
+                var headers = gridBody.querySelectorAll('.sv-group-header');
+                for (var i = 0; i < headers.length; i++) headers[i].remove();
+                // Reset hidden
+                var allRows = gridBody.querySelectorAll('tr');
+                for (var i = 0; i < allRows.length; i++) allRows[i].classList.remove('sv-group-row-hidden');
+
+                var dataRows = gridBody.querySelectorAll('tr:not(.sv-group-header)');
+                if (!dataRows.length || !activeGroups.length) return;
+
+                var colCount = ths.length;
+                groupRowsRecursive(Array.prototype.slice.call(dataRows), activeGroups, 0, colCount);
+            }
+
+            function groupRowsRecursive(rows, keys, depth, colCount) {
+                if (!keys.length || !rows.length) return;
+                var key = keys[0];
+                var ci = colIndex[key];
+                if (ci === undefined) return;
+
+                // Bucket rows by cell value
+                var bucketOrder = [];
+                var bucketMap = {};
+                for (var i = 0; i < rows.length; i++) {
+                    var cells = rows[i].querySelectorAll('td');
+                    var val = cells[ci] ? cells[ci].textContent.trim() : '';
+                    if (!bucketMap[val]) {
+                        bucketMap[val] = [];
+                        bucketOrder.push(val);
+                    }
+                    bucketMap[val].push(rows[i]);
+                }
+
+                for (var b = 0; b < bucketOrder.length; b++) {
+                    var val = bucketOrder[b];
+                    var bRows = bucketMap[val];
+                    var label = (colLabels[key] || key) + ': ' + (val || '(empty)');
+                    var grpTr = document.createElement('tr');
+                    grpTr.className = 'sv-group-header';
+                    grpTr.setAttribute('data-depth', depth);
+
+                    var td = document.createElement('td');
+                    td.setAttribute('colspan', colCount);
+                    td.style.paddingLeft = (0.75 + depth * 1.2) + 'rem';
+                    td.innerHTML = '<i class="bi bi-chevron-down"></i>' + label + ' <span style="opacity:.5;font-weight:400;">(' + bRows.length + ')</span>';
+                    grpTr.appendChild(td);
+
+                    bRows[0].parentNode.insertBefore(grpTr, bRows[0]);
+
+                    (function(grp, d) {
+                        grp.addEventListener('click', function() {
+                            var collapsed = grp.classList.toggle('collapsed');
+                            var sib = grp.nextElementSibling;
+                            while (sib) {
+                                if (sib.classList.contains('sv-group-header')) {
+                                    var sibD = parseInt(sib.getAttribute('data-depth') || '0', 10);
+                                    if (sibD <= d) break;
+                                }
+                                if (collapsed) sib.classList.add('sv-group-row-hidden');
+                                else sib.classList.remove('sv-group-row-hidden');
+                                sib = sib.nextElementSibling;
+                            }
+                        });
+                    })(grpTr, depth);
+
+                    if (keys.length > 1) {
+                        groupRowsRecursive(bRows, keys.slice(1), depth + 1, colCount);
+                    }
+                }
+            }
+
+            window.svGrouping = { applyRowGroups: applyRowGroups };
         })();
 
-        function swapPolPod(){
-            const pol = document.getElementById('sv-pol');
-            const pod = document.getElementById('sv-pod');
-            const tmp = pol.value;
+        function swapPolPod() {
+            var pol = document.getElementById('sv-pol');
+            var pod = document.getElementById('sv-pod');
+            var tmp = pol.value;
             pol.value = pod.value;
             pod.value = tmp;
         }
 
-        function clearFilters(btn){
-            const panel = btn.closest('.sv-filter-panel');
+        function clearFilters(btn) {
+            var panel = btn.closest('.sv-filter-panel');
             if (!panel) return;
-            panel.querySelectorAll('input[type="date"]').forEach(i => i.value = '');
-            panel.querySelectorAll('select').forEach(s => s.value = '');
-            const direct = panel.querySelector('input[value="direct"]');
+            var inputs = panel.querySelectorAll('input[type="date"]');
+            for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
+            var selects = panel.querySelectorAll('select');
+            for (var i = 0; i < selects.length; i++) selects[i].value = '';
+            var direct = panel.querySelector('input[value="direct"]');
             if (direct) direct.checked = true;
         }
 
-        function showSchedule(){
-            // Placeholder — will fetch data when backend is ready
+        function formatDate(val) {
+            if (!val) return '';
+            var d = new Date(val);
+            if (isNaN(d.getTime())) return '';
+            var dd = ('0' + d.getDate()).slice(-2);
+            var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+            var yyyy = d.getFullYear();
+            var hh = ('0' + d.getHours()).slice(-2);
+            var mi = ('0' + d.getMinutes()).slice(-2);
+            return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + mi;
         }
+
+        function showSchedule() {
+            // Detect active tab
+            var activeTab = document.querySelector('.sv-tab.active');
+            if (!activeTab) return;
+            var tab = activeTab.getAttribute('data-tab');
+
+            // Build query params based on active tab filters
+            var params = new URLSearchParams();
+
+            if (tab === 'byService') {
+                var f = document.getElementById('svc-date-from').value;
+                var t = document.getElementById('svc-date-to').value;
+                var s = document.getElementById('svc-service').value;
+                if (f) params.set('fromDate', f);
+                if (t) params.set('toDate', t);
+                if (s) params.set('serviceId', s);
+            }
+            else if (tab === 'byPort') {
+                var f = document.getElementById('port-date-from').value;
+                var t = document.getElementById('port-date-to').value;
+                var p = document.getElementById('port-port').value;
+                if (f) params.set('fromDate', f);
+                if (t) params.set('toDate', t);
+                if (p) params.set('portId', p);
+            }
+            else if (tab === 'byPolPod') {
+                var f = document.getElementById('polpod-date-from').value;
+                var t = document.getElementById('polpod-date-to').value;
+                var pol = document.getElementById('sv-pol').value;
+                var pod = document.getElementById('sv-pod').value;
+                if (f) params.set('fromDate', f);
+                if (t) params.set('toDate', t);
+                if (pol) params.set('polId', pol);
+                if (pod) params.set('podId', pod);
+            }
+            else if (tab === 'byRoute') {
+                var f = document.getElementById('route-date-from').value;
+                var t = document.getElementById('route-date-to').value;
+                var r = document.getElementById('route-route').value;
+                if (f) params.set('fromDate', f);
+                if (t) params.set('toDate', t);
+                if (r) params.set('routeId', r);
+            }
+            else {
+                // byDate (default) — only add if filled
+                var f = document.getElementById('date-from').value;
+                var t = document.getElementById('date-to').value;
+                if (f) params.set('fromDate', f);
+                if (t) params.set('toDate', t);
+            }
+
+            var url = '@Url.Action("GetSchedule", "Schedules")';
+            var qs = params.toString();
+            if (qs) url += '?' + qs;
+
+            var gridBody = document.getElementById('sv-grid-body');
+            gridBody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Loading…</td></tr>';
+
+            fetch(url)
+                .then(function(resp) {
+                    console.log('Schedule API:', resp.status, resp.url);
+                    var ct = resp.headers.get('content-type') || '';
+                    if (!resp.ok) {
+                        if (ct.indexOf('json') !== -1) {
+                            return resp.json().then(function(err) { throw new Error(err.error || 'HTTP ' + resp.status); });
+                        }
+                        throw new Error('HTTP ' + resp.status);
+                    }
+                    if (ct.indexOf('json') === -1) throw new Error('Auth redirect – please re-login');
+                    return resp.json();
+                })
+                .then(function(data) {
+                    console.log('Schedule rows:', data ? data.length : 0);
+                    gridBody.innerHTML = '';
+                    if (!data || !data.length) {
+                        gridBody.innerHTML = '<tr><td colspan="12" class="text-center py-3 text-muted">No records found</td></tr>';
+                        document.getElementById('sv-total-count').textContent = '0';
+                        return;
+                    }
+
+                    for (var i = 0; i < data.length; i++) {
+                        var r = data[i];
+                        var tr = document.createElement('tr');
+                        tr.innerHTML =
+                            '<td>' + (r.service || '') + '</td>' +
+                            '<td>' + (r.vesselCode || '') + '</td>' +
+                            '<td>' + (r.vesselName || '') + '</td>' +
+                            '<td>' + (r.voyage || '') + '</td>' +
+                            '<td>' + (r.bound || '') + '</td>' +
+                            '<td>' + (r.pol || '') + '</td>' +
+                            '<td>' + (r.polTerminal || '') + '</td>' +
+                            '<td>' + (r.pod || '') + '</td>' +
+                            '<td>' + (r.podTerminal || '') + '</td>' +
+                            '<td>' + formatDate(r.etd) + '</td>' +
+                            '<td>' + formatDate(r.eta) + '</td>' +
+                            '<td>' + (r.transitDays != null ? parseFloat(r.transitDays).toFixed(2) : '') + '</td>';
+                        gridBody.appendChild(tr);
+                    }
+
+                    document.getElementById('sv-total-count').textContent = data.length;
+                    window.svGrouping.applyRowGroups();
+                })
+                .catch(function(err) {
+                    gridBody.innerHTML = '<tr><td colspan="12" class="text-center py-3 text-danger">' + err.message + '</td></tr>';
+                    console.error('Schedule fetch error:', err);
+                });
+        }
+
+        // ── Auto-load all schedule data when page opens ──
+        showSchedule();
     </script>
 }
