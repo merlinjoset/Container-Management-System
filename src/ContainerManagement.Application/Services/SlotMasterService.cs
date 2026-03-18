@@ -65,5 +65,44 @@ namespace ContainerManagement.Application.Services
         {
             await _repository.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(
+            IEnumerable<string?> slotNames, Guid userId, CancellationToken ct = default)
+        {
+            var existing = await _repository.GetAllAsync(ct);
+            var byName = existing
+                .Where(s => !string.IsNullOrWhiteSpace(s.SlotName))
+                .ToDictionary(s => s.SlotName!.Trim().ToLowerInvariant(), s => s);
+
+            int added = 0, skipped = 0;
+            foreach (var raw in slotNames)
+            {
+                var name = (raw ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(name)) { skipped++; continue; }
+
+                var key = name.ToLowerInvariant();
+                if (byName.ContainsKey(key))
+                {
+                    skipped++;
+                }
+                else
+                {
+                    var newSlot = new SlotMaster
+                    {
+                        Id = Guid.NewGuid(),
+                        SlotName = name,
+                        IsDeleted = false,
+                        CreatedOn = DateTime.UtcNow,
+                        ModifiedOn = DateTime.UtcNow,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _repository.AddAsync(newSlot, ct);
+                    byName[key] = newSlot;
+                    added++;
+                }
+            }
+            return (added, 0, skipped);
+        }
     }
 }

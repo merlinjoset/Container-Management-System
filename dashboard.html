@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContainerManagement - Project Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .top-bar {
+            background: linear-gradient(90deg, #0f172a, #1e293b);
+            color: #fff; padding: .75rem 1.5rem;
+            display: flex; align-items: center; gap: .75rem;
+        }
+        .top-bar h1 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+        .top-bar .subtitle { font-size: .78rem; color: rgba(255,255,255,.6); }
+        .stat-card {
+            border: none; border-radius: .75rem; text-align: center;
+            padding: 1.25rem .75rem; background: #fff;
+        }
+        .stat-num { font-size: 2rem; font-weight: 700; line-height: 1; }
+        .stat-label { font-size: .78rem; color: #6b7280; margin-top: .25rem; }
+        .dash-card { border: none; border-radius: .6rem; }
+        .dash-card .card-header {
+            background: #1e3a8a; color: #fff; font-size: .85rem; font-weight: 600;
+            padding: .55rem .85rem; border-radius: .6rem .6rem 0 0 !important;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .dash-card .card-body { padding: .65rem .85rem; }
+        .dash-item {
+            font-size: .82rem; padding: .4rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex; align-items: flex-start; gap: .5rem;
+        }
+        .dash-item:last-child { border-bottom: none; }
+        .dash-item i { margin-top: .12rem; flex-shrink: 0; }
+        .dash-done { color: #9ca3af; text-decoration: line-through; }
+        .learn-header { background: #0f172a !important; }
+        .completed-header { background: #16a34a !important; }
+        .learn-item { padding: .35rem 0; border-bottom: 1px solid #f1f5f9; }
+        .learn-item:last-child { border-bottom: none; }
+        .learn-title { font-weight: 600; color: #1e3a8a; font-size: .8rem; }
+        .learn-desc { color: #4b5563; font-size: .77rem; }
+        .timestamp { font-size: .7rem; color: rgba(255,255,255,.45); }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <i class="bi bi-speedometer2" style="font-size:1.3rem;"></i>
+        <div>
+            <h1>ContainerManagement &mdash; Project Dashboard</h1>
+            <div class="subtitle">Backlog, architecture notes &amp; learnings</div>
+        </div>
+        <div class="ms-auto timestamp">Last updated: 2026-03-18 (validation + copy/paste)</div>
+    </div>
+
+    <div class="container-fluid py-3 px-4">
+
+        <!-- Stats Row -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-num text-danger">4</div>
+                    <div class="stat-label">High Priority</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-num text-warning">7</div>
+                    <div class="stat-label">Medium Priority</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-num text-secondary">7</div>
+                    <div class="stat-label">Low Priority</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card shadow-sm">
+                    <div class="stat-num text-success">18</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+
+            <!-- Left: Backlog -->
+            <div class="col-lg-8">
+
+                <!-- High Priority -->
+                <div class="card dash-card shadow-sm mb-3">
+                    <div class="card-header">
+                        <span><i class="bi bi-exclamation-triangle-fill me-1"></i> High Priority</span>
+                        <span class="badge bg-danger">4</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="dash-item"><i class="bi bi-square text-danger"></i><span>Verify Schedule Viewer loads data after latest fixes (try-catch, auto-load, error handling)</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-danger"></i><span>Test Create Voyage with card-based form and auto-calculation formulas</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-danger"></i><span>Test Edit Voyage loads and displays existing port data in cards</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-danger"></i><span>Verify ETA readonly for 2nd+ ports works correctly in both Create and Edit</span></div>
+                    </div>
+                </div>
+
+                <!-- Medium Priority -->
+                <div class="card dash-card shadow-sm mb-3">
+                    <div class="card-header">
+                        <span><i class="bi bi-dash-circle me-1"></i> Medium Priority</span>
+                        <span class="badge bg-warning text-dark">7</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Schedule Viewer: Export to Excel functionality</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Schedule Viewer: Export to PDF functionality</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Schedule Viewer: Column filter functionality (funnel icon button)</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Schedule Viewer: Reset button functionality</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Schedule Viewer: Chart visualization (bar chart icon button)</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Schedule Viewer: Column visibility toggle</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-warning"></i><span>Voyage: Confirm before deleting a port card</span></div>
+                    </div>
+                </div>
+
+                <!-- Low Priority -->
+                <div class="card dash-card shadow-sm mb-3">
+                    <div class="card-header">
+                        <span><i class="bi bi-arrow-down-circle me-1"></i> Low Priority</span>
+                        <span class="badge bg-secondary">7</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Schedule Viewer: Optimize N+1 query in GetScheduleRowsAsync</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Voyage: Drag-and-drop reorder port cards</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Voyage: Duplicate/copy a port card</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Voyage: Import port rotation from Excel</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Address Newtonsoft.Json 11.0.1 vulnerability (NU1903)</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Address System.IO.Packaging 6.0.0 vulnerability (NU1903)</span></div>
+                        <div class="dash-item"><i class="bi bi-square text-secondary"></i><span>Remove duplicate AddControllersWithViews() call in Program.cs</span></div>
+                    </div>
+                </div>
+
+                <!-- Completed -->
+                <div class="card dash-card shadow-sm mb-3">
+                    <div class="card-header completed-header">
+                        <span><i class="bi bi-check-circle-fill me-1"></i> Completed</span>
+                        <span class="badge bg-light text-success">18</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Add Import functionality to DistanceMasters (controller + service + view)</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Add Import functionality to SlotMasters (controller + service + view)</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Convert Voyage port rotation from table/grid to card-based form</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Auto-calculate ETA for 2nd+ ports (=prev ETD + prev SeaDay), readonly field</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Auto-fill Voy No and Bound from previous card when adding new port</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Default Speed to 14.5</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Fix Npgsql timestamp behavior for datetime-local inputs</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Fix JSON serialization casing (PascalCase vs camelCase)</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Fix date timezone handling in formatDateForInput</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Change Edit page from Razor serialization to API fetch for port data</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Schedule Viewer: Implement showSchedule() with fetch</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Schedule Viewer: Add tab filtering, query params, auto-load</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Schedule Viewer: Fix ExceptionHandlingFilter returning HTML for API errors</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Remove SlotId and ThirdParty from Voyage entity</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Voyage: Validation &mdash; require at least 2 ports, datetime format &amp; sequence</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Voyage: Change datetime-local inputs to text fields for copy/paste support</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Schedule Viewer: Direct vs Transhipment filtering on POL/POD tab</span></div>
+                        <div class="dash-item"><i class="bi bi-check-square-fill text-success"></i><span class="dash-done">Schedule Viewer: Show all voyage port data (transhipment) by default</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: Architecture & Learnings -->
+            <div class="col-lg-4">
+
+                <!-- Architecture -->
+                <div class="card dash-card shadow-sm mb-3">
+                    <div class="card-header learn-header">
+                        <span><i class="bi bi-diagram-3 me-1"></i> Architecture</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="learn-item">
+                            <div class="learn-title">Clean Architecture</div>
+                            <div class="learn-desc">Domain &rarr; Application &rarr; Infrastructure &rarr; Web</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Database</div>
+                            <div class="learn-desc">PostgreSQL via Npgsql + EF Core, soft delete with AuditableEntity</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Authentication</div>
+                            <div class="learn-desc">JWT Bearer with cookie, global AuthorizeFilter, 401 &rarr; /Account/Login</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">JSON Serialization</div>
+                            <div class="learn-desc">System.Text.Json with camelCase. Use @Json.Serialize() or controller Json()</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">UI Pattern</div>
+                            <div class="learn-desc">Bootstrap 5, card shadow-sm, form-control-sm, operator-page layout</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Voyage Formulas</div>
+                            <div class="learn-desc">SeaDay=Dist/Speed/24, ETB=ETA+2h, ETD=ETB+PortStay, NextETA=prevETD+prevSeaDay</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Schedule Viewer</div>
+                            <div class="learn-desc">Flattens Voyage+VoyagePorts into POL&rarr;POD leg rows, needs 2+ ports</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Learnings & Gotchas -->
+                <div class="card dash-card shadow-sm mb-3">
+                    <div class="card-header learn-header">
+                        <span><i class="bi bi-lightbulb me-1"></i> Learnings &amp; Gotchas</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="learn-item">
+                            <div class="learn-title">Npgsql Timestamps</div>
+                            <div class="learn-desc">Npgsql 6+ rejects DateTime with Kind=Unspecified. Fix: EnableLegacyTimestampBehavior</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">JSON Casing</div>
+                            <div class="learn-desc">Never use System.Text.Json.JsonSerializer.Serialize() for Razor &mdash; it uses PascalCase</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Date Inputs</div>
+                            <div class="learn-desc">Use dateStr.substring(0,16) to strip timezone. new Date() shifts values</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">ExceptionHandlingFilter</div>
+                            <div class="learn-desc">Returns HTML for ALL exceptions. API endpoints need try-catch returning JSON</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Auth &amp; Fetch</div>
+                            <div class="learn-desc">401 redirects to login (302). Check resp.ok AND content-type before .json()</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Build Lock Errors</div>
+                            <div class="learn-desc">MSB3021/MSB3027 when app running &mdash; not code errors. .cshtml changes need no restart</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">Selector Consistency</div>
+                            <div class="learn-desc">When changing HTML structure, update ALL querySelectorAll selectors</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">DB Column Changes</div>
+                            <div class="learn-desc">EF Core won't auto-migrate. Need manual SQL: ALTER TABLE DROP COLUMN</div>
+                        </div>
+                        <div class="learn-item">
+                            <div class="learn-title">URL Generation</div>
+                            <div class="learn-desc">Use @Url.Action() for attribute-routed controllers. Avoid hardcoded URLs</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

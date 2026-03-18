@@ -84,5 +84,63 @@ namespace ContainerManagement.Application.Services
         {
             await _repository.SoftDeleteAsync(id, modifiedBy, ct);
         }
+
+        public async Task<(int added, int updated, int skipped)> ImportAsync(
+            IEnumerable<(string? FromPortCode, string? ToPortCode, decimal? Distance)> rows,
+            Guid userId, CancellationToken ct = default)
+        {
+            var ports = await _portsRepository.GetAllAsync(ct);
+            var portByCode = ports
+                .Where(p => !string.IsNullOrWhiteSpace(p.PortCode))
+                .ToDictionary(p => p.PortCode.Trim().ToUpperInvariant(), p => p);
+
+            var existing = await _repository.GetAllAsync(ct);
+            var pairKey = static (Guid from, Guid to) => $"{from}|{to}";
+            var existingPairs = existing.ToDictionary(d => pairKey(d.FromPortId, d.ToPortId), d => d);
+
+            int added = 0, updated = 0, skipped = 0;
+            foreach (var row in rows)
+            {
+                var fromCode = (row.FromPortCode ?? string.Empty).Trim().ToUpperInvariant();
+                var toCode = (row.ToPortCode ?? string.Empty).Trim().ToUpperInvariant();
+                if (string.IsNullOrWhiteSpace(fromCode) || string.IsNullOrWhiteSpace(toCode) || row.Distance == null)
+                { skipped++; continue; }
+
+                if (!portByCode.TryGetValue(fromCode, out var fromPort) ||
+                    !portByCode.TryGetValue(toCode, out var toPort))
+                { skipped++; continue; }
+
+                if (fromPort.Id == toPort.Id) { skipped++; continue; }
+
+                var key = pairKey(fromPort.Id, toPort.Id);
+                if (existingPairs.TryGetValue(key, out var dist))
+                {
+                    dist.Distance = row.Distance.Value;
+                    dist.ModifiedOn = DateTime.UtcNow;
+                    dist.ModifiedBy = userId;
+                    await _repository.UpdateAsync(dist, ct);
+                    updated++;
+                }
+                else
+                {
+                    var newDist = new DistanceMaster
+                    {
+                        Id = Guid.NewGuid(),
+                        FromPortId = fromPort.Id,
+                        ToPortId = toPort.Id,
+                        Distance = row.Distance.Value,
+                        IsDeleted = false,
+                        CreatedOn = DateTime.UtcNow,
+                        ModifiedOn = DateTime.UtcNow,
+                        CreatedBy = userId,
+                        ModifiedBy = userId
+                    };
+                    await _repository.AddAsync(newDist, ct);
+                    existingPairs[key] = newDist;
+                    added++;
+                }
+            }
+            return (added, updated, skipped);
+        }
     }
 }

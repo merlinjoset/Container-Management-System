@@ -128,6 +128,52 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
+        public IActionResult Import() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file, CancellationToken ct)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["Error"] = "Please select an Excel file.";
+                return RedirectToAction(nameof(Import));
+            }
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+            {
+                TempData["Error"] = "Unsupported file type. Please upload .xlsx or .xls.";
+                return RedirectToAction(nameof(Import));
+            }
+
+            var rows = new List<(string? FromPortCode, string? ToPortCode, decimal? Distance)>();
+            using (var stream = file.OpenReadStream())
+            using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
+            {
+                var rowIndex = 0;
+                while (reader.Read())
+                {
+                    if (rowIndex == 0)
+                    {
+                        var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
+                        if (c0?.Contains("from") == true || c0?.Contains("port") == true) { rowIndex++; continue; }
+                    }
+                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
+                    decimal? Dec(int i) { if (reader.FieldCount <= i) return null; return decimal.TryParse(reader.GetValue(i)?.ToString(), out var v) ? v : null; }
+                    rows.Add((S(0), S(1), Dec(2)));
+                    rowIndex++;
+                }
+            }
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+
+            var (added, updated, skipped) = await _distanceMasterService.ImportAsync(rows, userId, ct);
+            TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
         public IActionResult Template()
         {
             using var wb = new XLWorkbook();

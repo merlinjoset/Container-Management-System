@@ -219,7 +219,7 @@ public class VoyageService
         await _voyagesRepo.SoftDeleteAsync(id, modifiedBy, ct);
     }
 
-    // ── Schedule Viewer: flatten voyages into POL→POD leg rows ──
+    // ── Schedule Viewer: one row per voyage-port entry (as entered) ──
     public async Task<List<ScheduleRowDto>> GetScheduleRowsAsync(
         DateTime? fromDate = null,
         DateTime? toDate = null,
@@ -235,8 +235,11 @@ public class VoyageService
         var allPorts = await _portsMasterRepo.GetAllAsync(ct);
         var terminals = await _terminalsRepo.GetAllAsync(ct);
 
+        var operators = await _operatorsRepo.GetAllAsync(ct);
+
         var vesselLookup = vessels.ToDictionary(v => v.Id);
         var serviceLookup = services.ToDictionary(s => s.Id);
+        var operatorLookup = operators.ToDictionary(o => o.Id);
         var portLookup = allPorts.ToDictionary(p => p.Id);
         var termLookup = terminals.ToDictionary(t => t.Id);
 
@@ -251,49 +254,64 @@ public class VoyageService
             var ports = await _portsRepo.GetByVoyageIdAsync(voyage.Id, ct);
             var sorted = ports.OrderBy(p => p.SortOrder).ToList();
 
+            if (sorted.Count == 0) continue;
+
             var vsl = vesselLookup.TryGetValue(voyage.VesselId, out var v) ? v : null;
             var svc = voyage.ServiceId.HasValue && serviceLookup.TryGetValue(voyage.ServiceId.Value, out var s) ? s : null;
+            var opr = voyage.OperatorId.HasValue && operatorLookup.TryGetValue(voyage.OperatorId.Value, out var o) ? o : null;
 
-            for (int i = 0; i < sorted.Count - 1; i++)
+            // Check if any port in this voyage matches the port/pol/pod filters
+            bool voyageMatchesPortFilter = !portId.HasValue
+                || sorted.Any(p => p.PortId == portId.Value);
+            bool voyageMatchesPolFilter = !polId.HasValue
+                || sorted.Any(p => p.PortId == polId.Value);
+            bool voyageMatchesPodFilter = !podId.HasValue
+                || sorted.Any(p => p.PortId == podId.Value);
+
+            if (!voyageMatchesPortFilter || !voyageMatchesPolFilter || !voyageMatchesPodFilter)
+                continue;
+
+            // Date range: check if any port in this voyage falls in range
+            if (fromDate.HasValue || toDate.HasValue)
             {
-                var pol = sorted[i];
-                var pod = sorted[i + 1];
+                bool anyInRange = sorted.Any(p =>
+                {
+                    var etd = p.ETD ?? p.ETA;
+                    if (etd == null) return true; // include ports without dates
+                    if (fromDate.HasValue && etd.Value < fromDate.Value) return false;
+                    if (toDate.HasValue && etd.Value > toDate.Value.AddDays(1)) return false;
+                    return true;
+                });
+                if (!anyInRange) continue;
+            }
 
-                // Date range filter on ETD
-                if (fromDate.HasValue && pol.ETD.HasValue && pol.ETD.Value < fromDate.Value)
-                    continue;
-                if (toDate.HasValue && pol.ETD.HasValue && pol.ETD.Value > toDate.Value.AddDays(1))
-                    continue;
-
-                // Port filter: either POL or POD matches
-                if (portId.HasValue && pol.PortId != portId.Value && pod.PortId != portId.Value)
-                    continue;
-
-                // POL/POD specific filter
-                if (polId.HasValue && pol.PortId != polId.Value)
-                    continue;
-                if (podId.HasValue && pod.PortId != podId.Value)
-                    continue;
-
-                var polPort = portLookup.TryGetValue(pol.PortId, out var pp) ? pp : null;
-                var podPort = portLookup.TryGetValue(pod.PortId, out var dp) ? dp : null;
-                var polTerm = pol.TerminalId.HasValue && termLookup.TryGetValue(pol.TerminalId.Value, out var pt) ? pt : null;
-                var podTerm = pod.TerminalId.HasValue && termLookup.TryGetValue(pod.TerminalId.Value, out var dt) ? dt : null;
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                var vp = sorted[i];
+                var port = portLookup.TryGetValue(vp.PortId, out var p2) ? p2 : null;
+                var term = vp.TerminalId.HasValue && termLookup.TryGetValue(vp.TerminalId.Value, out var t2) ? t2 : null;
 
                 rows.Add(new ScheduleRowDto
                 {
+                    VoyageId = voyage.Id,
                     Service = svc?.ServiceCode,
                     VesselCode = vsl?.VesselCode,
                     VesselName = vsl?.VesselName,
-                    Voyage = pol.VoyNo,
-                    Bound = pol.Bound,
-                    POL = polPort?.PortCode ?? polPort?.FullName,
-                    POLTerminal = polTerm?.TerminalCode ?? polTerm?.TerminalName,
-                    POD = podPort?.PortCode ?? podPort?.FullName,
-                    PODTerminal = podTerm?.TerminalCode ?? podTerm?.TerminalName,
-                    ETD = pol.ETD,
-                    ETA = pod.ETA,
-                    TransitDays = pol.SeaDay
+                    Operator = opr?.OperatorName,
+                    Slot = voyage.VoyageType,
+                    Voyage = vp.VoyNo,
+                    Bound = vp.Bound,
+                    Leg = i + 1,
+                    TotalLegs = sorted.Count,
+                    Port = port?.PortCode ?? port?.FullName,
+                    Terminal = term?.TerminalCode ?? term?.TerminalName,
+                    ETA = vp.ETA,
+                    ETB = vp.ETB,
+                    ETD = vp.ETD,
+                    PortStay = vp.PortStay,
+                    SeaDay = vp.SeaDay,
+                    Speed = vp.Speed,
+                    Distance = vp.Distance
                 });
             }
         }

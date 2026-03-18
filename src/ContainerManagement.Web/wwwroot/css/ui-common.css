@@ -4,7 +4,7 @@
 .operator-page .toolbar .btn { padding: .25rem .5rem; font-size: .875rem; }
 
 .operator-page .content { display: flex; justify-content: flex-start; padding: 1rem; }
-.operator-page .left-grid { width: 100%; max-width: 900px; }
+.operator-page .left-grid { width: 100%; }
 .operator-page .right-blank { display: none; }
 
 .operator-page .grid-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: .5rem; overflow: hidden; display: flex; flex-direction: column; }

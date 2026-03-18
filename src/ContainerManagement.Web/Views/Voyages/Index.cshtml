@@ -9,6 +9,45 @@
 
 @section Styles{
     <link rel="stylesheet" href="~/css/ui-common.css" asp-append-version="true" />
+    <style>
+        .voy-list-wrap { border: 1px solid #e5e7eb; border-radius: .5rem; overflow: hidden; background: #fff; margin-bottom: .75rem; }
+        .voy-list-header {
+            background: #1e3a8a; color: #fff; padding: .4rem .75rem; font-size: .8rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .voy-list-wrap table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+        .voy-list-wrap thead th {
+            background: #312e81; color: #fff; padding: .4rem .5rem; font-weight: 600;
+            white-space: nowrap; position: sticky; top: 0; z-index: 2; font-size: .72rem;
+        }
+        .voy-list-wrap tbody td { padding: .3rem .5rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+        .voy-list-wrap tbody tr:hover { background: #eff6ff; }
+        .voy-list-wrap tbody tr.selected { background: #dbeafe; border-left: 3px solid #1e3a8a; }
+
+        /* Port detail panel */
+        .voy-detail-wrap { border: 1px solid #e5e7eb; border-radius: .5rem; overflow: hidden; background: #fff; }
+        .voy-detail-header {
+            background: linear-gradient(135deg, #312e81, #4338ca); color: #fff; padding: .4rem .75rem; font-size: .8rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .voy-detail-info { background: #f8fafc; padding: .6rem .85rem; border-bottom: 1px solid #e5e7eb; display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        .voy-detail-info .info-item { font-size: .75rem; }
+        .voy-detail-info .info-label { font-weight: 600; color: #1e3a8a; margin-right: .3rem; }
+        .voy-detail-info .info-value { color: #374151; }
+
+        .voy-detail-wrap table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+        .voy-detail-wrap thead th {
+            background: #312e81; color: #fff; padding: .4rem .5rem; font-weight: 600;
+            white-space: nowrap; font-size: .72rem; text-align: center;
+        }
+        .voy-detail-wrap tbody td { padding: .3rem .5rem; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: .73rem; }
+        .voy-detail-wrap tbody tr:hover { background: #eff6ff; }
+
+        .voy-detail-empty { padding: 2rem; text-align: center; color: #9ca3af; font-size: .82rem; }
+
+        .voy-action-bar { display: flex; gap: .4rem; align-items: center; }
+        .voy-action-bar .btn { font-size: .72rem; padding: .2rem .55rem; }
+    </style>
 }
 
 <div class="operator-page">
@@ -19,9 +58,15 @@
 
     <div class="content" style="flex-direction: column; max-width: 100%;">
         <div style="width: 100%;">
-            <div class="grid-card">
-                <div class="table-wrapper">
-                    <table class="table table-sm mb-0 sticky">
+
+            @* ── Voyage List ── *@
+            <div class="voy-list-wrap">
+                <div class="voy-list-header">
+                    <span><i class="bi bi-ship me-1"></i> Voyage List</span>
+                    <span style="font-size:.7rem; opacity:.7;">Click a row to view port rotation</span>
+                </div>
+                <div style="max-height: 260px; overflow: auto;">
+                    <table>
                         <thead>
                             <tr>
                                 <th>Vessel</th>
@@ -33,12 +78,17 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="voy-list-body">
                             @if (Model != null && Model.Any())
                             {
                                 foreach (var v in Model)
                                 {
-                                    <tr>
+                                    <tr data-id="@v.Id"
+                                        data-vessel="@v.VesselName"
+                                        data-service-code="@v.ServiceCode"
+                                        data-service-name="@v.ServiceName"
+                                        data-operator="@v.OperatorName"
+                                        data-slot="@v.VoyageType">
                                         <td>@v.VesselName</td>
                                         <td>@v.ServiceCode</td>
                                         <td>@v.ServiceName</td>
@@ -46,15 +96,17 @@
                                         <td>@v.VoyageType</td>
                                         <td>@v.CreatedOn.ToString("dd/MM/yyyy")</td>
                                         <td>
-                                            <a asp-action="Edit" asp-route-id="@v.Id" class="btn btn-sm btn-outline-primary" style="font-size:.7rem; padding:.15rem .4rem;">
-                                                <i class="bi bi-pencil"></i> Edit
-                                            </a>
-                                            <form asp-action="Delete" asp-route-id="@v.Id" method="post" style="display:inline;" onsubmit="return confirm('Delete this voyage?');">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:.7rem; padding:.15rem .4rem;">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            <div class="voy-action-bar">
+                                                <a asp-action="Edit" asp-route-id="@v.Id" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                                                    <i class="bi bi-pencil"></i> Edit
+                                                </a>
+                                                <form asp-action="Delete" asp-route-id="@v.Id" method="post" style="display:inline;" onsubmit="event.stopPropagation(); return confirm('Delete this voyage?');">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 }
@@ -67,6 +119,153 @@
                     </table>
                 </div>
             </div>
+
+            @* ── Port Rotation Detail Panel ── *@
+            <div class="voy-detail-wrap" id="voy-detail-panel" style="display:none;">
+                <div class="voy-detail-header">
+                    <span><i class="bi bi-geo-alt me-1"></i> Port Rotation — <span id="detail-title"></span></span>
+                    <span id="detail-port-count" style="font-size:.7rem; opacity:.7;"></span>
+                </div>
+                <div class="voy-detail-info" id="detail-info">
+                    <div class="info-item"><span class="info-label">Vessel:</span><span class="info-value" id="info-vessel"></span></div>
+                    <div class="info-item"><span class="info-label">Service:</span><span class="info-value" id="info-service"></span></div>
+                    <div class="info-item"><span class="info-label">Operator:</span><span class="info-value" id="info-operator"></span></div>
+                    <div class="info-item"><span class="info-label">Slot:</span><span class="info-value" id="info-slot"></span></div>
+                </div>
+                <div style="max-height: 45vh; overflow: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Voy No</th>
+                                <th>Bound</th>
+                                <th>Port</th>
+                                <th>Terminal</th>
+                                <th>ETA</th>
+                                <th>ETB</th>
+                                <th>ETD</th>
+                                <th>Port Stay</th>
+                                <th>Speed</th>
+                                <th>Distance</th>
+                                <th>Sea Day</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-port-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @* ── Placeholder when no voyage selected ── *@
+            <div class="voy-detail-wrap" id="voy-detail-placeholder">
+                <div class="voy-detail-empty">
+                    <i class="bi bi-cursor" style="font-size:1.5rem; display:block; margin-bottom:.5rem;"></i>
+                    Select a voyage from the list above to view its port rotation
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+
+@section Scripts{
+    <script>
+        (function() {
+            var listBody = document.getElementById('voy-list-body');
+            var detailPanel = document.getElementById('voy-detail-panel');
+            var placeholder = document.getElementById('voy-detail-placeholder');
+            var portBody = document.getElementById('detail-port-body');
+            var selectedId = null;
+
+            function formatDate(val) {
+                if (!val) return '';
+                var d = new Date(val);
+                if (isNaN(d.getTime())) return '';
+                var dd = ('0' + d.getDate()).slice(-2);
+                var mm = ('0' + (d.getMonth() + 1)).slice(-2);
+                var yyyy = d.getFullYear();
+                var hh = ('0' + d.getHours()).slice(-2);
+                var mi = ('0' + d.getMinutes()).slice(-2);
+                return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + mi;
+            }
+
+            // Attach click to voyage rows
+            var rows = listBody.querySelectorAll('tr[data-id]');
+            for (var i = 0; i < rows.length; i++) {
+                (function(row) {
+                    row.addEventListener('click', function() {
+                        var id = row.getAttribute('data-id');
+                        if (selectedId === id) return;
+                        selectedId = id;
+
+                        // Highlight selected row
+                        var allRows = listBody.querySelectorAll('tr[data-id]');
+                        for (var j = 0; j < allRows.length; j++) allRows[j].classList.remove('selected');
+                        row.classList.add('selected');
+
+                        // Update detail info
+                        document.getElementById('info-vessel').textContent = row.getAttribute('data-vessel') || '';
+                        document.getElementById('info-service').textContent = (row.getAttribute('data-service-code') || '') + (row.getAttribute('data-service-name') ? ' — ' + row.getAttribute('data-service-name') : '');
+                        document.getElementById('info-operator').textContent = row.getAttribute('data-operator') || '';
+                        document.getElementById('info-slot').textContent = row.getAttribute('data-slot') || '';
+                        document.getElementById('detail-title').textContent = (row.getAttribute('data-vessel') || 'Voyage');
+
+                        // Load ports
+                        loadPorts(id);
+                    });
+                })(rows[i]);
+            }
+
+            function loadPorts(voyageId) {
+                portBody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Loading…</td></tr>';
+                placeholder.style.display = 'none';
+                detailPanel.style.display = '';
+
+                fetch('@Url.Action("GetPorts", "Voyages")?id=' + voyageId)
+                    .then(function(resp) {
+                        var ct = resp.headers.get('content-type') || '';
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                        if (ct.indexOf('json') === -1) throw new Error('Auth redirect – please re-login');
+                        return resp.json();
+                    })
+                    .then(function(data) {
+                        portBody.innerHTML = '';
+                        if (!data || !data.length) {
+                            portBody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-3">No port rotation data</td></tr>';
+                            document.getElementById('detail-port-count').textContent = '0 ports';
+                            return;
+                        }
+
+                        document.getElementById('detail-port-count').textContent = data.length + ' port' + (data.length !== 1 ? 's' : '');
+
+                        for (var i = 0; i < data.length; i++) {
+                            var p = data[i];
+                            var tr = document.createElement('tr');
+                            tr.innerHTML =
+                                '<td style="font-weight:700;color:#1e3a8a;">' + (i + 1) + '</td>' +
+                                '<td>' + (p.voyNo || '') + '</td>' +
+                                '<td>' + (p.bound || '') + '</td>' +
+                                '<td>' + (p.portCode || '') + '</td>' +
+                                '<td>' + (p.terminalCode || '') + '</td>' +
+                                '<td>' + formatDate(p.eta) + '</td>' +
+                                '<td>' + formatDate(p.etb) + '</td>' +
+                                '<td>' + formatDate(p.etd) + '</td>' +
+                                '<td>' + (p.portStay != null ? p.portStay : '') + '</td>' +
+                                '<td>' + (p.speed != null ? parseFloat(p.speed).toFixed(1) : '') + '</td>' +
+                                '<td>' + (p.distance != null ? parseFloat(p.distance).toFixed(0) : '') + '</td>' +
+                                '<td>' + (p.seaDay != null ? parseFloat(p.seaDay).toFixed(2) : '') + '</td>';
+                            portBody.appendChild(tr);
+                        }
+                    })
+                    .catch(function(err) {
+                        portBody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-3">' + err.message + '</td></tr>';
+                    });
+            }
+
+            // Auto-select first voyage if available
+            if (rows.length > 0) {
+                rows[0].click();
+            }
+        })();
+    </script>
+}

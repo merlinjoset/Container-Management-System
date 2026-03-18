@@ -295,15 +295,20 @@
                                 <th class="sv-header-th" data-col="service">Service</th>
                                 <th class="sv-header-th" data-col="vesselCode">Vessel Code</th>
                                 <th class="sv-header-th" data-col="vesselName">Vessel Name</th>
+                                <th class="sv-header-th" data-col="operator">Operator</th>
+                                <th class="sv-header-th" data-col="slot">Slot</th>
                                 <th class="sv-header-th" data-col="voyage">Voyage</th>
                                 <th class="sv-header-th" data-col="bound">Bound</th>
-                                <th class="sv-header-th" data-col="pol">POL</th>
-                                <th class="sv-header-th" data-col="polTerminal">POL Terminal</th>
-                                <th class="sv-header-th" data-col="pod">POD</th>
-                                <th class="sv-header-th" data-col="podTerminal">POD Terminal</th>
-                                <th class="sv-header-th" data-col="etd">ETD</th>
+                                <th class="sv-header-th" data-col="leg">Leg</th>
+                                <th class="sv-header-th" data-col="port">Port</th>
+                                <th class="sv-header-th" data-col="terminal">Terminal</th>
                                 <th class="sv-header-th" data-col="eta">ETA</th>
-                                <th class="sv-header-th" data-col="transitDays">Transit Days</th>
+                                <th class="sv-header-th" data-col="etb">ETB</th>
+                                <th class="sv-header-th" data-col="etd">ETD</th>
+                                <th class="sv-header-th" data-col="portStay">Port Stay</th>
+                                <th class="sv-header-th" data-col="seaDay">Sea Day</th>
+                                <th class="sv-header-th" data-col="speed">Speed</th>
+                                <th class="sv-header-th" data-col="distance">Distance</th>
                             </tr>
                         </thead>
                         <tbody id="sv-grid-body">
@@ -584,6 +589,7 @@
             for (var i = 0; i < selects.length; i++) selects[i].value = '';
             var direct = panel.querySelector('input[value="direct"]');
             if (direct) direct.checked = true;
+            showSchedule();
         }
 
         function formatDate(val) {
@@ -598,6 +604,9 @@
             return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + mi;
         }
 
+        // ── Store full data for client-side filtering ──
+        var svAllData = [];
+
         function showSchedule() {
             // Detect active tab
             var activeTab = document.querySelector('.sv-tab.active');
@@ -606,59 +615,66 @@
 
             // Build query params based on active tab filters
             var params = new URLSearchParams();
+            var routingType = 'transhipment'; // default: show all ports
 
             if (tab === 'byService') {
-                var f = document.getElementById('svc-date-from').value;
-                var t = document.getElementById('svc-date-to').value;
-                var s = document.getElementById('svc-service').value;
-                if (f) params.set('fromDate', f);
-                if (t) params.set('toDate', t);
-                if (s) params.set('serviceId', s);
+                var svcFrom = document.getElementById('svc-date-from');
+                var svcTo = document.getElementById('svc-date-to');
+                var svcSel = document.getElementById('svc-service');
+                if (svcFrom && svcFrom.value) params.set('fromDate', svcFrom.value);
+                if (svcTo && svcTo.value) params.set('toDate', svcTo.value);
+                if (svcSel && svcSel.value) params.set('serviceId', svcSel.value);
             }
             else if (tab === 'byPort') {
-                var f = document.getElementById('port-date-from').value;
-                var t = document.getElementById('port-date-to').value;
-                var p = document.getElementById('port-port').value;
-                if (f) params.set('fromDate', f);
-                if (t) params.set('toDate', t);
-                if (p) params.set('portId', p);
+                var portFrom = document.getElementById('port-date-from');
+                var portTo = document.getElementById('port-date-to');
+                var portSel = document.getElementById('port-port');
+                if (portFrom && portFrom.value) params.set('fromDate', portFrom.value);
+                if (portTo && portTo.value) params.set('toDate', portTo.value);
+                if (portSel && portSel.value) params.set('portId', portSel.value);
             }
             else if (tab === 'byPolPod') {
-                var f = document.getElementById('polpod-date-from').value;
-                var t = document.getElementById('polpod-date-to').value;
-                var pol = document.getElementById('sv-pol').value;
-                var pod = document.getElementById('sv-pod').value;
-                if (f) params.set('fromDate', f);
-                if (t) params.set('toDate', t);
-                if (pol) params.set('polId', pol);
-                if (pod) params.set('podId', pod);
+                var ppFrom = document.getElementById('polpod-date-from');
+                var ppTo = document.getElementById('polpod-date-to');
+                var polSel = document.getElementById('sv-pol');
+                var podSel = document.getElementById('sv-pod');
+                if (ppFrom && ppFrom.value) params.set('fromDate', ppFrom.value);
+                if (ppTo && ppTo.value) params.set('toDate', ppTo.value);
+                if (polSel && polSel.value) params.set('polId', polSel.value);
+                if (podSel && podSel.value) params.set('podId', podSel.value);
+                // Get routing type
+                var rt = document.querySelector('input[name="routingType"]:checked');
+                routingType = rt ? rt.value : 'transhipment';
             }
             else if (tab === 'byRoute') {
-                var f = document.getElementById('route-date-from').value;
-                var t = document.getElementById('route-date-to').value;
-                var r = document.getElementById('route-route').value;
-                if (f) params.set('fromDate', f);
-                if (t) params.set('toDate', t);
-                if (r) params.set('routeId', r);
+                var rtFrom = document.getElementById('route-date-from');
+                var rtTo = document.getElementById('route-date-to');
+                var rtSel = document.getElementById('route-route');
+                if (rtFrom && rtFrom.value) params.set('fromDate', rtFrom.value);
+                if (rtTo && rtTo.value) params.set('toDate', rtTo.value);
+                if (rtSel && rtSel.value) params.set('routeId', rtSel.value);
             }
             else {
-                // byDate (default) — only add if filled
-                var f = document.getElementById('date-from').value;
-                var t = document.getElementById('date-to').value;
-                if (f) params.set('fromDate', f);
-                if (t) params.set('toDate', t);
+                // byDate (default)
+                var dtFrom = document.getElementById('date-from');
+                var dtTo = document.getElementById('date-to');
+                if (dtFrom && dtFrom.value) params.set('fromDate', dtFrom.value);
+                if (dtTo && dtTo.value) params.set('toDate', dtTo.value);
             }
 
-            var url = '@Url.Action("GetSchedule", "Schedules")';
+            var baseUrl = '@Url.Action("GetSchedule", "Schedules")';
+            if (!baseUrl) baseUrl = '/schedules/api/schedule'; // fallback
             var qs = params.toString();
-            if (qs) url += '?' + qs;
+            var url = qs ? baseUrl + '?' + qs : baseUrl;
+
+            console.log('[Schedule] tab=' + tab + ' url=' + url);
 
             var gridBody = document.getElementById('sv-grid-body');
-            gridBody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Loading…</td></tr>';
+            gridBody.innerHTML = '<tr><td colspan="17" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Loading…</td></tr>';
 
             fetch(url)
                 .then(function(resp) {
-                    console.log('Schedule API:', resp.status, resp.url);
+                    console.log('[Schedule] HTTP ' + resp.status + ' type=' + (resp.headers.get('content-type') || ''));
                     var ct = resp.headers.get('content-type') || '';
                     if (!resp.ok) {
                         if (ct.indexOf('json') !== -1) {
@@ -670,40 +686,62 @@
                     return resp.json();
                 })
                 .then(function(data) {
-                    console.log('Schedule rows:', data ? data.length : 0);
-                    gridBody.innerHTML = '';
-                    if (!data || !data.length) {
-                        gridBody.innerHTML = '<tr><td colspan="12" class="text-center py-3 text-muted">No records found</td></tr>';
-                        document.getElementById('sv-total-count').textContent = '0';
-                        return;
+                    svAllData = data || [];
+                    console.log('[Schedule] Received ' + svAllData.length + ' rows');
+
+                    // Apply Direct/Transhipment filter
+                    var filtered = svAllData;
+                    if (routingType === 'direct') {
+                        // Direct: show only first and last port per voyage
+                        filtered = svAllData.filter(function(r) {
+                            return r.leg === 1 || r.leg === r.totalLegs;
+                        });
+                        console.log('[Schedule] Direct filter: ' + filtered.length + ' of ' + svAllData.length);
                     }
 
-                    for (var i = 0; i < data.length; i++) {
-                        var r = data[i];
-                        var tr = document.createElement('tr');
-                        tr.innerHTML =
-                            '<td>' + (r.service || '') + '</td>' +
-                            '<td>' + (r.vesselCode || '') + '</td>' +
-                            '<td>' + (r.vesselName || '') + '</td>' +
-                            '<td>' + (r.voyage || '') + '</td>' +
-                            '<td>' + (r.bound || '') + '</td>' +
-                            '<td>' + (r.pol || '') + '</td>' +
-                            '<td>' + (r.polTerminal || '') + '</td>' +
-                            '<td>' + (r.pod || '') + '</td>' +
-                            '<td>' + (r.podTerminal || '') + '</td>' +
-                            '<td>' + formatDate(r.etd) + '</td>' +
-                            '<td>' + formatDate(r.eta) + '</td>' +
-                            '<td>' + (r.transitDays != null ? parseFloat(r.transitDays).toFixed(2) : '') + '</td>';
-                        gridBody.appendChild(tr);
-                    }
-
-                    document.getElementById('sv-total-count').textContent = data.length;
-                    window.svGrouping.applyRowGroups();
+                    renderGrid(filtered);
                 })
                 .catch(function(err) {
-                    gridBody.innerHTML = '<tr><td colspan="12" class="text-center py-3 text-danger">' + err.message + '</td></tr>';
-                    console.error('Schedule fetch error:', err);
+                    console.error('[Schedule] Error: ' + err.message);
+                    gridBody.innerHTML = '<tr><td colspan="17" class="text-center py-3 text-danger"><i class="bi bi-exclamation-triangle"></i> ' + err.message + '</td></tr>';
                 });
+        }
+
+        function renderGrid(data) {
+            var gridBody = document.getElementById('sv-grid-body');
+            gridBody.innerHTML = '';
+            if (!data || !data.length) {
+                gridBody.innerHTML = '<tr><td colspan="17" class="text-center py-3 text-muted">No records found</td></tr>';
+                document.getElementById('sv-total-count').textContent = '0';
+                return;
+            }
+
+            for (var i = 0; i < data.length; i++) {
+                var r = data[i];
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + (r.service || '') + '</td>' +
+                    '<td>' + (r.vesselCode || '') + '</td>' +
+                    '<td>' + (r.vesselName || '') + '</td>' +
+                    '<td>' + (r.operator || '') + '</td>' +
+                    '<td>' + (r.slot || '') + '</td>' +
+                    '<td>' + (r.voyage || '') + '</td>' +
+                    '<td>' + (r.bound || '') + '</td>' +
+                    '<td>' + (r.leg || '') + '</td>' +
+                    '<td>' + (r.port || '') + '</td>' +
+                    '<td>' + (r.terminal || '') + '</td>' +
+                    '<td>' + formatDate(r.eta) + '</td>' +
+                    '<td>' + formatDate(r.etb) + '</td>' +
+                    '<td>' + formatDate(r.etd) + '</td>' +
+                    '<td>' + (r.portStay != null ? r.portStay : '') + '</td>' +
+                    '<td>' + (r.seaDay != null ? parseFloat(r.seaDay).toFixed(2) : '') + '</td>' +
+                    '<td>' + (r.speed != null ? parseFloat(r.speed).toFixed(1) : '') + '</td>' +
+                    '<td>' + (r.distance != null ? parseFloat(r.distance).toFixed(0) : '') + '</td>';
+                gridBody.appendChild(tr);
+            }
+
+            document.getElementById('sv-total-count').textContent = data.length;
+            window.svGrouping.applyRowGroups();
         }
 
         // ── Auto-load all schedule data when page opens ──

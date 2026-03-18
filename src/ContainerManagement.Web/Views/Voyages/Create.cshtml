@@ -17,14 +17,33 @@
         .voy-header .voy-field select,
         .voy-header .voy-field input { font-size: .75rem; padding: .3rem .5rem; border: 1px solid #cbd5e1; border-radius: .25rem; min-width: 180px; }
         .voy-header .voy-field select { background: #e0f2fe; }
-        .voy-header .voy-type-highlight { background: #fef08a; font-weight: 600; }
 
-        /* ── Port rotation cards ── */
-        .port-card .form-label { font-size: .75rem; font-weight: 600; color: #374151; margin-bottom: .15rem; }
-        .port-card .form-control-sm, .port-card .form-select-sm { font-size: .78rem; }
-        .port-card .card-header { background: #1e3a8a; color: #fff; padding: .4rem .75rem; font-size: .8rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
-        .port-card .btn-remove-port { background: none; border: none; color: #fca5a5; cursor: pointer; font-size: .9rem; padding: .1rem .3rem; }
-        .port-card .btn-remove-port:hover { color: #fef2f2; }
+        /* ── Port rotation grid ── */
+        .voy-grid-wrap { border: 1px solid #e5e7eb; border-radius: .5rem; overflow: hidden; background: #fff; }
+        .voy-grid-header { background: #1e3a8a; color: #fff; padding: .4rem .75rem; font-size: .8rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+        .voy-grid table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+        .voy-grid thead th {
+            background: #312e81; color: #fff; padding: .4rem .5rem; font-weight: 600;
+            white-space: nowrap; position: sticky; top: 0; z-index: 2; font-size: .72rem; text-align: center;
+        }
+        .voy-grid tbody td { padding: .25rem .3rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .voy-grid tbody tr:hover { background: #eff6ff; }
+        .voy-grid tbody tr.first-row .voy-eta { background: #fff !important; }
+        .voy-grid input, .voy-grid select {
+            font-size: .73rem; padding: .2rem .35rem; border: 1px solid #cbd5e1;
+            border-radius: .2rem; width: 100%; box-sizing: border-box;
+        }
+        .voy-grid select { background: #e0f2fe; }
+        .voy-grid .voy-eta, .voy-grid .voy-etb, .voy-grid .voy-etd { min-width: 140px; }
+        .voy-grid input[type="number"] { min-width: 65px; }
+        .voy-grid .voy-port-select { min-width: 150px; }
+        .voy-grid .voy-terminal-select { min-width: 130px; }
+        .voy-grid .col-row-num { width: 32px; text-align: center; font-weight: 700; color: #1e3a8a; }
+        .voy-grid .col-action { width: 32px; text-align: center; }
+        .voy-grid .btn-remove-row { background: none; border: none; color: #ef4444; cursor: pointer; font-size: .85rem; padding: .1rem .25rem; }
+        .voy-grid .btn-remove-row:hover { color: #dc2626; }
+        .voy-grid .readonly-cell { background: #f1f5f9 !important; }
+        .voy-grid .grid-scroll { max-height: 60vh; overflow: auto; }
 
         /* ── Action bar ── */
         .voy-actions { display: flex; gap: .5rem; padding: .75rem 0; }
@@ -38,6 +57,8 @@
 
 <div class="operator-page">
     <div class="page-header">Voyage</div>
+
+    <div id="voy-message-container"></div>
 
     <div class="content" style="flex-direction: column; max-width: 100%;">
         <div style="width: 100%;">
@@ -89,12 +110,38 @@
                 </div>
             </div>
 
-            @* ── Port Rotation Cards ── *@
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <span class="fw-bold" style="font-size:.9rem; color:#1e3a8a;">Port Rotations</span>
-                <button class="btn btn-sm btn-warning fw-bold" id="btn-add-port"><i class="bi bi-plus-lg"></i> Add Port</button>
+            @* ── Port Rotation Grid ── *@
+            <div class="voy-grid-wrap">
+                <div class="voy-grid-header">
+                    <span>Port Rotations</span>
+                    <button class="btn btn-sm btn-warning fw-bold" id="btn-add-port" style="font-size:.72rem;"><i class="bi bi-plus-lg"></i> Add Row</button>
+                </div>
+                <div class="voy-grid">
+                    <div class="grid-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Voy No</th>
+                                    <th>Bound</th>
+                                    <th>Port</th>
+                                    <th>Terminal</th>
+                                    <th>ETA</th>
+                                    <th>ETB</th>
+                                    <th>ETD</th>
+                                    <th>Port Stay</th>
+                                    <th>Speed</th>
+                                    <th>Distance</th>
+                                    <th>Sea Day</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="voy-port-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div id="voy-port-body"></div>
 
             @* ── Action Buttons ── *@
             <div class="voy-actions">
@@ -111,6 +158,34 @@
         (function() {
             var portBody = document.getElementById('voy-port-body');
             var rowCounter = 0;
+
+            // ── Inline message helper ──
+            var msgContainer = document.getElementById('voy-message-container');
+            function showMessage(type, text) {
+                var isArray = Array.isArray(text);
+                var content = '';
+                if (isArray) {
+                    content = '<ul class="mb-0 ps-3">';
+                    for (var i = 0; i < text.length; i++) {
+                        content += '<li>' + text[i] + '</li>';
+                    }
+                    content += '</ul>';
+                } else {
+                    content = '<span>' + text + '</span>';
+                }
+                msgContainer.innerHTML =
+                    '<div class="alert alert-' + type + ' alert-dismissible fade show d-flex align-items-start" role="alert" style="font-size:.82rem;">' +
+                    content +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size:.7rem;"></button>' +
+                    '</div>';
+                msgContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (type === 'success') {
+                    setTimeout(function() {
+                        var al = msgContainer.querySelector('.alert');
+                        if (al) al.remove();
+                    }, 5000);
+                }
+            }
 
             // Build ports and terminals options HTML once
             var portsOptions = '<option value="">--</option>';
@@ -139,20 +214,55 @@
                 document.getElementById('voy-service-name').value = sn;
             });
 
-            // ── Helpers for date ↔ datetime-local string ──
+            // ── Helpers for date ↔ display string (dd/MM/yyyy HH:mm) ──
             function toLocal(dt) {
                 if (!dt) return '';
+                var dd = ('0' + dt.getDate()).slice(-2);
+                var mm = ('0' + (dt.getMonth() + 1)).slice(-2);
                 var y = dt.getFullYear();
-                var mo = ('0' + (dt.getMonth() + 1)).slice(-2);
-                var d = ('0' + dt.getDate()).slice(-2);
                 var h = ('0' + dt.getHours()).slice(-2);
                 var mi = ('0' + dt.getMinutes()).slice(-2);
-                return y + '-' + mo + '-' + d + 'T' + h + ':' + mi;
+                return dd + '/' + mm + '/' + y + ' ' + h + ':' + mi;
             }
             function parseLocal(s) {
                 if (!s) return null;
+                s = s.trim();
+                // dd/MM/yyyy HH:mm
+                var m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+                if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]), parseInt(m[4]), parseInt(m[5]));
+                // ISO fallback: yyyy-MM-ddTHH:mm
                 var d = new Date(s);
                 return isNaN(d.getTime()) ? null : d;
+            }
+            function toIso(s) {
+                var d = parseLocal(s);
+                if (!d) return null;
+                var y = d.getFullYear();
+                var mo = ('0' + (d.getMonth() + 1)).slice(-2);
+                var dd = ('0' + d.getDate()).slice(-2);
+                var h = ('0' + d.getHours()).slice(-2);
+                var mi = ('0' + d.getMinutes()).slice(-2);
+                return y + '-' + mo + '-' + dd + 'T' + h + ':' + mi;
+            }
+
+            // ── Auto-format datetime as user types (dd/MM/yyyy HH:mm) ──
+            function wireDateMask(input) {
+                input.addEventListener('input', function(e) {
+                    if (e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward') return;
+                    var raw = input.value.replace(/[^\d]/g, ''); // digits only
+                    var out = '';
+                    for (var i = 0; i < raw.length && i < 12; i++) {
+                        if (i === 2 || i === 4) out += '/';
+                        if (i === 8) out += ' ';
+                        if (i === 10) out += ':';
+                        out += raw[i];
+                    }
+                    if (out !== input.value) {
+                        var pos = out.length;
+                        input.value = out;
+                        input.setSelectionRange(pos, pos);
+                    }
+                });
             }
 
             // ── Formula calculations (exact Excel formulas) ──
@@ -168,7 +278,7 @@
 
                 // I = K/J/24  →  Sea Day = Distance / Speed / 24
                 if (speed > 0 && distance > 0) {
-                    seaDayEl.value = distance / speed / 24;
+                    seaDayEl.value = (distance / speed / 24).toFixed(4);
                 }
 
                 var eta = parseLocal(tr.querySelector('.voy-eta').value);
@@ -192,7 +302,7 @@
 
             // E(next) = G + I  →  Next ETA = current ETD + current SeaDay
             function calcNextRowEta(tr) {
-                var rows = Array.prototype.slice.call(portBody.querySelectorAll('.port-card'));
+                var rows = Array.prototype.slice.call(portBody.querySelectorAll('tr.port-row'));
                 var idx = rows.indexOf(tr);
                 if (idx < 0 || idx >= rows.length - 1) return;
 
@@ -208,6 +318,24 @@
                 }
             }
 
+            // ── Paste support: convert ISO formats to dd/MM/yyyy HH:mm on paste ──
+            function wirePaste(input, tr) {
+                input.addEventListener('paste', function(e) {
+                    var pasted = (e.clipboardData || window.clipboardData).getData('text');
+                    if (!pasted) return;
+                    pasted = pasted.trim();
+                    // If pasted text is in ISO format, convert to display format
+                    var d = parseLocal(pasted);
+                    if (!d) {
+                        d = new Date(pasted);
+                        if (isNaN(d.getTime())) return; // let native paste handle it
+                    }
+                    e.preventDefault();
+                    input.value = toLocal(d);
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            }
+
             function wireRowEvents(tr) {
                 var fields = ['voy-eta', 'voy-portstay', 'voy-speed', 'voy-distance'];
                 for (var i = 0; i < fields.length; i++) {
@@ -216,6 +344,9 @@
                         el.addEventListener('change', function() { calcRow(tr); });
                     }
                 }
+                // Paste support for ETA (only editable on first row, mask wired below)
+                wirePaste(tr.querySelector('.voy-eta'), tr);
+                wireDateMask(tr.querySelector('.voy-eta'));
                 // Also recalc when ETB or ETD manually changed
                 tr.querySelector('.voy-etb').addEventListener('change', function() {
                     var etb = parseLocal(this.value);
@@ -231,99 +362,86 @@
                 });
             }
 
-            // ── Add port card ──
+            // ── Add port row ──
             function addRow() {
                 rowCounter++;
-                var card = document.createElement('div');
-                card.className = 'card port-card shadow-sm mb-3';
-                card.innerHTML =
-                    '<div class="card-header">' +
-                        '<span class="row-num">[' + rowCounter + '] Port Rotation</span>' +
-                        '<button class="btn-remove-port" title="Remove"><i class="bi bi-trash"></i></button>' +
-                    '</div>' +
-                    '<div class="card-body py-2 px-3">' +
-                        '<div class="row g-3 mb-2">' +
-                            '<div class="col-md-3"><label class="form-label">Voy No</label><input type="text" class="form-control form-control-sm voy-no" placeholder="Voy No" /></div>' +
-                            '<div class="col-md-2"><label class="form-label">Bound</label><select class="form-select form-select-sm voy-bound"><option value="">--</option><option value="West">West</option><option value="East">East</option></select></div>' +
-                            '<div class="col-md-4"><label class="form-label">Port</label><select class="form-select form-select-sm voy-port">' + portsOptions + '</select></div>' +
-                            '<div class="col-md-3"><label class="form-label">Terminal</label><select class="form-select form-select-sm voy-terminal">' + terminalsOptions + '</select></div>' +
-                        '</div>' +
-                        '<div class="row g-3 mb-2">' +
-                            '<div class="col-md-3"><label class="form-label">ETA</label><input type="datetime-local" class="form-control form-control-sm voy-eta" /></div>' +
-                            '<div class="col-md-3"><label class="form-label">ETB</label><input type="datetime-local" class="form-control form-control-sm voy-etb" style="background:#f1f5f9;" /></div>' +
-                            '<div class="col-md-3"><label class="form-label">ETD</label><input type="datetime-local" class="form-control form-control-sm voy-etd" style="background:#f1f5f9;" /></div>' +
-                            '<div class="col-md-3"><label class="form-label">Port Stay (days)</label><input type="number" class="form-control form-control-sm voy-portstay" min="0" step="1" placeholder="0" /></div>' +
-                        '</div>' +
-                        '<div class="row g-3">' +
-                            '<div class="col-md-3"><label class="form-label">Speed</label><input type="number" class="form-control form-control-sm voy-speed" min="0" step="0.1" value="14.5" /></div>' +
-                            '<div class="col-md-3"><label class="form-label">Distance</label><input type="number" class="form-control form-control-sm voy-distance" min="0" step="0.01" placeholder="0" /></div>' +
-                            '<div class="col-md-3"><label class="form-label">Sea Day</label><input type="number" class="form-control form-control-sm voy-seaday" min="0" step="any" placeholder="0" readonly style="background:#f1f5f9;" /></div>' +
-                        '</div>' +
-                    '</div>';
+                var tr = document.createElement('tr');
+                tr.className = 'port-row';
+                tr.innerHTML =
+                    '<td class="col-row-num">' + rowCounter + '</td>' +
+                    '<td><input type="text" class="voy-no" placeholder="Voy No" /></td>' +
+                    '<td><select class="voy-bound"><option value="">--</option><option value="West">West</option><option value="East">East</option></select></td>' +
+                    '<td><select class="voy-port voy-port-select">' + portsOptions + '</select></td>' +
+                    '<td><select class="voy-terminal voy-terminal-select">' + terminalsOptions + '</select></td>' +
+                    '<td><input type="text" class="voy-eta" placeholder="dd/mm/yyyy hh:mm" /></td>' +
+                    '<td><input type="text" class="voy-etb readonly-cell" placeholder="dd/mm/yyyy hh:mm" readonly /></td>' +
+                    '<td><input type="text" class="voy-etd readonly-cell" placeholder="dd/mm/yyyy hh:mm" readonly /></td>' +
+                    '<td><input type="number" class="voy-portstay" min="0" step="1" placeholder="0" /></td>' +
+                    '<td><input type="number" class="voy-speed" min="0" step="0.1" value="14.5" /></td>' +
+                    '<td><input type="number" class="voy-distance" min="0" step="0.01" placeholder="0" /></td>' +
+                    '<td><input type="number" class="voy-seaday readonly-cell" min="0" step="any" placeholder="0" readonly /></td>' +
+                    '<td class="col-action"><button class="btn-remove-row" title="Remove"><i class="bi bi-trash"></i></button></td>';
 
-                card.querySelector('.btn-remove-port').addEventListener('click', function() {
-                    card.remove();
+                tr.querySelector('.btn-remove-row').addEventListener('click', function() {
+                    tr.remove();
                     renumberRows();
                 });
 
-                wireRowEvents(card);
-                portBody.appendChild(card);
+                wireRowEvents(tr);
+                portBody.appendChild(tr);
 
-                // 2nd+ port: ETA is auto-calculated (=prev ETD + prev SeaDay), so readonly
+                // 2nd+ port: ETA is auto-calculated, so readonly
                 updateEtaState();
 
-                // If 2nd+ card, carry over Voy No & Bound, then calc ETA from previous card
-                var allCards = portBody.querySelectorAll('.port-card');
-                if (allCards.length > 1) {
-                    var prevCard = allCards[allCards.length - 2];
+                // If 2nd+ row, carry over Voy No & Bound, then calc ETA from previous
+                var allRows = portBody.querySelectorAll('tr.port-row');
+                if (allRows.length > 1) {
+                    var prevRow = allRows[allRows.length - 2];
 
-                    // Auto-fill Voy No from previous card
-                    var prevVoyNo = prevCard.querySelector('.voy-no').value;
-                    if (prevVoyNo) card.querySelector('.voy-no').value = prevVoyNo;
+                    var prevVoyNo = prevRow.querySelector('.voy-no').value;
+                    if (prevVoyNo) tr.querySelector('.voy-no').value = prevVoyNo;
 
-                    // Auto-fill Bound from previous card
-                    var prevBound = prevCard.querySelector('.voy-bound').value;
-                    if (prevBound) card.querySelector('.voy-bound').value = prevBound;
+                    var prevBound = prevRow.querySelector('.voy-bound').value;
+                    if (prevBound) tr.querySelector('.voy-bound').value = prevBound;
 
-                    // Calc ETA = prev ETD + prev SeaDay
-                    var prevEtd = parseLocal(prevCard.querySelector('.voy-etd').value);
-                    var prevSeaDay = parseFloat(prevCard.querySelector('.voy-seaday').value) || 0;
+                    var prevEtd = parseLocal(prevRow.querySelector('.voy-etd').value);
+                    var prevSeaDay = parseFloat(prevRow.querySelector('.voy-seaday').value) || 0;
                     if (prevEtd && prevSeaDay > 0) {
                         var newEta = new Date(prevEtd.getTime() + prevSeaDay * 86400000);
-                        card.querySelector('.voy-eta').value = toLocal(newEta);
-                        calcRow(card);
+                        tr.querySelector('.voy-eta').value = toLocal(newEta);
+                        calcRow(tr);
                     }
                 }
             }
 
             function updateEtaState() {
-                var cards = portBody.querySelectorAll('.port-card');
-                for (var i = 0; i < cards.length; i++) {
-                    var etaEl = cards[i].querySelector('.voy-eta');
+                var rows = portBody.querySelectorAll('tr.port-row');
+                for (var i = 0; i < rows.length; i++) {
+                    var etaEl = rows[i].querySelector('.voy-eta');
                     if (i === 0) {
+                        etaEl.classList.remove('readonly-cell');
                         etaEl.readOnly = false;
-                        etaEl.style.background = '';
                     } else {
+                        etaEl.classList.add('readonly-cell');
                         etaEl.readOnly = true;
-                        etaEl.style.background = '#f1f5f9';
                     }
                 }
             }
 
             function renumberRows() {
-                var cards = portBody.querySelectorAll('.port-card');
-                for (var i = 0; i < cards.length; i++) {
-                    var numCell = cards[i].querySelector('.row-num');
-                    if (numCell) numCell.textContent = '[' + (i + 1) + '] Port Rotation';
+                var rows = portBody.querySelectorAll('tr.port-row');
+                for (var i = 0; i < rows.length; i++) {
+                    var numCell = rows[i].querySelector('.col-row-num');
+                    if (numCell) numCell.textContent = (i + 1);
                 }
-                rowCounter = cards.length;
+                rowCounter = rows.length;
                 updateEtaState();
             }
 
             document.getElementById('btn-add-port').addEventListener('click', addRow);
 
-            // Start with 3 empty rows
-            addRow(); addRow(); addRow();
+            // Start with 1 empty row
+            addRow();
 
             // ── Anti-forgery token ──
             function token() {
@@ -331,30 +449,122 @@
                 return el ? el.value : '';
             }
 
+            // ── Validation helpers ──
+            function isValidDate(val) {
+                if (!val || !val.trim()) return false;
+                return parseLocal(val) !== null;
+            }
+            function highlightField(el, invalid) {
+                el.style.border = invalid ? '2px solid #dc3545' : '';
+            }
+            function validateForm() {
+                var errors = [];
+
+                // ── Header validation ──
+                var vesselEl = document.getElementById('voy-vessel');
+                var serviceEl = document.getElementById('voy-service');
+                var operatorEl = document.getElementById('voy-operator');
+                var slotEl = document.getElementById('voy-type');
+
+                highlightField(vesselEl, false);
+                highlightField(serviceEl, false);
+                highlightField(operatorEl, false);
+                highlightField(slotEl, false);
+
+                if (!vesselEl.value) { highlightField(vesselEl, true); errors.push('Vessel is required.'); }
+                if (!serviceEl.value) { highlightField(serviceEl, true); errors.push('Service is required.'); }
+                if (!operatorEl.value) { highlightField(operatorEl, true); errors.push('Operator is required.'); }
+                if (!slotEl.value) { highlightField(slotEl, true); errors.push('Slot is required.'); }
+
+                // ── Row validation ──
+                var rows = portBody.querySelectorAll('tr.port-row');
+                for (var i = 0; i < rows.length; i++) {
+                    var r = rows[i];
+                    var rowNum = i + 1;
+                    var voyNoEl = r.querySelector('.voy-no');
+                    var boundEl = r.querySelector('.voy-bound');
+                    var portEl = r.querySelector('.voy-port');
+                    var etaEl = r.querySelector('.voy-eta');
+                    var etbEl = r.querySelector('.voy-etb');
+                    var etdEl = r.querySelector('.voy-etd');
+
+                    // Reset highlights
+                    [voyNoEl, boundEl, portEl, etaEl, etbEl, etdEl].forEach(function(el) { if (el) highlightField(el, false); });
+
+                    // Required fields (user-editable)
+                    if (voyNoEl && !voyNoEl.value.trim()) { highlightField(voyNoEl, true); errors.push('Row ' + rowNum + ': Voy No is required.'); }
+                    if (boundEl && !boundEl.value.trim()) { highlightField(boundEl, true); errors.push('Row ' + rowNum + ': Bound is required.'); }
+                    if (portEl && !portEl.value) { highlightField(portEl, true); errors.push('Row ' + rowNum + ': Port is required.'); }
+
+                    // ETA: required on first row (user enters), auto-calc on 2nd+
+                    if (i === 0 && etaEl && !etaEl.value.trim()) {
+                        highlightField(etaEl, true); errors.push('Row ' + rowNum + ': ETA is required.');
+                    } else if (etaEl && etaEl.value.trim() && !isValidDate(etaEl.value)) {
+                        highlightField(etaEl, true); errors.push('Row ' + rowNum + ': ETA has invalid format. Use dd/mm/yyyy hh:mm');
+                    }
+
+                    // ETB: formula-driven (readonly), validate format only if has value
+                    if (etbEl && etbEl.value.trim() && !isValidDate(etbEl.value)) {
+                        highlightField(etbEl, true); errors.push('Row ' + rowNum + ': ETB has invalid format. Use dd/mm/yyyy hh:mm');
+                    }
+
+                    // ETD: formula-driven (readonly), validate format only if has value
+                    if (etdEl && etdEl.value.trim() && !isValidDate(etdEl.value)) {
+                        highlightField(etdEl, true); errors.push('Row ' + rowNum + ': ETD has invalid format. Use dd/mm/yyyy hh:mm');
+                    }
+
+                    // Validate date sequence: ETA < ETB < ETD
+                    var eta = parseLocal(etaEl ? etaEl.value : '');
+                    var etb = parseLocal(etbEl ? etbEl.value : '');
+                    var etd = parseLocal(etdEl ? etdEl.value : '');
+
+                    if (eta && etb && etb <= eta) {
+                        highlightField(etbEl, true);
+                        errors.push('Row ' + rowNum + ': ETB must be after ETA');
+                    }
+                    if (etb && etd && etd <= etb) {
+                        highlightField(etdEl, true);
+                        errors.push('Row ' + rowNum + ': ETD must be after ETB');
+                    }
+                    if (eta && etd && !etb && etd <= eta) {
+                        highlightField(etdEl, true);
+                        errors.push('Row ' + rowNum + ': ETD must be after ETA');
+                    }
+                }
+
+                return errors;
+            }
+
             // ── Save Voyage ──
             document.getElementById('btn-save-voyage').addEventListener('click', function() {
-                var vesselId = document.getElementById('voy-vessel').value;
-                if (!vesselId) { alert('Please select a Vessel.'); return; }
 
+                // Run validation
+                var valErrors = validateForm();
+                if (valErrors.length > 0) {
+                    showMessage('danger', valErrors);
+                    return;
+                }
+
+                var vesselId = document.getElementById('voy-vessel').value;
                 var serviceId = document.getElementById('voy-service').value || null;
                 var operatorId = document.getElementById('voy-operator').value || null;
                 var voyageType = document.getElementById('voy-type').value || null;
 
                 var ports = [];
-                var rows = portBody.querySelectorAll('.port-card');
+                var rows = portBody.querySelectorAll('tr.port-row');
                 for (var i = 0; i < rows.length; i++) {
                     var r = rows[i];
                     var portId = r.querySelector('.voy-port') ? r.querySelector('.voy-port').value : '';
-                    if (!portId) continue; // skip empty rows
+                    if (!portId) continue;
 
                     ports.push({
                         voyNo: r.querySelector('.voy-no') ? r.querySelector('.voy-no').value : '',
                         bound: r.querySelector('.voy-bound') ? r.querySelector('.voy-bound').value : '',
                         portId: portId,
                         terminalId: r.querySelector('.voy-terminal') ? r.querySelector('.voy-terminal').value || null : null,
-                        eta: r.querySelector('.voy-eta') ? r.querySelector('.voy-eta').value || null : null,
-                        etb: r.querySelector('.voy-etb') ? r.querySelector('.voy-etb').value || null : null,
-                        etd: r.querySelector('.voy-etd') ? r.querySelector('.voy-etd').value || null : null,
+                        eta: toIso(r.querySelector('.voy-eta').value),
+                        etb: toIso(r.querySelector('.voy-etb').value),
+                        etd: toIso(r.querySelector('.voy-etd').value),
                         portStay: r.querySelector('.voy-portstay') ? parseInt(r.querySelector('.voy-portstay').value) || null : null,
                         seaDay: r.querySelector('.voy-seaday') ? parseFloat(r.querySelector('.voy-seaday').value) || null : null,
                         speed: r.querySelector('.voy-speed') ? parseFloat(r.querySelector('.voy-speed').value) || null : null,
@@ -382,14 +592,14 @@
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
                     if (data.success) {
-                        alert('Voyage saved successfully!');
-                        window.location.href = '@Url.Action("Index", "Voyages")';
+                        showMessage('success', 'Voyage saved successfully!');
+                        setTimeout(function() { window.location.href = '@Url.Action("Index", "Voyages")'; }, 1500);
                     } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
+                        showMessage('danger', 'Error: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(function(err) {
-                    alert('Error saving voyage: ' + err.message);
+                    showMessage('danger', 'Error saving voyage: ' + err.message);
                 });
             });
 
