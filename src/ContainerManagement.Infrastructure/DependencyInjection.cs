@@ -21,6 +21,8 @@ namespace ContainerManagement.Infrastructure
             services.AddScoped<ISlotsRepository, SlotsRepository>();
             services.AddScoped<IVoyagesRepository, VoyagesRepository>();
             services.AddScoped<IVoyagePortsRepository, VoyagePortsRepository>();
+            services.AddScoped<IVoyagePortArrivalsRepository, VoyagePortArrivalsRepository>();
+            services.AddScoped<IVoyagePortDeparturesRepository, VoyagePortDeparturesRepository>();
             services.AddScoped<IJobsRepository, JobsRepository>();
             services.AddScoped<IJobAttachmentsRepository, JobAttachmentsRepository>();
 

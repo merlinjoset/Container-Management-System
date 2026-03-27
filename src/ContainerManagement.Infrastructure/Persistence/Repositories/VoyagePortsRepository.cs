@@ -45,6 +45,18 @@ public class VoyagePortsRepository : IVoyagePortsRepository
         }
     }
 
+    public async Task UpdateETDAsync(Guid voyagePortId, DateTime etd, Guid modifiedBy, CancellationToken ct = default)
+    {
+        var entity = await _db.Set<VoyagePortEntity>()
+            .FirstOrDefaultAsync(x => x.Id == voyagePortId && !x.IsDeleted, ct);
+        if (entity == null) return;
+
+        entity.ETD = etd;
+        entity.ModifiedOn = DateTime.UtcNow;
+        entity.ModifiedBy = modifiedBy;
+        await _db.SaveChangesAsync(ct);
+    }
+
     private static VoyagePort ToDomain(VoyagePortEntity e) => new()
     {
         Id = e.Id,

@@ -1,0 +1,509 @@
+@using ContainerManagement.Application.Dtos.Voyages
+@model VoyagePortArrivalDto
+@{
+    ViewData["Title"] = "Vessel Arrival Report";
+    var port = ViewBag.VoyagePort as VoyagePortListItemDto;
+    var voyage = ViewBag.ParentVoyage as VoyageListItemDto;
+    var isEdit = Model.Id != Guid.Empty;
+    var ports = ViewBag.Ports as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+}
+
+@section Styles {
+<style>
+    .arrival-page { max-width: 960px; }
+    .arrival-header {
+        background: linear-gradient(135deg, #1e3a8a, #312e81);
+        color: #fff; border-radius: .5rem; padding: 1rem 1.25rem; margin-bottom: 1rem;
+    }
+    .arrival-header h5 { margin: 0; font-weight: 700; font-size: 1rem; }
+    .arrival-header .subtitle { font-size: .75rem; opacity: .8; margin-top: .2rem; }
+    .arrival-context { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .arrival-context .ctx-item { font-size: .78rem; }
+    .arrival-context .ctx-label { font-weight: 600; color: #1e3a8a; margin-right: .25rem; }
+    .arrival-context .ctx-value { color: #374151; }
+    .arrival-section {
+        background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; margin-bottom: 1rem; overflow: hidden;
+    }
+    .arrival-section-header {
+        background: #f1f5f9; padding: .5rem .85rem; font-size: .78rem; font-weight: 600; color: #1e3a8a;
+        border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: .4rem;
+    }
+    .arrival-section-body { padding: .75rem 1rem; }
+    .arrival-section .form-label { font-size: .72rem; font-weight: 600; color: #475569; margin-bottom: .15rem; }
+    .arrival-section .form-control, .arrival-section .form-select { font-size: .78rem; }
+    .arrival-footer { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+</style>
+}
+
+<div class="operator-page arrival-page">
+
+    <!-- Header -->
+    <div class="arrival-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h5><i class="bi bi-clipboard-data me-2"></i>Vessel Arrival Report</h5>
+                <div class="subtitle">@(isEdit ? "Edit arrival data" : "Record new arrival data") for port rotation</div>
+            </div>
+            <a asp-action="Index" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left me-1"></i>Back to Voyages</a>
+        </div>
+    </div>
+
+    <!-- Context Info -->
+    <div class="arrival-context">
+        <div class="ctx-item"><span class="ctx-label">Vessel:</span><span class="ctx-value">@(voyage?.VesselName ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Service:</span><span class="ctx-value">@(voyage?.ServiceCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Port:</span><span class="ctx-value">@(port?.PortCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Terminal:</span><span class="ctx-value">@(port?.TerminalCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETA:</span><span class="ctx-value">@(port?.ETA?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETB:</span><span class="ctx-value">@(port?.ETB?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETD:</span><span class="ctx-value">@(port?.ETD?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+    </div>
+
+    <input type="hidden" id="voyagePortId" value="@Model.VoyagePortId" />
+    <input type="hidden" id="arrivalId" value="@Model.Id" />
+
+    <!-- Voyage Info -->
+    <div class="arrival-section">
+        <div class="arrival-section-header"><i class="bi bi-compass"></i> Voyage Information</div>
+        <div class="arrival-section-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Inbound Voyage</label>
+                    <input type="text" class="form-control form-control-sm" id="inboundVoyage" value="@(Model.InboundVoyage ?? port?.VoyNo)" placeholder="@port?.VoyNo" maxlength="50" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Outbound Voyage</label>
+                    <input type="text" class="form-control form-control-sm" id="outboundVoyage" value="@(Model.OutboundVoyage ?? port?.VoyNo)" placeholder="@port?.VoyNo" maxlength="50" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Last Port</label>
+                    <select class="form-select form-select-sm" id="lastPortId">
+                        <option value="">-- Select --</option>
+                        @foreach (var p in ports)
+                        {
+                            var lastSelected = p.Value == Model.LastPortId?.ToString();
+                            if (lastSelected)
+                            {
+                                <option value="@p.Value" selected>@p.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@p.Value">@p.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Next Port</label>
+                    <select class="form-select form-select-sm" id="nextPortId">
+                        <option value="">-- Select --</option>
+                        @foreach (var p in ports)
+                        {
+                            var nextSelected = p.Value == Model.NextPortId?.ToString();
+                            if (nextSelected)
+                            {
+                                <option value="@p.Value" selected>@p.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@p.Value">@p.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Arrival Times -->
+    <div class="arrival-section">
+        <div class="arrival-section-header"><i class="bi bi-clock-history"></i> Arrival Times</div>
+        <div class="arrival-section-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Actual ETA (End of Passage)</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="actualETA_date" value="@(Model.ActualETA?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="actualETA_time" value="@(Model.ActualETA?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Actual ETB (Arrival Berth)</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="actualETB_date" value="@(Model.ActualETB?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="actualETB_time" value="@(Model.ActualETB?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Pilot On Board</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="pilotOnBoard_date" value="@(Model.PilotOnBoard?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="pilotOnBoard_time" value="@(Model.PilotOnBoard?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Commenced Cargo Ops</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="commencedCargoOp_date" value="@(Model.CommencedCargoOperation?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="commencedCargoOp_time" value="@(Model.CommencedCargoOperation?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Est. Time of Departure</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="estimatedETD_date" value="@(port?.ETD?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="estimatedETD_time" value="@(port?.ETD?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+            </div>
+            <div id="timeValidationError" class="text-danger mt-2" style="font-size:.75rem; display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Draft & Tugs -->
+    <div class="arrival-section">
+        <div class="arrival-section-header"><i class="bi bi-rulers"></i> Draft & Tugs</div>
+        <div class="arrival-section-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Tugs In</label>
+                    <input type="text" class="form-control form-control-sm" id="tugsIn" value="@Model.TugsIn" maxlength="50" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Draft Fwd (m)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="draftFwd" value="@Model.ArrivalDraftFwdMtr" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Draft Aft (m)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="draftAft" value="@Model.ArrivalDraftAftMtr" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Draft Mean (m)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="draftMean" value="@Model.ArrivalDraftMeanMtr" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bunkers On Arrival -->
+    <div class="arrival-section">
+        <div class="arrival-section-header"><i class="bi bi-fuel-pump"></i> Bunkers On Arrival</div>
+        <div class="arrival-section-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Fuel Oil</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="fuelOil" value="@Model.FuelOil" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Diesel Oil</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="dieselOil" value="@Model.DieselOil" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fresh Water</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="freshWater" value="@Model.FreshWater" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ballast Water</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="ballastWater" value="@Model.BallastWater" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remarks -->
+    <div class="arrival-section">
+        <div class="arrival-section-header"><i class="bi bi-chat-left-text"></i> Remarks</div>
+        <div class="arrival-section-body">
+            <textarea class="form-control form-control-sm" id="remarks" rows="3" maxlength="2000">@Model.Remarks</textarea>
+        </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="arrival-footer">
+        <a asp-action="Index" class="btn btn-light btn-sm">Cancel</a>
+        @if (isEdit)
+        {
+            <button type="button" class="btn btn-sm" style="background:#065f46;color:#fff;" id="btnExport" data-export-url="@Url.Action("ExportArrival", "Voyages", new { id = Model.VoyagePortId })">
+                <span id="btnExportText"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Excel</span>
+                <span id="btnExportLoader" style="display:none;"><span class="spinner-border spinner-border-sm me-1"></span>Exporting...</span>
+            </button>
+        }
+        <button class="btn btn-primary btn-sm" id="btnSave" onclick="saveArrival()">
+            <span id="btnSaveText"><i class="bi bi-check-lg me-1"></i>Save Arrival Report</span>
+            <span id="btnSaveLoader" style="display:none;"><span class="spinner-border spinner-border-sm me-1"></span>Saving...</span>
+        </button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+    <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Export button handler
+    (function() {
+        var btnExport = document.getElementById('btnExport');
+        if (!btnExport) return;
+        var exporting = false;
+        btnExport.addEventListener('click', function() {
+            if (exporting) return;
+            exporting = true;
+            var url = btnExport.getAttribute('data-export-url');
+            btnExport.disabled = true;
+            btnExport.style.opacity = '0.6';
+            document.getElementById('btnExportText').style.display = 'none';
+            document.getElementById('btnExportLoader').style.display = '';
+
+            fetch(url, { credentials: 'same-origin' })
+                .then(function(resp) {
+                    if (!resp.ok) throw new Error('Export failed');
+                    var cd = resp.headers.get('content-disposition') || '';
+                    var m = cd.match(/filename[^;=\n]*=(["']?)([^"';\n]*)\1/);
+                    var fname = m ? m[2] : 'ArrivalReport.xlsx';
+                    return resp.blob().then(function(b) { return { blob: b, name: fname }; });
+                })
+                .then(function(r) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(r.blob);
+                    a.download = r.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(function(err) { alert('Export failed: ' + err.message); })
+                .finally(function() {
+                    exporting = false;
+                    btnExport.disabled = false;
+                    btnExport.style.opacity = '';
+                    document.getElementById('btnExportText').style.display = '';
+                    document.getElementById('btnExportLoader').style.display = 'none';
+                });
+        });
+    })();
+
+    function val(id) { return document.getElementById(id)?.value?.trim() || null; }
+    function numVal(id) { var v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; }
+    function guidVal(id) { var v = document.getElementById(id)?.value; return v || null; }
+
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    function dmyToIso(dmy) {
+        if (!dmy) return null;
+        var m = dmy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!m) return null;
+        return m[3] + '-' + m[2] + '-' + m[1]; // YYYY-MM-DD
+    }
+
+    // Combine separate date (DD/MM/YYYY) + time (HH:MM) into ISO string for API
+    function combineDT(dateId, timeId) {
+        var d = dmyToIso(document.getElementById(dateId)?.value?.trim());
+        var t = document.getElementById(timeId)?.value?.trim();
+        if (!d) return null;
+        return t ? d + 'T' + t : d + 'T00:00';
+    }
+
+    // Parse combined datetime for comparison
+    function parseDT(dateId, timeId) {
+        var v = combineDT(dateId, timeId);
+        if (!v) return null;
+        var dt = new Date(v);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    function showValidationError(msg) {
+        var el = document.getElementById('timeValidationError');
+        el.textContent = msg;
+        el.style.display = '';
+    }
+
+    function clearValidationError() {
+        var el = document.getElementById('timeValidationError');
+        el.textContent = '';
+        el.style.display = 'none';
+    }
+
+    function validateDates() {
+        clearValidationError();
+
+        var eta = parseDT('actualETA_date', 'actualETA_time');
+        var etb = parseDT('actualETB_date', 'actualETB_time');
+        var pilot = parseDT('pilotOnBoard_date', 'pilotOnBoard_time');
+        var cargo = parseDT('commencedCargoOp_date', 'commencedCargoOp_time');
+        var etd = parseDT('estimatedETD_date', 'estimatedETD_time');
+
+        if (eta && etb && etb <= eta) {
+            showValidationError('Actual ETB (Arrival Berth) must be after Actual ETA (End of Passage).');
+            return false;
+        }
+        if (eta && etd && etd <= eta) {
+            showValidationError('Est. Time of Departure must be after Actual ETA.');
+            return false;
+        }
+        if (etb && etd && etd <= etb) {
+            showValidationError('Est. Time of Departure must be after Actual ETB.');
+            return false;
+        }
+        if (eta && pilot && pilot > etb) {
+            // Pilot boards before berthing — just a soft check, no block
+        }
+        if (etb && cargo && cargo < etb) {
+            showValidationError('Commenced Cargo Ops must be on or after Actual ETB (Arrival Berth).');
+            return false;
+        }
+        if (cargo && etd && etd <= cargo) {
+            showValidationError('Est. Time of Departure must be after Commenced Cargo Ops.');
+            return false;
+        }
+        return true;
+    }
+
+    // Live validation on date/time blur
+    document.querySelectorAll('.date-dmy, .time-24')
+        .forEach(function(el) { el.addEventListener('blur', validateDates); });
+
+    function setLoading(on) {
+        var btn = document.getElementById('btnSave');
+        document.getElementById('btnSaveText').style.display = on ? 'none' : '';
+        document.getElementById('btnSaveLoader').style.display = on ? '' : 'none';
+        btn.disabled = on;
+    }
+
+    async function saveArrival() {
+        if (!validateDates()) return;
+
+        setLoading(true);
+
+        var payload = {
+            voyagePortId: val('voyagePortId'),
+            inboundVoyage: val('inboundVoyage'),
+            outboundVoyage: val('outboundVoyage'),
+            actualETA: combineDT('actualETA_date', 'actualETA_time'),
+            actualETB: combineDT('actualETB_date', 'actualETB_time'),
+            lastPortId: guidVal('lastPortId'),
+            nextPortId: guidVal('nextPortId'),
+            pilotOnBoard: combineDT('pilotOnBoard_date', 'pilotOnBoard_time'),
+            commencedCargoOperation: combineDT('commencedCargoOp_date', 'commencedCargoOp_time'),
+            tugsIn: val('tugsIn'),
+            arrivalDraftFwdMtr: numVal('draftFwd'),
+            arrivalDraftAftMtr: numVal('draftAft'),
+            arrivalDraftMeanMtr: numVal('draftMean'),
+            fuelOil: numVal('fuelOil'),
+            dieselOil: numVal('dieselOil'),
+            freshWater: numVal('freshWater'),
+            ballastWater: numVal('ballastWater'),
+            remarks: val('remarks'),
+            estimatedETD: combineDT('estimatedETD_date', 'estimatedETD_time')
+        };
+
+        try {
+            var resp = await fetch('@Url.Action("Arrival", "Voyages")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            var result = await resp.json();
+            if (result.success) {
+                showToast('Arrival report saved', 'success');
+                document.getElementById('arrivalId').value = result.id;
+            } else {
+                showToast(result.message || 'Error saving', 'danger');
+            }
+        } catch (err) {
+            showToast('Network error', 'danger');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.className = 'toast align-items-center text-bg-' + type + ' border-0';
+        document.getElementById('toastMsg').textContent = msg;
+        new bootstrap.Toast(t).show();
+    }
+
+    // Auto-calc mean draft
+    document.getElementById('draftFwd')?.addEventListener('input', calcMean);
+    document.getElementById('draftAft')?.addEventListener('input', calcMean);
+    function calcMean() {
+        var fwd = parseFloat(document.getElementById('draftFwd').value);
+        var aft = parseFloat(document.getElementById('draftAft').value);
+        if (!isNaN(fwd) && !isNaN(aft)) {
+            document.getElementById('draftMean').value = ((fwd + aft) / 2).toFixed(2);
+        }
+    }
+
+    // DD/MM/YYYY date mask — auto-insert slashes, digits only, validate range
+    document.querySelectorAll('.date-dmy').forEach(function(el) {
+        el.addEventListener('input', function() {
+            var v = el.value.replace(/[^\d]/g, '');
+            if (v.length > 8) v = v.slice(0, 8);
+            if (v.length >= 5) {
+                v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+            } else if (v.length >= 3) {
+                v = v.slice(0, 2) + '/' + v.slice(2);
+            }
+            el.value = v;
+        });
+
+        el.addEventListener('blur', function() {
+            var v = el.value.trim();
+            if (!v) return;
+            var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (!m) { el.classList.add('is-invalid'); return; }
+            var dd = parseInt(m[1], 10);
+            var mm = parseInt(m[2], 10);
+            var yyyy = parseInt(m[3], 10);
+            if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 2000 || yyyy > 2099) {
+                el.classList.add('is-invalid'); return;
+            }
+            // Check valid day for month
+            var testDate = new Date(yyyy, mm - 1, dd);
+            if (testDate.getDate() !== dd || testDate.getMonth() !== mm - 1) {
+                el.classList.add('is-invalid'); return;
+            }
+            el.classList.remove('is-invalid');
+        });
+
+        el.addEventListener('focus', function() {
+            el.classList.remove('is-invalid');
+        });
+    });
+
+    // 24-hour time mask (HH:MM) — auto-insert colon, digits only, validate range
+    document.querySelectorAll('.time-24').forEach(function(el) {
+        el.addEventListener('input', function(e) {
+            var v = el.value.replace(/[^\d]/g, '');
+            if (v.length > 4) v = v.slice(0, 4);
+            if (v.length >= 3) {
+                v = v.slice(0, 2) + ':' + v.slice(2);
+            }
+            el.value = v;
+        });
+
+        el.addEventListener('blur', function() {
+            var v = el.value.trim();
+            if (!v) return;
+            var m = v.match(/^(\d{1,2}):(\d{2})$/);
+            if (!m) { el.value = ''; el.classList.add('is-invalid'); return; }
+            var hh = parseInt(m[1], 10);
+            var mm = parseInt(m[2], 10);
+            if (hh > 23 || mm > 59) { el.value = ''; el.classList.add('is-invalid'); return; }
+            el.value = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
+            el.classList.remove('is-invalid');
+            validateDates();
+        });
+
+        el.addEventListener('focus', function() {
+            el.classList.remove('is-invalid');
+        });
+    });
+</script>
+}

@@ -47,6 +47,29 @@
 
         .voy-action-bar { display: flex; gap: .4rem; align-items: center; }
         .voy-action-bar .btn { font-size: .72rem; padding: .2rem .55rem; }
+
+        /* Actual date highlighting */
+        .actual-green { background: #dcfce7 !important; color: #15803d !important; font-weight: 600; }
+        .actual-brown { background: #fde8d8 !important; color: #7c2d12 !important; font-weight: 600; }
+
+        /* Inline report buttons */
+        .port-report-btns { display: flex; gap: .25rem; }
+        .port-report-btns .btn {
+            font-size: .62rem; padding: .12rem .35rem; border-radius: .25rem;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: .2rem;
+        }
+        .btn-arr { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .btn-arr:hover { background: #dbeafe; color: #1e3a8a; }
+        .btn-arr.filled { background: #dcfce7; color: #15803d; border-color: #86efac; }
+        .btn-dep { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .btn-dep:hover { background: #fef3c7; color: #78350f; }
+        .btn-dep.filled { background: #dcfce7; color: #15803d; border-color: #86efac; }
+        .btn-xls { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; font-size: .58rem !important; padding: .1rem .3rem !important; }
+        .btn-xls:hover { background: #d1fae5; color: #064e3b; }
+
+        /* Export button */
+        .btn-export { font-size: .72rem; padding: .25rem .6rem; background: #065f46; color: #fff; border: none; border-radius: .3rem; }
+        .btn-export:hover { background: #047857; color: #fff; }
     </style>
 }
 
@@ -124,7 +147,12 @@
             <div class="voy-detail-wrap" id="voy-detail-panel" style="display:none;">
                 <div class="voy-detail-header">
                     <span><i class="bi bi-geo-alt me-1"></i> Port Rotation — <span id="detail-title"></span></span>
-                    <span id="detail-port-count" style="font-size:.7rem; opacity:.7;"></span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="detail-port-count" style="font-size:.7rem; opacity:.7;"></span>
+                        <button class="btn btn-export" id="btnExport" onclick="exportReport()" title="Export to Excel">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export
+                        </button>
+                    </div>
                 </div>
                 <div class="voy-detail-info" id="detail-info">
                     <div class="info-item"><span class="info-label">Vessel:</span><span class="info-value" id="info-vessel"></span></div>
@@ -144,10 +172,14 @@
                                 <th>ETA</th>
                                 <th>ETB</th>
                                 <th>ETD</th>
+                                <th style="background:#1e3a8a;">Act. ETA</th>
+                                <th style="background:#1e3a8a;">Act. ETB</th>
+                                <th>Act. ETD</th>
                                 <th>Port Stay</th>
                                 <th>Speed</th>
                                 <th>Distance</th>
                                 <th>Sea Day</th>
+                                <th>Reports</th>
                             </tr>
                         </thead>
                         <tbody id="detail-port-body">
@@ -189,6 +221,9 @@
                 return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + mi;
             }
 
+            // Expose selectedId for export
+            window.getSelectedVoyageId = function() { return selectedId; };
+
             // Attach click to voyage rows
             var rows = listBody.querySelectorAll('tr[data-id]');
             for (var i = 0; i < rows.length; i++) {
@@ -217,7 +252,7 @@
             }
 
             function loadPorts(voyageId) {
-                portBody.innerHTML = '<tr><td colspan="12" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Loading…</td></tr>';
+                portBody.innerHTML = '<tr><td colspan="16" class="text-center py-3"><i class="bi bi-hourglass-split"></i> Loading…</td></tr>';
                 placeholder.style.display = 'none';
                 detailPanel.style.display = '';
 
@@ -231,7 +266,7 @@
                     .then(function(data) {
                         portBody.innerHTML = '';
                         if (!data || !data.length) {
-                            portBody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-3">No port rotation data</td></tr>';
+                            portBody.innerHTML = '<tr><td colspan="16" class="text-center text-muted py-3">No port rotation data</td></tr>';
                             document.getElementById('detail-port-count').textContent = '0 ports';
                             return;
                         }
@@ -241,24 +276,51 @@
                         for (var i = 0; i < data.length; i++) {
                             var p = data[i];
                             var tr = document.createElement('tr');
+
+                            // Determine highlight classes
+                            var etaCls = p.hasArrival ? ' class="actual-green"' : '';
+                            var etbCls = p.hasArrival ? ' class="actual-green"' : '';
+                            var etdCls = p.hasDeparture ? ' class="actual-brown"' : '';
+
+                            // Arrival button style
+                            var arrBtnCls = p.hasArrival ? 'btn btn-arr filled' : 'btn btn-arr';
+                            var arrIcon = p.hasArrival ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-clipboard-data"></i>';
+                            var arrLabel = p.hasArrival ? 'Arrival' : 'Arrival';
+
+                            // Departure button style
+                            var depBtnCls = p.hasDeparture ? 'btn btn-dep filled' : 'btn btn-dep';
+                            var depIcon = p.hasDeparture ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-box-arrow-right"></i>';
+                            var depLabel = p.hasDeparture ? 'Departure' : 'Departure';
+
                             tr.innerHTML =
                                 '<td style="font-weight:700;color:#1e3a8a;">' + (i + 1) + '</td>' +
                                 '<td>' + (p.voyNo || '') + '</td>' +
                                 '<td>' + (p.bound || '') + '</td>' +
-                                '<td>' + (p.portCode || '') + '</td>' +
+                                '<td style="font-weight:600;">' + (p.portCode || '') + '</td>' +
                                 '<td>' + (p.terminalCode || '') + '</td>' +
                                 '<td>' + formatDate(p.eta) + '</td>' +
                                 '<td>' + formatDate(p.etb) + '</td>' +
                                 '<td>' + formatDate(p.etd) + '</td>' +
+                                '<td' + etaCls + '>' + formatDate(p.actualETA) + '</td>' +
+                                '<td' + etbCls + '>' + formatDate(p.actualETB) + '</td>' +
+                                '<td' + etdCls + '>' + formatDate(p.actualETD) + '</td>' +
                                 '<td>' + (p.portStay != null ? p.portStay : '') + '</td>' +
                                 '<td>' + (p.speed != null ? parseFloat(p.speed).toFixed(1) : '') + '</td>' +
                                 '<td>' + (p.distance != null ? parseFloat(p.distance).toFixed(0) : '') + '</td>' +
-                                '<td>' + (p.seaDay != null ? parseFloat(p.seaDay).toFixed(2) : '') + '</td>';
+                                '<td>' + (p.seaDay != null ? parseFloat(p.seaDay).toFixed(2) : '') + '</td>' +
+                                '<td>' +
+                                    '<div class="port-report-btns">' +
+                                        '<a href="/voyages/arrival/' + p.id + '" class="' + arrBtnCls + '" onclick="event.stopPropagation();">' + arrIcon + arrLabel + '</a>' +
+                                        (p.hasArrival ? '<a href="/voyages/exportarrival/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export Arrival"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
+                                        '<a href="/voyages/departure/' + p.id + '" class="' + depBtnCls + '" onclick="event.stopPropagation();">' + depIcon + depLabel + '</a>' +
+                                        (p.hasDeparture ? '<a href="/voyages/exportdeparture/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export Departure"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
+                                    '</div>' +
+                                '</td>';
                             portBody.appendChild(tr);
                         }
                     })
                     .catch(function(err) {
-                        portBody.innerHTML = '<tr><td colspan="12" class="text-center text-danger py-3">' + err.message + '</td></tr>';
+                        portBody.innerHTML = '<tr><td colspan="16" class="text-center text-danger py-3">' + err.message + '</td></tr>';
                     });
             }
 
@@ -267,5 +329,11 @@
                 rows[0].click();
             }
         })();
+
+        function exportReport() {
+            var voyageId = window.getSelectedVoyageId();
+            if (!voyageId) { alert('Please select a voyage first.'); return; }
+            window.location.href = '@Url.Action("ExportPorts", "Voyages")?id=' + voyageId;
+        }
     </script>
 }

@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<SlotEntity> Slots => Set<SlotEntity>();
     public DbSet<VoyageEntity> Voyages => Set<VoyageEntity>();
     public DbSet<VoyagePortEntity> VoyagePorts => Set<VoyagePortEntity>();
+    public DbSet<VoyagePortArrivalEntity> VoyagePortArrivals => Set<VoyagePortArrivalEntity>();
+    public DbSet<VoyagePortDepartureEntity> VoyagePortDepartures => Set<VoyagePortDepartureEntity>();
     public DbSet<JobEntity> Jobs => Set<JobEntity>();
     public DbSet<JobAttachmentEntity> JobAttachments => Set<JobAttachmentEntity>();
 
@@ -530,6 +532,95 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(x => x.JobId).HasDatabaseName("IX_TblJobAttachment_JobId");
+        });
+
+        // ---------------- TblVoyagePortArrival ----------------
+        b.Entity<VoyagePortArrivalEntity>(e =>
+        {
+            e.ToTable("TblVoyagePortArrival");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VoyagePortId).IsRequired();
+            e.Property(x => x.InboundVoyage).HasMaxLength(50);
+            e.Property(x => x.OutboundVoyage).HasMaxLength(50);
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.LastPortId)
+                .HasConstraintName("FK_TblVoyagePortArrival_TblPorts_Last")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.NextPortId)
+                .HasConstraintName("FK_TblVoyagePortArrival_TblPorts_Next")
+                .OnDelete(DeleteBehavior.NoAction);
+            e.Property(x => x.TugsIn).HasMaxLength(50);
+            e.Property(x => x.ArrivalDraftFwdMtr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.ArrivalDraftAftMtr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.ArrivalDraftMeanMtr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.FuelOil).HasColumnType("decimal(10,2)");
+            e.Property(x => x.DieselOil).HasColumnType("decimal(10,2)");
+            e.Property(x => x.FreshWater).HasColumnType("decimal(10,2)");
+            e.Property(x => x.BallastWater).HasColumnType("decimal(10,2)");
+            e.Property(x => x.Remarks).HasMaxLength(2000);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VoyagePortId)
+                .HasConstraintName("FK_TblVoyagePortArrival_TblVoyagePort")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.VoyagePortId)
+                .IsUnique()
+                .HasDatabaseName("IX_TblVoyagePortArrival_VoyagePortId");
+        });
+
+        // ---------------- TblVoyagePortDeparture ----------------
+        b.Entity<VoyagePortDepartureEntity>(e =>
+        {
+            e.ToTable("TblVoyagePortDeparture");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VoyagePortId).IsRequired();
+            e.Property(x => x.InboundVoyage).HasMaxLength(50);
+            e.Property(x => x.OutboundVoyage).HasMaxLength(50);
+            e.Property(x => x.TugsOut).HasMaxLength(50);
+            e.Property(x => x.DepDraftFwdMtr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.DepDraftAftMtr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.DepDraftMeanMtr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.FuelOil).HasColumnType("decimal(10,2)");
+            e.Property(x => x.DieselOil).HasColumnType("decimal(10,2)");
+            e.Property(x => x.FreshWater).HasColumnType("decimal(10,2)");
+            e.Property(x => x.BallastWater).HasColumnType("decimal(10,2)");
+            e.Property(x => x.Remarks).HasMaxLength(2000);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VoyagePortId)
+                .HasConstraintName("FK_TblVoyagePortDeparture_TblVoyagePort")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<PortsEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.NextPortId)
+                .HasConstraintName("FK_TblVoyagePortDeparture_TblPorts_Next")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            e.HasIndex(x => x.VoyagePortId)
+                .IsUnique()
+                .HasDatabaseName("IX_TblVoyagePortDeparture_VoyagePortId");
         });
 
     }

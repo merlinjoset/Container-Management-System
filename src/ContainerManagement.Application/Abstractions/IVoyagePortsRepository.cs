@@ -8,4 +8,5 @@ public interface IVoyagePortsRepository
     Task AddAsync(VoyagePort port, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<VoyagePort> ports, CancellationToken ct = default);
     Task DeleteByVoyageIdAsync(Guid voyageId, CancellationToken ct = default);
+    Task UpdateETDAsync(Guid voyagePortId, DateTime etd, Guid modifiedBy, CancellationToken ct = default);
 }

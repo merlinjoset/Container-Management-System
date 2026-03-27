@@ -1,4 +1,4 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
+// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
 // for details on configuring this project to bundle and minify static web assets.
 
 // Write your JavaScript code.
@@ -14,11 +14,14 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 (function () {
+  var isFileDownload = false;
+
   function getLoader() {
     return document.getElementById('globalPageLoader');
   }
 
   function showLoader() {
+    if (isFileDownload) return;
     var loader = getLoader();
     if (!loader) return;
     loader.classList.add('is-active');
@@ -32,9 +35,16 @@ document.addEventListener('DOMContentLoaded', function () {
     loader.setAttribute('aria-busy', 'false');
   }
 
+  function isDownloadLink(anchor) {
+    if (!anchor) return false;
+    if (anchor.hasAttribute('download')) return true;
+    if (anchor.hasAttribute('data-no-loader')) return true;
+    var href = (anchor.getAttribute('href') || '').trim().toLowerCase();
+    return href.indexOf('/export') !== -1 || href.indexOf('/template') !== -1;
+  }
+
   function shouldIgnoreLink(anchor) {
     if (!anchor) return true;
-    if (anchor.hasAttribute('download')) return true;
     if (anchor.target && anchor.target.toLowerCase() === '_blank') return true;
 
     var href = anchor.getAttribute('href');
@@ -57,9 +67,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var anchor = event.target.closest('a[href]');
     if (!anchor) return;
     if (event.defaultPrevented) return;
-    if (shouldIgnoreLink(anchor)) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     if (event.button && event.button !== 0) return;
+
+    // If it's a file download link, set flag and skip loader
+    if (isDownloadLink(anchor)) {
+      isFileDownload = true;
+      setTimeout(function () { isFileDownload = false; hideLoader(); }, 3000);
+      return;
+    }
+
+    if (shouldIgnoreLink(anchor)) return;
     showLoader();
   }, true);
 
@@ -68,7 +86,13 @@ document.addEventListener('DOMContentLoaded', function () {
     showLoader();
   }, true);
 
-  window.addEventListener('pageshow', hideLoader);
+  window.addEventListener('pageshow', function () {
+    isFileDownload = false;
+    hideLoader();
+  });
   window.addEventListener('DOMContentLoaded', hideLoader);
-  window.addEventListener('beforeunload', showLoader);
+  window.addEventListener('beforeunload', function () {
+    if (isFileDownload) return;
+    showLoader();
+  });
 })();

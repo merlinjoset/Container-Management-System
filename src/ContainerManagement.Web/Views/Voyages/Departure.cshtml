@@ -1,0 +1,455 @@
+@using ContainerManagement.Application.Dtos.Voyages
+@model VoyagePortDepartureDto
+@{
+    ViewData["Title"] = "Vessel Departure Report";
+    var port = ViewBag.VoyagePort as VoyagePortListItemDto;
+    var voyage = ViewBag.ParentVoyage as VoyageListItemDto;
+    var isEdit = Model.Id != Guid.Empty;
+    var ports = ViewBag.Ports as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+}
+
+@section Styles {
+<style>
+    .departure-page { max-width: 960px; }
+    .departure-header {
+        background: linear-gradient(135deg, #7c2d12, #9a3412);
+        color: #fff; border-radius: .5rem; padding: 1rem 1.25rem; margin-bottom: 1rem;
+    }
+    .departure-header h5 { margin: 0; font-weight: 700; font-size: 1rem; }
+    .departure-header .subtitle { font-size: .75rem; opacity: .8; margin-top: .2rem; }
+    .departure-context { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .departure-context .ctx-item { font-size: .78rem; }
+    .departure-context .ctx-label { font-weight: 600; color: #9a3412; margin-right: .25rem; }
+    .departure-context .ctx-value { color: #374151; }
+    .dep-section {
+        background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; margin-bottom: 1rem; overflow: hidden;
+    }
+    .dep-section-header {
+        background: #fff7ed; padding: .5rem .85rem; font-size: .78rem; font-weight: 600; color: #9a3412;
+        border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: .4rem;
+    }
+    .dep-section-body { padding: .75rem 1rem; }
+    .dep-section .form-label { font-size: .72rem; font-weight: 600; color: #475569; margin-bottom: .15rem; }
+    .dep-section .form-control, .dep-section .form-select { font-size: .78rem; }
+    .dep-footer { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+</style>
+}
+
+<div class="operator-page departure-page">
+
+    <!-- Header -->
+    <div class="departure-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h5><i class="bi bi-box-arrow-right me-2"></i>Vessel Departure Report</h5>
+                <div class="subtitle">@(isEdit ? "Edit departure data" : "Record new departure data") for port rotation</div>
+            </div>
+            <a asp-action="Index" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left me-1"></i>Back to Voyages</a>
+        </div>
+    </div>
+
+    <!-- Context Info -->
+    <div class="departure-context">
+        <div class="ctx-item"><span class="ctx-label">Vessel:</span><span class="ctx-value">@(voyage?.VesselName ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Service:</span><span class="ctx-value">@(voyage?.ServiceCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Port:</span><span class="ctx-value">@(port?.PortCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Terminal:</span><span class="ctx-value">@(port?.TerminalCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETA:</span><span class="ctx-value">@(port?.ETA?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETB:</span><span class="ctx-value">@(port?.ETB?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETD:</span><span class="ctx-value">@(port?.ETD?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+    </div>
+
+    <input type="hidden" id="voyagePortId" value="@Model.VoyagePortId" />
+    <input type="hidden" id="departureId" value="@Model.Id" />
+
+    <!-- Voyage Info -->
+    <div class="dep-section">
+        <div class="dep-section-header"><i class="bi bi-compass"></i> Voyage Information</div>
+        <div class="dep-section-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Inbound Voyage</label>
+                    <input type="text" class="form-control form-control-sm" id="inboundVoyage" value="@(Model.InboundVoyage ?? port?.VoyNo)" placeholder="@port?.VoyNo" maxlength="50" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Outbound Voyage</label>
+                    <input type="text" class="form-control form-control-sm" id="outboundVoyage" value="@(Model.OutboundVoyage ?? port?.VoyNo)" placeholder="@port?.VoyNo" maxlength="50" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Next Port</label>
+                    <select class="form-select form-select-sm" id="nextPortId">
+                        <option value="">-- Select --</option>
+                        @foreach (var p in ports)
+                        {
+                            var sel = p.Value == Model.NextPortId?.ToString();
+                            if (sel)
+                            {
+                                <option value="@p.Value" selected>@p.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@p.Value">@p.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Departure Times -->
+    <div class="dep-section">
+        <div class="dep-section-header"><i class="bi bi-clock-history"></i> Departure Times</div>
+        <div class="dep-section-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Completed Cargo Ops</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="compCargoOp_date" value="@(Model.CompleteCargoOperation?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="compCargoOp_time" value="@(Model.CompleteCargoOperation?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Pilot On Board</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="pilotOnBoard_date" value="@(Model.PilotOnBoard?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="pilotOnBoard_time" value="@(Model.PilotOnBoard?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Unberth (FAOP)</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="unberthFAOP_date" value="@(Model.UnberthFAOP?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="unberthFAOP_time" value="@(Model.UnberthFAOP?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Departure (BOSP)</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="actualETD_date" value="@(Model.ActualETD?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="actualETD_time" value="@(Model.ActualETD?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">ETA Next Port</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="etaNextPort_date" value="@(Model.ETANextPort?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="etaNextPort_time" value="@(Model.ETANextPort?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+            </div>
+            <div id="timeValidationError" class="text-danger mt-2" style="font-size:.75rem; display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Draft & Tugs -->
+    <div class="dep-section">
+        <div class="dep-section-header"><i class="bi bi-rulers"></i> Draft & Tugs</div>
+        <div class="dep-section-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Tugs Out</label>
+                    <input type="text" class="form-control form-control-sm" id="tugsOut" value="@Model.TugsOut" maxlength="50" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Draft Fwd (m)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="draftFwd" value="@Model.DepDraftFwdMtr" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Draft Aft (m)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="draftAft" value="@Model.DepDraftAftMtr" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Draft Mean (m)</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="draftMean" value="@Model.DepDraftMeanMtr" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bunkers On Departure -->
+    <div class="dep-section">
+        <div class="dep-section-header"><i class="bi bi-fuel-pump"></i> Bunkers On Departure</div>
+        <div class="dep-section-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Fuel Oil</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="fuelOil" value="@Model.FuelOil" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Diesel Oil</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="dieselOil" value="@Model.DieselOil" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fresh Water</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="freshWater" value="@Model.FreshWater" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Ballast Water</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm" id="ballastWater" value="@Model.BallastWater" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remarks -->
+    <div class="dep-section">
+        <div class="dep-section-header"><i class="bi bi-chat-left-text"></i> Remarks</div>
+        <div class="dep-section-body">
+            <textarea class="form-control form-control-sm" id="remarks" rows="3" maxlength="2000">@Model.Remarks</textarea>
+        </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="dep-footer">
+        <a asp-action="Index" class="btn btn-light btn-sm">Cancel</a>
+        @if (isEdit)
+        {
+            <button type="button" class="btn btn-sm" style="background:#065f46;color:#fff;" id="btnExport" data-export-url="@Url.Action("ExportDeparture", "Voyages", new { id = Model.VoyagePortId })">
+                <span id="btnExportText"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Excel</span>
+                <span id="btnExportLoader" style="display:none;"><span class="spinner-border spinner-border-sm me-1"></span>Exporting...</span>
+            </button>
+        }
+        <button class="btn btn-sm" style="background:#9a3412;color:#fff;" id="btnSave" onclick="saveDeparture()">
+            <span id="btnSaveText"><i class="bi bi-check-lg me-1"></i>Save Departure Report</span>
+            <span id="btnSaveLoader" style="display:none;"><span class="spinner-border spinner-border-sm me-1"></span>Saving...</span>
+        </button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+    <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Export button handler
+    (function() {
+        var btnExport = document.getElementById('btnExport');
+        if (!btnExport) return;
+        var exporting = false;
+        btnExport.addEventListener('click', function() {
+            if (exporting) return;
+            exporting = true;
+            var url = btnExport.getAttribute('data-export-url');
+            btnExport.disabled = true;
+            btnExport.style.opacity = '0.6';
+            document.getElementById('btnExportText').style.display = 'none';
+            document.getElementById('btnExportLoader').style.display = '';
+
+            fetch(url, { credentials: 'same-origin' })
+                .then(function(resp) {
+                    if (!resp.ok) throw new Error('Export failed');
+                    var cd = resp.headers.get('content-disposition') || '';
+                    var m = cd.match(/filename[^;=\n]*=(["']?)([^"';\n]*)\1/);
+                    var fname = m ? m[2] : 'DepartureReport.xlsx';
+                    return resp.blob().then(function(b) { return { blob: b, name: fname }; });
+                })
+                .then(function(r) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(r.blob);
+                    a.download = r.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(function(err) { alert('Export failed: ' + err.message); })
+                .finally(function() {
+                    exporting = false;
+                    btnExport.disabled = false;
+                    btnExport.style.opacity = '';
+                    document.getElementById('btnExportText').style.display = '';
+                    document.getElementById('btnExportLoader').style.display = 'none';
+                });
+        });
+    })();
+
+    function val(id) { return document.getElementById(id)?.value?.trim() || null; }
+    function numVal(id) { var v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; }
+    function guidVal(id) { var v = document.getElementById(id)?.value; return v || null; }
+
+    function dmyToIso(dmy) {
+        if (!dmy) return null;
+        var m = dmy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!m) return null;
+        return m[3] + '-' + m[2] + '-' + m[1];
+    }
+
+    function combineDT(dateId, timeId) {
+        var d = dmyToIso(document.getElementById(dateId)?.value?.trim());
+        var t = document.getElementById(timeId)?.value?.trim();
+        if (!d) return null;
+        return t ? d + 'T' + t : d + 'T00:00';
+    }
+
+    function parseDT(dateId, timeId) {
+        var v = combineDT(dateId, timeId);
+        if (!v) return null;
+        var dt = new Date(v);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    function showValidationError(msg) {
+        var el = document.getElementById('timeValidationError');
+        el.textContent = msg;
+        el.style.display = '';
+    }
+
+    function clearValidationError() {
+        var el = document.getElementById('timeValidationError');
+        el.textContent = '';
+        el.style.display = 'none';
+    }
+
+    function validateDates() {
+        clearValidationError();
+        var cargo = parseDT('compCargoOp_date', 'compCargoOp_time');
+        var pilot = parseDT('pilotOnBoard_date', 'pilotOnBoard_time');
+        var unberth = parseDT('unberthFAOP_date', 'unberthFAOP_time');
+        var etd = parseDT('actualETD_date', 'actualETD_time');
+        var etaNext = parseDT('etaNextPort_date', 'etaNextPort_time');
+
+        if (cargo && unberth && unberth < cargo) {
+            showValidationError('Unberth (FAOP) must be on or after Completed Cargo Ops.');
+            return false;
+        }
+        if (cargo && etd && etd < cargo) {
+            showValidationError('Departure (BOSP) must be on or after Completed Cargo Ops.');
+            return false;
+        }
+        if (unberth && etd && etd < unberth) {
+            showValidationError('Departure (BOSP) must be on or after Unberth (FAOP).');
+            return false;
+        }
+        if (etd && etaNext && etaNext <= etd) {
+            showValidationError('ETA Next Port must be after Departure (BOSP).');
+            return false;
+        }
+        return true;
+    }
+
+    document.querySelectorAll('.date-dmy, .time-24')
+        .forEach(function(el) { el.addEventListener('blur', validateDates); });
+
+    function setLoading(on) {
+        var btn = document.getElementById('btnSave');
+        document.getElementById('btnSaveText').style.display = on ? 'none' : '';
+        document.getElementById('btnSaveLoader').style.display = on ? '' : 'none';
+        btn.disabled = on;
+    }
+
+    async function saveDeparture() {
+        if (!validateDates()) return;
+        setLoading(true);
+
+        var payload = {
+            voyagePortId: val('voyagePortId'),
+            inboundVoyage: val('inboundVoyage'),
+            outboundVoyage: val('outboundVoyage'),
+            completeCargoOperation: combineDT('compCargoOp_date', 'compCargoOp_time'),
+            pilotOnBoard: combineDT('pilotOnBoard_date', 'pilotOnBoard_time'),
+            unberthFAOP: combineDT('unberthFAOP_date', 'unberthFAOP_time'),
+            actualETD: combineDT('actualETD_date', 'actualETD_time'),
+            nextPortId: guidVal('nextPortId'),
+            etaNextPort: combineDT('etaNextPort_date', 'etaNextPort_time'),
+            tugsOut: val('tugsOut'),
+            depDraftFwdMtr: numVal('draftFwd'),
+            depDraftAftMtr: numVal('draftAft'),
+            depDraftMeanMtr: numVal('draftMean'),
+            fuelOil: numVal('fuelOil'),
+            dieselOil: numVal('dieselOil'),
+            freshWater: numVal('freshWater'),
+            ballastWater: numVal('ballastWater'),
+            remarks: val('remarks')
+        };
+
+        try {
+            var resp = await fetch('@Url.Action("Departure", "Voyages")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            var result = await resp.json();
+            if (result.success) {
+                showToast('Departure report saved', 'success');
+                document.getElementById('departureId').value = result.id;
+            } else {
+                showToast(result.message || 'Error saving', 'danger');
+            }
+        } catch (err) {
+            showToast('Network error', 'danger');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.className = 'toast align-items-center text-bg-' + type + ' border-0';
+        document.getElementById('toastMsg').textContent = msg;
+        new bootstrap.Toast(t).show();
+    }
+
+    // Auto-calc mean draft
+    document.getElementById('draftFwd')?.addEventListener('input', calcMean);
+    document.getElementById('draftAft')?.addEventListener('input', calcMean);
+    function calcMean() {
+        var fwd = parseFloat(document.getElementById('draftFwd').value);
+        var aft = parseFloat(document.getElementById('draftAft').value);
+        if (!isNaN(fwd) && !isNaN(aft)) {
+            document.getElementById('draftMean').value = ((fwd + aft) / 2).toFixed(2);
+        }
+    }
+
+    // DD/MM/YYYY date mask
+    document.querySelectorAll('.date-dmy').forEach(function(el) {
+        el.addEventListener('input', function() {
+            var v = el.value.replace(/[^\d]/g, '');
+            if (v.length > 8) v = v.slice(0, 8);
+            if (v.length >= 5) v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+            else if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+            el.value = v;
+        });
+        el.addEventListener('blur', function() {
+            var v = el.value.trim();
+            if (!v) return;
+            var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (!m) { el.classList.add('is-invalid'); return; }
+            var dd = parseInt(m[1],10), mm = parseInt(m[2],10), yyyy = parseInt(m[3],10);
+            if (mm<1||mm>12||dd<1||dd>31||yyyy<2000||yyyy>2099) { el.classList.add('is-invalid'); return; }
+            var test = new Date(yyyy, mm-1, dd);
+            if (test.getDate()!==dd||test.getMonth()!==mm-1) { el.classList.add('is-invalid'); return; }
+            el.classList.remove('is-invalid');
+        });
+        el.addEventListener('focus', function() { el.classList.remove('is-invalid'); });
+    });
+
+    // 24-hour time mask
+    document.querySelectorAll('.time-24').forEach(function(el) {
+        el.addEventListener('input', function() {
+            var v = el.value.replace(/[^\d]/g, '');
+            if (v.length > 4) v = v.slice(0, 4);
+            if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
+            el.value = v;
+        });
+        el.addEventListener('blur', function() {
+            var v = el.value.trim();
+            if (!v) return;
+            var m = v.match(/^(\d{1,2}):(\d{2})$/);
+            if (!m) { el.value = ''; el.classList.add('is-invalid'); return; }
+            var hh = parseInt(m[1],10), mm = parseInt(m[2],10);
+            if (hh>23||mm>59) { el.value = ''; el.classList.add('is-invalid'); return; }
+            el.value = ('0'+hh).slice(-2)+':'+('0'+mm).slice(-2);
+            el.classList.remove('is-invalid');
+        });
+        el.addEventListener('focus', function() { el.classList.remove('is-invalid'); });
+    });
+</script>
+}

@@ -14,6 +14,8 @@ public class VoyageService
     private readonly IOperatorsRepository _operatorsRepo;
     private readonly IPortsRepository _portsMasterRepo;
     private readonly ITerminalsRepository _terminalsRepo;
+    private readonly IVoyagePortArrivalsRepository _arrivalsRepo;
+    private readonly IVoyagePortDeparturesRepository _departuresRepo;
 
     public VoyageService(
         IVoyagesRepository voyagesRepo,
@@ -22,7 +24,9 @@ public class VoyageService
         IServicesRepository servicesRepo,
         IOperatorsRepository operatorsRepo,
         IPortsRepository portsMasterRepo,
-        ITerminalsRepository terminalsRepo)
+        ITerminalsRepository terminalsRepo,
+        IVoyagePortArrivalsRepository arrivalsRepo,
+        IVoyagePortDeparturesRepository departuresRepo)
     {
         _voyagesRepo = voyagesRepo;
         _portsRepo = portsRepo;
@@ -31,6 +35,8 @@ public class VoyageService
         _operatorsRepo = operatorsRepo;
         _portsMasterRepo = portsMasterRepo;
         _terminalsRepo = terminalsRepo;
+        _arrivalsRepo = arrivalsRepo;
+        _departuresRepo = departuresRepo;
     }
 
     public async Task<List<VoyageListItemDto>> GetAllAsync(CancellationToken ct = default)
@@ -96,25 +102,72 @@ public class VoyageService
         var portLookup = allPorts.ToDictionary(p => p.Id, p => p.PortCode ?? p.FullName ?? "");
         var termLookup = terminals.ToDictionary(t => t.Id, t => t.TerminalCode ?? t.TerminalName ?? "");
 
-        return ports.OrderBy(p => p.SortOrder).Select(p => new VoyagePortListItemDto
+        var result = new List<VoyagePortListItemDto>();
+        foreach (var p in ports.OrderBy(p => p.SortOrder))
         {
-            Id = p.Id,
-            VoyageId = p.VoyageId,
-            VoyNo = p.VoyNo,
-            Bound = p.Bound,
-            PortId = p.PortId,
-            PortCode = portLookup.TryGetValue(p.PortId, out var pc) ? pc : null,
-            TerminalId = p.TerminalId,
-            TerminalCode = p.TerminalId.HasValue && termLookup.TryGetValue(p.TerminalId.Value, out var tc) ? tc : null,
-            ETA = p.ETA,
-            ETB = p.ETB,
-            ETD = p.ETD,
-            PortStay = p.PortStay,
-            SeaDay = p.SeaDay,
-            Speed = p.Speed,
-            Distance = p.Distance,
-            SortOrder = p.SortOrder
-        }).ToList();
+            var arrival = await _arrivalsRepo.GetByVoyagePortIdAsync(p.Id, ct);
+            var departure = await _departuresRepo.GetByVoyagePortIdAsync(p.Id, ct);
+            var dto = new VoyagePortListItemDto
+            {
+                Id = p.Id,
+                VoyageId = p.VoyageId,
+                VoyNo = p.VoyNo,
+                Bound = p.Bound,
+                PortId = p.PortId,
+                PortCode = portLookup.TryGetValue(p.PortId, out var pc) ? pc : null,
+                TerminalId = p.TerminalId,
+                TerminalCode = p.TerminalId.HasValue && termLookup.TryGetValue(p.TerminalId.Value, out var tc) ? tc : null,
+                ETA = p.ETA,
+                ETB = p.ETB,
+                ETD = p.ETD,
+                PortStay = p.PortStay,
+                SeaDay = p.SeaDay,
+                Speed = p.Speed,
+                Distance = p.Distance,
+                SortOrder = p.SortOrder,
+                HasArrival = arrival != null && arrival.ActualETA.HasValue && arrival.ActualETB.HasValue,
+                HasDeparture = departure != null && departure.ActualETD.HasValue
+            };
+
+            // Populate actual dates from arrival
+            if (arrival != null)
+            {
+                dto.ActualETA = arrival.ActualETA;
+                dto.ActualETB = arrival.ActualETB;
+                dto.ArrPilotOnBoard = arrival.PilotOnBoard;
+                dto.ArrCommencedCargoOp = arrival.CommencedCargoOperation;
+                dto.ArrTugsIn = arrival.TugsIn;
+                dto.ArrDraftFwd = arrival.ArrivalDraftFwdMtr;
+                dto.ArrDraftAft = arrival.ArrivalDraftAftMtr;
+                dto.ArrDraftMean = arrival.ArrivalDraftMeanMtr;
+                dto.ArrFuelOil = arrival.FuelOil;
+                dto.ArrDieselOil = arrival.DieselOil;
+                dto.ArrFreshWater = arrival.FreshWater;
+                dto.ArrBallastWater = arrival.BallastWater;
+                dto.ArrRemarks = arrival.Remarks;
+            }
+
+            // Populate actual dates from departure
+            if (departure != null)
+            {
+                dto.ActualETD = departure.ActualETD;
+                dto.DepCompleteCargoOp = departure.CompleteCargoOperation;
+                dto.DepPilotOnBoard = departure.PilotOnBoard;
+                dto.DepUnberthFAOP = departure.UnberthFAOP;
+                dto.DepTugsOut = departure.TugsOut;
+                dto.DepDraftFwd = departure.DepDraftFwdMtr;
+                dto.DepDraftAft = departure.DepDraftAftMtr;
+                dto.DepDraftMean = departure.DepDraftMeanMtr;
+                dto.DepFuelOil = departure.FuelOil;
+                dto.DepDieselOil = departure.DieselOil;
+                dto.DepFreshWater = departure.FreshWater;
+                dto.DepBallastWater = departure.BallastWater;
+                dto.DepRemarks = departure.Remarks;
+            }
+
+            result.Add(dto);
+        }
+        return result;
     }
 
     public async Task<Guid> CreateAsync(VoyageCreateDto dto, CancellationToken ct = default)
@@ -317,5 +370,212 @@ public class VoyageService
         }
 
         return rows;
+    }
+
+    // ── Vessel Arrival ──
+
+    public async Task<VoyagePortArrivalDto?> GetArrivalByVoyagePortIdAsync(Guid voyagePortId, CancellationToken ct = default)
+    {
+        var arrival = await _arrivalsRepo.GetByVoyagePortIdAsync(voyagePortId, ct);
+        if (arrival == null) return null;
+
+        var ports = await _portsMasterRepo.GetAllAsync(ct);
+        var portLookup = ports.ToDictionary(p => p.Id, p => p.PortCode ?? p.FullName);
+
+        return new VoyagePortArrivalDto
+        {
+            Id = arrival.Id,
+            VoyagePortId = arrival.VoyagePortId,
+            InboundVoyage = arrival.InboundVoyage,
+            OutboundVoyage = arrival.OutboundVoyage,
+            ActualETA = arrival.ActualETA,
+            ActualETB = arrival.ActualETB,
+            LastPortId = arrival.LastPortId,
+            LastPortCode = arrival.LastPortId.HasValue && portLookup.TryGetValue(arrival.LastPortId.Value, out var lp) ? lp : null,
+            NextPortId = arrival.NextPortId,
+            NextPortCode = arrival.NextPortId.HasValue && portLookup.TryGetValue(arrival.NextPortId.Value, out var np) ? np : null,
+            PilotOnBoard = arrival.PilotOnBoard,
+            CommencedCargoOperation = arrival.CommencedCargoOperation,
+            TugsIn = arrival.TugsIn,
+            ArrivalDraftFwdMtr = arrival.ArrivalDraftFwdMtr,
+            ArrivalDraftAftMtr = arrival.ArrivalDraftAftMtr,
+            ArrivalDraftMeanMtr = arrival.ArrivalDraftMeanMtr,
+            FuelOil = arrival.FuelOil,
+            DieselOil = arrival.DieselOil,
+            FreshWater = arrival.FreshWater,
+            BallastWater = arrival.BallastWater,
+            Remarks = arrival.Remarks
+        };
+    }
+
+    public async Task<Guid> SaveArrivalAsync(VoyagePortArrivalDto dto, CancellationToken ct = default)
+    {
+        var existing = await _arrivalsRepo.GetByVoyagePortIdAsync(dto.VoyagePortId, ct);
+
+        if (existing != null)
+        {
+            existing.InboundVoyage = dto.InboundVoyage;
+            existing.OutboundVoyage = dto.OutboundVoyage;
+            existing.ActualETA = dto.ActualETA;
+            existing.ActualETB = dto.ActualETB;
+            existing.LastPortId = dto.LastPortId;
+            existing.NextPortId = dto.NextPortId;
+            existing.PilotOnBoard = dto.PilotOnBoard;
+            existing.CommencedCargoOperation = dto.CommencedCargoOperation;
+            existing.TugsIn = dto.TugsIn;
+            existing.ArrivalDraftFwdMtr = dto.ArrivalDraftFwdMtr;
+            existing.ArrivalDraftAftMtr = dto.ArrivalDraftAftMtr;
+            existing.ArrivalDraftMeanMtr = dto.ArrivalDraftMeanMtr;
+            existing.FuelOil = dto.FuelOil;
+            existing.DieselOil = dto.DieselOil;
+            existing.FreshWater = dto.FreshWater;
+            existing.BallastWater = dto.BallastWater;
+            existing.Remarks = dto.Remarks;
+            existing.ModifiedBy = dto.ModifiedBy;
+
+            await _arrivalsRepo.UpdateAsync(existing, ct);
+
+            // Update ETD on VoyagePort if provided
+            if (dto.EstimatedETD.HasValue)
+                await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.EstimatedETD.Value, dto.ModifiedBy, ct);
+
+            return existing.Id;
+        }
+        else
+        {
+            var arrival = new VoyagePortArrival
+            {
+                Id = Guid.NewGuid(),
+                VoyagePortId = dto.VoyagePortId,
+                InboundVoyage = dto.InboundVoyage,
+                OutboundVoyage = dto.OutboundVoyage,
+                ActualETA = dto.ActualETA,
+                ActualETB = dto.ActualETB,
+                LastPortId = dto.LastPortId,
+                NextPortId = dto.NextPortId,
+                PilotOnBoard = dto.PilotOnBoard,
+                CommencedCargoOperation = dto.CommencedCargoOperation,
+                TugsIn = dto.TugsIn,
+                ArrivalDraftFwdMtr = dto.ArrivalDraftFwdMtr,
+                ArrivalDraftAftMtr = dto.ArrivalDraftAftMtr,
+                ArrivalDraftMeanMtr = dto.ArrivalDraftMeanMtr,
+                FuelOil = dto.FuelOil,
+                DieselOil = dto.DieselOil,
+                FreshWater = dto.FreshWater,
+                BallastWater = dto.BallastWater,
+                Remarks = dto.Remarks,
+                CreatedBy = dto.CreatedBy
+            };
+
+            await _arrivalsRepo.AddAsync(arrival, ct);
+
+            // Update ETD on VoyagePort if provided
+            if (dto.EstimatedETD.HasValue)
+                await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.EstimatedETD.Value, dto.CreatedBy, ct);
+
+            return arrival.Id;
+        }
+    }
+
+    // ── Vessel Departure ──
+
+    public async Task<VoyagePortDepartureDto?> GetDepartureByVoyagePortIdAsync(Guid voyagePortId, CancellationToken ct = default)
+    {
+        var dep = await _departuresRepo.GetByVoyagePortIdAsync(voyagePortId, ct);
+        if (dep == null) return null;
+
+        var ports = await _portsMasterRepo.GetAllAsync(ct);
+        var portLookup = ports.ToDictionary(p => p.Id, p => p.PortCode ?? p.FullName);
+
+        return new VoyagePortDepartureDto
+        {
+            Id = dep.Id,
+            VoyagePortId = dep.VoyagePortId,
+            InboundVoyage = dep.InboundVoyage,
+            OutboundVoyage = dep.OutboundVoyage,
+            CompleteCargoOperation = dep.CompleteCargoOperation,
+            PilotOnBoard = dep.PilotOnBoard,
+            UnberthFAOP = dep.UnberthFAOP,
+            ActualETD = dep.ActualETD,
+            NextPortId = dep.NextPortId,
+            NextPortCode = dep.NextPortId.HasValue && portLookup.TryGetValue(dep.NextPortId.Value, out var np) ? np : null,
+            ETANextPort = dep.ETANextPort,
+            TugsOut = dep.TugsOut,
+            DepDraftFwdMtr = dep.DepDraftFwdMtr,
+            DepDraftAftMtr = dep.DepDraftAftMtr,
+            DepDraftMeanMtr = dep.DepDraftMeanMtr,
+            FuelOil = dep.FuelOil,
+            DieselOil = dep.DieselOil,
+            FreshWater = dep.FreshWater,
+            BallastWater = dep.BallastWater,
+            Remarks = dep.Remarks
+        };
+    }
+
+    public async Task<Guid> SaveDepartureAsync(VoyagePortDepartureDto dto, CancellationToken ct = default)
+    {
+        var existing = await _departuresRepo.GetByVoyagePortIdAsync(dto.VoyagePortId, ct);
+
+        if (existing != null)
+        {
+            existing.InboundVoyage = dto.InboundVoyage;
+            existing.OutboundVoyage = dto.OutboundVoyage;
+            existing.CompleteCargoOperation = dto.CompleteCargoOperation;
+            existing.PilotOnBoard = dto.PilotOnBoard;
+            existing.UnberthFAOP = dto.UnberthFAOP;
+            existing.ActualETD = dto.ActualETD;
+            existing.NextPortId = dto.NextPortId;
+            existing.ETANextPort = dto.ETANextPort;
+            existing.TugsOut = dto.TugsOut;
+            existing.DepDraftFwdMtr = dto.DepDraftFwdMtr;
+            existing.DepDraftAftMtr = dto.DepDraftAftMtr;
+            existing.DepDraftMeanMtr = dto.DepDraftMeanMtr;
+            existing.FuelOil = dto.FuelOil;
+            existing.DieselOil = dto.DieselOil;
+            existing.FreshWater = dto.FreshWater;
+            existing.BallastWater = dto.BallastWater;
+            existing.Remarks = dto.Remarks;
+            existing.ModifiedBy = dto.ModifiedBy;
+
+            await _departuresRepo.UpdateAsync(existing, ct);
+
+            if (dto.ActualETD.HasValue)
+                await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.ActualETD.Value, dto.ModifiedBy, ct);
+
+            return existing.Id;
+        }
+        else
+        {
+            var departure = new VoyagePortDeparture
+            {
+                Id = Guid.NewGuid(),
+                VoyagePortId = dto.VoyagePortId,
+                InboundVoyage = dto.InboundVoyage,
+                OutboundVoyage = dto.OutboundVoyage,
+                CompleteCargoOperation = dto.CompleteCargoOperation,
+                PilotOnBoard = dto.PilotOnBoard,
+                UnberthFAOP = dto.UnberthFAOP,
+                ActualETD = dto.ActualETD,
+                NextPortId = dto.NextPortId,
+                ETANextPort = dto.ETANextPort,
+                TugsOut = dto.TugsOut,
+                DepDraftFwdMtr = dto.DepDraftFwdMtr,
+                DepDraftAftMtr = dto.DepDraftAftMtr,
+                DepDraftMeanMtr = dto.DepDraftMeanMtr,
+                FuelOil = dto.FuelOil,
+                DieselOil = dto.DieselOil,
+                FreshWater = dto.FreshWater,
+                BallastWater = dto.BallastWater,
+                Remarks = dto.Remarks,
+                CreatedBy = dto.CreatedBy
+            };
+
+            await _departuresRepo.AddAsync(departure, ct);
+
+            if (dto.ActualETD.HasValue)
+                await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.ActualETD.Value, dto.CreatedBy, ct);
+
+            return departure.Id;
+        }
     }
 }
