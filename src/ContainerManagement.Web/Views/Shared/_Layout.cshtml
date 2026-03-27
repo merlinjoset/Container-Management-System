@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ContainerManagement.Web.styles.css" asp-append-version="true" />
 
-
     <style>
         .app-navbar {
             background: linear-gradient(90deg, #0f172a, #111827);
@@ -39,7 +38,6 @@
                 letter-spacing: .2px;
             }
 
-        /* Logo slot styles */
         .app-logo-slot {
             width: 36px;
             height: 36px;
@@ -82,61 +80,63 @@
             background: #f8fafc;
         }
 
-        .app-shell {
-            display: flex;
-            gap: 1rem;
-            align-items: flex-start;
-        }
-
-        .app-sidebar {
-            width: 220px;
+        /* ── Top menu bar ── */
+        .app-topmenu {
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,.04);
+            padding: 0 1rem;
             position: sticky;
-            top: 84px;
-            height: calc(100vh - 110px);
-            border-radius: .75rem;
-            background: #ffffff;
-            border: 1px solid rgba(15, 23, 42, .08);
-            box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
-            overflow: auto;
-            padding: .35rem !important;
+            top: 0;
+            z-index: 1020;
         }
-
-            .app-sidebar .sidebar-title {
-                font-weight: 600;
-                color: #0f172a;
-                letter-spacing: .1px;
-                font-size: .7rem;
-                text-transform: uppercase;
-            }
-
-            .app-sidebar .nav-link {
-                color: #0f172a !important;
-                border-radius: .4rem;
-                padding: .25rem .5rem;
-                display: flex;
-                align-items: center;
-                gap: .35rem;
-                font-size: 13px;
-                line-height: 1.3;
-            }
-
-            .app-sidebar .nav-link i {
-                font-size: .72rem;
-            }
-
-                .app-sidebar .nav-link:hover {
-                    background: #f1f5f9;
-                }
-
-                .app-sidebar .nav-link.active {
-                    background: #0f172a;
-                    color: #fff !important;
-                }
-
-        .app-content {
-            flex: 1;
-            min-width: 0;
+        .app-topmenu .navbar-nav { gap: 0; }
+        .app-topmenu .nav-item { position: relative; }
+        .app-topmenu .nav-link {
+            color: #374151 !important;
+            font-size: .8rem;
+            font-weight: 500;
+            padding: .6rem .75rem;
+            border-radius: 0;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
         }
+        .app-topmenu .nav-link:hover {
+            color: #0f172a !important;
+            background: #f1f5f9;
+            border-bottom-color: #cbd5e1;
+        }
+        .app-topmenu .nav-link.active {
+            color: #0f172a !important;
+            background: transparent;
+            border-bottom-color: #0f172a;
+            font-weight: 600;
+        }
+        .app-topmenu .dropdown-menu {
+            font-size: .8rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 8px 24px rgba(0,0,0,.1);
+            border-radius: .5rem;
+            padding: .35rem 0;
+            min-width: 180px;
+        }
+        .app-topmenu .dropdown-item {
+            padding: .4rem .85rem;
+            font-size: .8rem;
+            color: #374151;
+        }
+        .app-topmenu .dropdown-item:hover { background: #f1f5f9; color: #0f172a; }
+        .app-topmenu .dropdown-item.active,
+        .app-topmenu .dropdown-item:active { background: #0f172a; color: #fff; }
+        .app-topmenu .dropdown-header {
+            font-size: .65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #9ca3af;
+            padding: .4rem .85rem .2rem;
+        }
+        .app-topmenu .dropdown-divider { margin: .25rem 0; }
 
         /* Sticky table header utility */
         table.sticky thead th {
@@ -163,9 +163,9 @@
             font-size: .875rem;
         }
 
-        @@media (max-width: 767.98px) {
-            .app-shell { flex-direction: column; }
-            .app-sidebar { display: none; }
+        @@media (max-width: 991.98px) {
+            .app-topmenu .navbar-collapse { padding: .5rem 0; }
+            .app-topmenu .nav-link { padding: .5rem .6rem; }
         }
 
         @@media (min-width: 1400px) {
@@ -173,11 +173,82 @@
                 max-width: 100% !important;
             }
         }
-            /* Grid data font sizing */
+
         .operator-page .table { font-size: .75rem; }
         .operator-page .table .btn { font-size: .7rem; padding: .15rem .35rem; }
         .operator-page .table .btn i { font-size: .7rem; }
-        .operator-page .table .form-control, .operator-page .table .form-select { font-size: .75rem; padding: .2rem .35rem; }    </style>
+        .operator-page .table .form-control, .operator-page .table .form-select { font-size: .75rem; padding: .2rem .35rem; }
+
+        /* ── Open-tabs bar (browser-style) ── */
+        .app-tabbar {
+            background: #1e293b;
+            padding: 0 .5rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+            overflow-x: auto;
+            min-height: 34px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.15) transparent;
+        }
+        .app-tabbar::-webkit-scrollbar { height: 3px; }
+        .app-tabbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+        .app-tabbar:empty { display: none; }
+        .app-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            background: #334155;
+            border: none;
+            border-radius: .45rem .45rem 0 0;
+            padding: .38rem .5rem .38rem .7rem;
+            font-size: .73rem;
+            font-weight: 500;
+            color: #94a3b8;
+            white-space: nowrap;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .15s;
+            position: relative;
+            max-width: 180px;
+        }
+        .app-tab-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .app-tab:hover { background: #475569; color: #e2e8f0; text-decoration: none; }
+        .app-tab.active {
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 600;
+            z-index: 1;
+        }
+        .app-tab-icon {
+            font-size: .65rem;
+            opacity: .7;
+        }
+        .app-tab.active .app-tab-icon { opacity: 1; color: #3b82f6; }
+        .app-tab-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: .25rem;
+            border: none;
+            background: transparent;
+            color: inherit;
+            font-size: .55rem;
+            padding: 0;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity .12s, background .12s;
+            flex-shrink: 0;
+        }
+        .app-tab:hover .app-tab-close { opacity: .6; }
+        .app-tab-close:hover { opacity: 1 !important; background: rgba(239,68,68,.15); color: #ef4444; }
+        .app-tab.active .app-tab-close:hover { background: rgba(239,68,68,.1); color: #dc2626; }
+    </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="bg-light">
@@ -205,6 +276,11 @@
         var isProviders = path.StartsWith("/providers");
         var isUsers = path.StartsWith("/users");
         var isAccount = path.StartsWith("/account");
+        var isJobs = path.StartsWith("/jobs");
+        var isSchedules = path.StartsWith("/schedules");
+
+        var globalMastersActive = isOperators || isRegions || isCountries || isPorts || isTerminals || isVendors || isServices || isRoutes || isDistances || isSlots;
+        var operationsActive = isVessels || isVoyages;
 
         var display =
         User.FindFirstValue(ClaimTypes.Email)
@@ -249,135 +325,65 @@
         </nav>
     </header>
 
-    <div class="container app-container py-4">
-        <div class="app-shell">
+    @* ── Top Menu Bar ── *@
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <nav class="navbar navbar-expand-lg app-topmenu">
+            <div class="container-fluid px-2">
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#topMenuCollapse">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <div class="collapse navbar-collapse" id="topMenuCollapse">
+                    <ul class="navbar-nav">
 
-            @* Sidebar *@
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <aside class="app-sidebar p-3 d-none d-md-block">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="sidebar-title">Navigation</div>
-                    </div>
+                        @* Job Dashboard *@
+                        <li class="nav-item">
+                            <a class="nav-link @(isJobs ? "active" : "")" asp-controller="Jobs" asp-action="Index">
+                                <i class="bi bi-kanban me-1"></i>Dashboard
+                            </a>
+                        </li>
 
-                                        <nav class="nav flex-column gap-1">
+                        @* Masters dropdown *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(globalMastersActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                <i class="bi bi-gear me-1"></i>Masters
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a></li>
+                                <li><a class="dropdown-item @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a></li>
+                                <li><a class="dropdown-item @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a></li>
+                                <li><a class="dropdown-item @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a></li>
+                                <li><a class="dropdown-item @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a></li>
+                                <li><a class="dropdown-item @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a></li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li><a class="dropdown-item @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a></li>
+                                <li><a class="dropdown-item @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a></li>
+                                <li><a class="dropdown-item @(isDistances ? "active" : "")" asp-controller="DistanceMasters" asp-action="Index">Distances</a></li>
+                                <li><a class="dropdown-item @(isSlots ? "active" : "")" asp-controller="SlotMasters" asp-action="Index">Slots</a></li>
+                            </ul>
+                        </li>
+
+                        @* Operations dropdown *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(operationsActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-box-seam me-1"></i>Operations
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a></li>
+                                <li><a class="dropdown-item @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a></li>
+                            </ul>
+                        </li>
+
+                        @* Schedules *@
+                        <li class="nav-item">
+                            <a class="nav-link @(isSchedules ? "active" : "")" asp-controller="Schedules" asp-action="Index">
+                                <i class="bi bi-calendar3 me-1"></i>Schedules
+                            </a>
+                        </li>
+
+                        @* Placeholder menus *@
                         @{
-    var settingsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Settings);
-    var mastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Masters);
-    var globalMastersUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.GlobalMasters);
-    var operatorUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Operator);
-    var regionsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Regions);
-    var portsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Ports);
-    var terminalsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Terminals);
-    var vendorsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vendors);
-    var servicesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Services);
-    var routesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Routes);
-    var distancesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Distances);
-    var slotsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Slots);
-    var restrictionUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Restriction);
-    var systemToolsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.SystemTools);
-    var userAccessSecurityUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.UserAccessSecurity);
-
-    var globalMastersActive =
-         path.StartsWith(globalMastersUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(operatorUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(regionsUrl, StringComparison.OrdinalIgnoreCase)
-         || isCountries
-         || path.StartsWith(portsUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(terminalsUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(vendorsUrl, StringComparison.OrdinalIgnoreCase)
-         || isServices
-         || isRoutes
-         || isDistances
-         || isSlots;
-
-    var mastersActive =
-         path.StartsWith(mastersUrl, StringComparison.OrdinalIgnoreCase)
-         || globalMastersActive;
-
-    var settingsActive = path.StartsWith(settingsUrl, StringComparison.OrdinalIgnoreCase)
-         || mastersActive
-         || path.StartsWith(restrictionUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(systemToolsUrl, StringComparison.OrdinalIgnoreCase)
-         || path.StartsWith(userAccessSecurityUrl, StringComparison.OrdinalIgnoreCase);
-}
-                        <a class="nav-link d-flex justify-content-between align-items-center @(settingsActive ? "active" : "")" data-bs-toggle="collapse" href="#settingsCollapse" role="button" aria-expanded="@(settingsActive.ToString().ToLower())" aria-controls="settingsCollapse">
-                            <span>Settings</span>
-                            <i class="bi bi-chevron-down"></i>
-                        </a>
-                        <div class="collapse @(settingsActive ? "show" : "")" id="settingsCollapse">
-                            <nav class="nav flex-column ms-3 gap-1">
-
-                                @* ── Masters ── *@
-                                <a class="nav-link d-flex justify-content-between align-items-center @(mastersActive ? "active" : "")" data-bs-toggle="collapse" href="#mastersCollapse" role="button" aria-expanded="@(mastersActive.ToString().ToLower())" aria-controls="mastersCollapse">
-                                    <span>Masters</span>
-                                    <i class="bi bi-chevron-down"></i>
-                                </a>
-                                <div class="collapse @(mastersActive ? "show" : "")" id="mastersCollapse">
-                                    <nav class="nav flex-column ms-3 gap-1">
-
-                                        @* ── Global Masters ── *@
-                                        <a class="nav-link d-flex justify-content-between align-items-center @(globalMastersActive ? "active" : "")" data-bs-toggle="collapse" href="#globalMastersCollapse" role="button" aria-expanded="@(globalMastersActive.ToString().ToLower())" aria-controls="globalMastersCollapse">
-                                            <span>Global Masters</span>
-                                            <i class="bi bi-chevron-down"></i>
-                                        </a>
-                                        <div class="collapse @(globalMastersActive ? "show" : "")" id="globalMastersCollapse">
-                                            <nav class="nav flex-column ms-3 gap-1">
-                                                <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operator</a>
-                                                <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
-                                                <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
-                                                <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
-                                                <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
-                                                <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
-                                                <a class="nav-link @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a>
-                                                <a class="nav-link @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a>
-                                                <a class="nav-link @(isDistances ? "active" : "")" asp-controller="DistanceMasters" asp-action="Index">Distances</a>
-                                                <a class="nav-link @(isSlots ? "active" : "")" asp-controller="SlotMasters" asp-action="Index">Slots</a>
-                                            </nav>
-                                        </div>
-
-                                    </nav>
-                                </div>
-
-                                @* ── Settings direct children ── *@
-                                <a class="nav-link" href="@restrictionUrl">Restriction</a>
-                                <a class="nav-link" href="@systemToolsUrl">System Tools</a>
-                                <a class="nav-link" href="@userAccessSecurityUrl">User Access Security</a>
-
-                            </nav>
-                        </div>
-                                            @{ var schedulesUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Schedules);
-                           var scheduleViewerUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer);
-                           var schedulesActive = path.StartsWith(schedulesUrl, StringComparison.OrdinalIgnoreCase) || path.StartsWith(scheduleViewerUrl, StringComparison.OrdinalIgnoreCase);
-                        }
-                        <a class="nav-link d-flex justify-content-between align-items-center @(schedulesActive ? "active" : "")" data-bs-toggle="collapse" href="#schedulesCollapse" role="button" aria-expanded="@(schedulesActive.ToString().ToLower())" aria-controls="schedulesCollapse">
-                            <span>@ContainerManagement.Web.Models.Navigation.MainMenu.Schedules.GetDisplayName()</span>
-                            <i class="bi bi-chevron-down"></i>
-                        </a>
-                        <div class="collapse @(schedulesActive ? "show" : "")" id="schedulesCollapse">
-                            <nav class="nav flex-column ms-3 gap-1">
-                                <a class="nav-link" href="@scheduleViewerUrl">@ContainerManagement.Web.Models.Navigation.ModulePage.ScheduleViewer.GetDisplayName()</a>
-                            </nav>
-                        </div>
-
-                        @{
-                            var operationsUrl = Url.NavigateToMainMenu(ContainerManagement.Web.Models.Navigation.MainMenu.Operations);
-                            var vesselsUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Vessels);
-                            var voyagesUrl = Url.OpenModule(ContainerManagement.Web.Models.Navigation.ModulePage.Voyages);
-                            var operationsActive = path.StartsWith(operationsUrl, StringComparison.OrdinalIgnoreCase) || isVessels || isVoyages;
-                        }
-                        <a class="nav-link d-flex justify-content-between align-items-center @(operationsActive ? "active" : "")" data-bs-toggle="collapse" href="#operationsCollapse" role="button" aria-expanded="@(operationsActive.ToString().ToLower())" aria-controls="operationsCollapse">
-                            <span>Operations</span>
-                            <i class="bi bi-chevron-down"></i>
-                        </a>
-                        <div class="collapse @(operationsActive ? "show" : "")" id="operationsCollapse">
-                            <nav class="nav flex-column ms-3 gap-1">
-                                <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
-                                <a class="nav-link @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a>
-                            </nav>
-                        </div>
-
-                        @{ var others = new [] {
+                            var others = new[] {
                                 ContainerManagement.Web.Models.Navigation.MainMenu.Commercial,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.CustomerService,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.Documentation,
@@ -385,24 +391,33 @@
                                 ContainerManagement.Web.Models.Navigation.MainMenu.EMS,
                                 ContainerManagement.Web.Models.Navigation.MainMenu.EDI
                             };
-                           foreach (var m in others)
-                           {
-                               var url = Url.NavigateToMainMenu(m);
-                               var active = path.StartsWith(url, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-                        <a class="nav-link @active" href="@url">@m.GetDisplayName()</a>
-                           }
-                        }</nav></aside>
-            }
+                            foreach (var m in others)
+                            {
+                                var url = Url.NavigateToMainMenu(m);
+                                var active = path.StartsWith(url, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                                <li class="nav-item">
+                                    <a class="nav-link @active" href="@url">@m.GetDisplayName()</a>
+                                </li>
+                            }
+                        }
 
-            @* Main content *@
-            <section class="app-content">
-                <main role="main">
-                    @await Html.PartialAsync("_Alerts")
-                    @RenderBody()
-                </main>
-            </section>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    }
 
-        </div>
+    @* ── Open Tabs Bar ── *@
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="app-tabbar" id="appTabBar"></div>
+    }
+
+    <div class="container-fluid app-container py-3 px-4">
+        <main role="main">
+            @await Html.PartialAsync("_Alerts")
+            @RenderBody()
+        </main>
     </div>
 
     <footer class="border-top app-footer text-muted py-3">
@@ -417,156 +432,160 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
 
     @if (User.Identity?.IsAuthenticated == true)
     {
-        <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="mobileSidebarLabel">Navigation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body">
-                <nav class="nav flex-column gap-1">
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#salesCollapseMobile" role="button" aria-expanded="false" aria-controls="salesCollapseMobile">
-                        <span>Sales</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="salesCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/sales/quotes">Quotes</a>
-                            <a class="nav-link" href="/sales/orders">Sales Orders</a>
-                            <a class="nav-link" href="/sales/invoices">Invoices</a>
-                            <a class="nav-link" href="/sales/customers">Customers</a>
-                        </nav>
-                    </div>
+    <script>
+    (function() {
+        const STORAGE_KEY = 'cm_open_tabs';
+        const currentPath = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#purchasesCollapseMobile" role="button" aria-expanded="false" aria-controls="purchasesCollapseMobile">
-                        <span>Purchases</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="purchasesCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/purchases/requisitions">Requisitions</a>
-                            <a class="nav-link" href="/purchases/orders">Purchase Orders</a>
-                            <a class="nav-link" href="/purchases/bills">Bills</a>
-                            <a class="nav-link" href="/purchases/vendors">Vendors</a>
-                        </nav>
-                    </div>
+        // path → { label, icon }
+        const tabMeta = {
+            '/jobs':            { label: 'Dashboard',  icon: 'bi-kanban' },
+            '/operators':       { label: 'Operators',  icon: 'bi-building' },
+            '/regions':         { label: 'Regions',    icon: 'bi-globe2' },
+            '/countries':       { label: 'Countries',  icon: 'bi-flag' },
+            '/ports':           { label: 'Ports',      icon: 'bi-geo-alt' },
+            '/terminals':       { label: 'Terminals',  icon: 'bi-pin-map' },
+            '/vendors':         { label: 'Vendors',    icon: 'bi-shop' },
+            '/servicemasters':  { label: 'Services',   icon: 'bi-truck' },
+            '/routemasters':    { label: 'Routes',     icon: 'bi-signpost-2' },
+            '/distancemasters': { label: 'Distances',  icon: 'bi-rulers' },
+            '/slotmasters':     { label: 'Slots',      icon: 'bi-grid-3x3' },
+            '/vessels':         { label: 'Vessels',    icon: 'bi-water' },
+            '/voyages':         { label: 'Voyages',    icon: 'bi-compass' },
+            '/schedules':       { label: 'Schedules',  icon: 'bi-calendar3' },
+            '/users':           { label: 'Users',      icon: 'bi-people' }
+        };
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#inventoryCollapseMobile" role="button" aria-expanded="false" aria-controls="inventoryCollapseMobile">
-                        <span>Inventory</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="inventoryCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/inventory/items">Items</a>
-                            <a class="nav-link" href="/inventory/movements">Stock Movements</a>
-                            <a class="nav-link" href="/inventory/adjustments">Adjustments</a>
-                            <a class="nav-link" href="/warehouse/locations">Warehouses</a>
-                        </nav>
-                    </div>
+        function getTabs() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+            catch { return []; }
+        }
+        function saveTabs(tabs) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); }
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#accountingCollapseMobile" role="button" aria-expanded="false" aria-controls="accountingCollapseMobile">
-                        <span>Accounting</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="accountingCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/accounting/chart-of-accounts">Chart of Accounts</a>
-                            <a class="nav-link" href="/accounting/journals">Journal Entries</a>
-                            <a class="nav-link" href="/accounting/payments">Payments</a>
-                            <a class="nav-link" href="/reports/finance">Financial Reports</a>
-                        </nav>
-                    </div>
+        function getBaseRoute(href) {
+            const p = href.toLowerCase().replace(/\/+$/, '');
+            for (const prefix of Object.keys(tabMeta)) {
+                if (p === prefix || p.startsWith(prefix + '/')) return prefix;
+            }
+            return p;
+        }
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#hrCollapseMobile" role="button" aria-expanded="false" aria-controls="hrCollapseMobile">
-                        <span>HR</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="hrCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/hr/employees">Employees</a>
-                            <a class="nav-link" href="/hr/attendance">Attendance</a>
-                            <a class="nav-link" href="/hr/payroll">Payroll</a>
-                        </nav>
-                    </div>
+        function getMeta(href) {
+            const base = getBaseRoute(href);
+            if (tabMeta[base]) return tabMeta[base];
+            const seg = base.split('/').filter(Boolean).pop() || 'Page';
+            return { label: seg.charAt(0).toUpperCase() + seg.slice(1), icon: 'bi-file-earmark' };
+        }
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#projectsCollapseMobile" role="button" aria-expanded="false" aria-controls="projectsCollapseMobile">
-                        <span>Projects</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="projectsCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/projects/list">Projects</a>
-                            <a class="nav-link" href="/projects/tasks">Tasks</a>
-                            <a class="nav-link" href="/projects/timesheets">Timesheets</a>
-                        </nav>
-                    </div>
+        const MAX_TABS = 10;
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#manufacturingCollapseMobile" role="button" aria-expanded="false" aria-controls="manufacturingCollapseMobile">
-                        <span>Manufacturing</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="manufacturingCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/manufacturing/bom">BOM</a>
-                            <a class="nav-link" href="/manufacturing/work-orders">Work Orders</a>
-                            <a class="nav-link" href="/manufacturing/production">Production</a>
-                        </nav>
-                    </div>
+        function addTab(href, label) {
+            let tabs = getTabs();
+            const base = getBaseRoute(href);
+            if (!tabs.find(t => getBaseRoute(t.href) === base)) {
+                if (tabs.length >= MAX_TABS) {
+                    // Remove the oldest non-active tab
+                    const currentBase = getBaseRoute(currentPath);
+                    const idx = tabs.findIndex(t => getBaseRoute(t.href) !== currentBase);
+                    if (idx !== -1) tabs.splice(idx, 1);
+                    else return; // all tabs are active somehow, don't add
+                }
+                const meta = getMeta(href);
+                tabs.push({ href, label: label || meta.label, icon: meta.icon });
+                saveTabs(tabs);
+            }
+        }
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#reportsCollapseMobile" role="button" aria-expanded="false" aria-controls="reportsCollapseMobile">
-                        <span>Reports</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="reportsCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link" href="/reports/dashboards">Dashboards</a>
-                            <a class="nav-link" href="/reports/kpi">KPIs</a>
-                            <a class="nav-link" href="/reports/custom">Custom Reports</a>
-                        </nav>
-                    </div>
+        function removeTab(href) {
+            let tabs = getTabs();
+            const base = getBaseRoute(href);
+            tabs = tabs.filter(t => getBaseRoute(t.href) !== base);
+            saveTabs(tabs);
+            return tabs;
+        }
 
-                    <a class="nav-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#adminCollapseMobile" role="button" aria-expanded="false" aria-controls="adminCollapseMobile">
-                        <span>Administration</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse" id="adminCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
-                            <a class="nav-link" href="/admin/roles">Roles</a>
-                            <a class="nav-link" href="/admin/settings">Settings</a>
-                        </nav>
-                    </div>
+        function renderTabs() {
+            const bar = document.getElementById('appTabBar');
+            if (!bar) return;
+            bar.innerHTML = '';
+            const tabs = getTabs();
+            if (tabs.length === 0) { bar.style.display = 'none'; return; }
+            bar.style.display = '';
 
-                    <a class="nav-link d-flex justify-content-between align-items-center"
-                       data-bs-toggle="collapse" href="#setupCollapseMobile" role="button"
-                       aria-expanded="true" aria-controls="setupCollapseMobile">
-                        <span>Data Setup</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                    <div class="collapse show" id="setupCollapseMobile">
-                        <nav class="nav flex-column ms-3 gap-1">
-                            <a class="nav-link @(isRegions ? "active" : "")" asp-controller="Regions" asp-action="Index">Regions</a>
-                            <a class="nav-link @(isCountries ? "active" : "")" asp-controller="Countries" asp-action="Index">Countries</a>
-                            <a class="nav-link @(isPorts ? "active" : "")" asp-controller="Ports" asp-action="Index">Ports</a>
-                            <a class="nav-link @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a>
-                            <a class="nav-link @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a>
-                            <a class="nav-link @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a>
-                            <a class="nav-link @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a>
-                            <a class="nav-link @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a>
-                            <a class="nav-link @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a>
-                            <a class="nav-link @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a>
-                            <a class="nav-link @(isDistances ? "active" : "")" asp-controller="DistanceMasters" asp-action="Index">Distances</a>
-                            <a class="nav-link @(isSlots ? "active" : "")" asp-controller="SlotMasters" asp-action="Index">Slots</a>
-                        </nav>
-                    </div>
-                </nav>
-            </div>
-        </div>
+            const currentBase = getBaseRoute(currentPath);
+
+            tabs.forEach((tab, idx) => {
+                const tabBase = getBaseRoute(tab.href);
+                const isActive = tabBase === currentBase;
+                const meta = getMeta(tab.href);
+
+                const a = document.createElement('a');
+                a.className = 'app-tab' + (isActive ? ' active' : '');
+                a.href = tab.href;
+
+                // Icon
+                const icon = document.createElement('i');
+                icon.className = 'app-tab-icon bi ' + (tab.icon || meta.icon);
+                a.appendChild(icon);
+
+                // Label
+                const lbl = document.createElement('span');
+                lbl.className = 'app-tab-label';
+                lbl.textContent = tab.label || meta.label;
+                a.appendChild(lbl);
+
+                // Close button
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'app-tab-close';
+                closeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                closeBtn.title = 'Close tab';
+                closeBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Grab neighbors before removing
+                    const allTabs = getTabs();
+                    const closingIdx = allTabs.findIndex(t => getBaseRoute(t.href) === getBaseRoute(tab.href));
+                    const rightNeighbor = closingIdx < allTabs.length - 1 ? allTabs[closingIdx + 1] : null;
+                    const leftNeighbor = closingIdx > 0 ? allTabs[closingIdx - 1] : null;
+
+                    const remaining = removeTab(tab.href);
+                    if (isActive && remaining.length > 0) {
+                        const next = rightNeighbor || leftNeighbor || remaining[0];
+                        window.location.href = next.href;
+                    } else if (isActive) {
+                        // No tabs left — just stay on current page, re-render empty bar
+                        renderTabs();
+                    } else {
+                        renderTabs();
+                    }
+                };
+                a.appendChild(closeBtn);
+                bar.appendChild(a);
+            });
+        }
+
+        // Auto-add current page as a tab
+        if (tabMeta[getBaseRoute(currentPath)]) {
+            addTab(currentPath);
+        }
+
+        // Intercept menu clicks
+        document.querySelectorAll('.app-topmenu .dropdown-item, .app-topmenu .nav-link').forEach(link => {
+            const href = link.getAttribute('href');
+            if (!href || href === '#' || href.startsWith('javascript')) return;
+            link.addEventListener('click', function() {
+                addTab(href, link.textContent.trim());
+            });
+        });
+
+        renderTabs();
+    })();
+    </script>
     }
+
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
-
-

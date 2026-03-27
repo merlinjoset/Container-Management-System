@@ -1,0 +1,54 @@
+@model ContainerManagement.Application.Dtos.Jobs.JobListItemDto
+@{
+    var screenshots = Model.Attachments.Where(a => a.IsScreenshot).Take(2).ToList();
+    var attCount = Model.Attachments.Count;
+}
+
+<div class="kanban-card"
+     draggable="true"
+     ondragstart="dragStart(event)"
+     ondragend="dragEnd(event)"
+     data-id="@Model.Id"
+     data-status="@Model.Status"
+     data-title="@Model.Title"
+     data-desc="@Model.Description"
+     data-tag="@Model.Tag"
+     data-tagcolor="@Model.TagColor">
+    <div class="kanban-card-title">@Model.Title</div>
+    @if (Model.Status == 2 && !string.IsNullOrEmpty(Model.Description))
+    {
+        <div class="kanban-card-desc">@Model.Description</div>
+    }
+    @if (screenshots.Any())
+    {
+        <div class="kanban-card-thumbs">
+            @foreach (var s in screenshots)
+            {
+                <img src="@s.Url" alt="@s.FileName" class="kanban-thumb" />
+            }
+        </div>
+    }
+    <div class="kanban-card-meta">
+        <div class="d-flex align-items-center gap-2">
+            @if (!string.IsNullOrEmpty(Model.Tag))
+            {
+                <span class="kanban-card-tag" style="background:@(Model.TagColor ?? "#6b7280")">@Model.Tag</span>
+            }
+            @if (attCount > 0)
+            {
+                <span class="kanban-card-att" title="@attCount attachment(s)">
+                    <i class="bi bi-paperclip"></i> @attCount
+                </span>
+            }
+        </div>
+        <span class="kanban-card-date">@Model.CreatedOn.ToString("MMM dd, yyyy")</span>
+    </div>
+    <div class="kanban-card-actions">
+        <button class="btn btn-outline-secondary btn-sm" onclick="openEditModal(this.closest('.kanban-card'))">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-outline-danger btn-sm" onclick="deleteJob('@Model.Id')">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>

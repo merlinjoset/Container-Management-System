@@ -20,6 +20,7 @@ namespace ContainerManagement.Application
             services.AddScoped<DistanceMasterService>();
             services.AddScoped<SlotMasterService>();
             services.AddScoped<VoyageService>();
+            services.AddScoped<JobService>();
 
             return services;
         }

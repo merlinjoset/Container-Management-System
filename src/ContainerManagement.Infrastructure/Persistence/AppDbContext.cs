@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<SlotEntity> Slots => Set<SlotEntity>();
     public DbSet<VoyageEntity> Voyages => Set<VoyageEntity>();
     public DbSet<VoyagePortEntity> VoyagePorts => Set<VoyagePortEntity>();
+    public DbSet<JobEntity> Jobs => Set<JobEntity>();
+    public DbSet<JobAttachmentEntity> JobAttachments => Set<JobAttachmentEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -481,6 +483,53 @@ public class AppDbContext : DbContext
 
             e.HasIndex(x => x.VoyageId).HasDatabaseName("IX_TblVoyagePort_VoyageId");
             e.HasIndex(x => new { x.VoyageId, x.SortOrder }).HasDatabaseName("IX_TblVoyagePort_VoyageId_SortOrder");
+        });
+
+        // ---------------- TblJob ----------------
+        b.Entity<JobEntity>(e =>
+        {
+            e.ToTable("TblJob");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.Title).HasMaxLength(300).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.Status).IsRequired();
+            e.Property(x => x.Tag).HasMaxLength(100);
+            e.Property(x => x.TagColor).HasMaxLength(30);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+        });
+
+        // ---------------- TblJobAttachment ----------------
+        b.Entity<JobAttachmentEntity>(e =>
+        {
+            e.ToTable("TblJobAttachment");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.JobId).IsRequired();
+            e.Property(x => x.FileName).HasMaxLength(500).IsRequired();
+            e.Property(x => x.StoredFileName).HasMaxLength(500).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(200).IsRequired();
+            e.Property(x => x.FileSize).IsRequired();
+            e.Property(x => x.IsScreenshot).HasDefaultValue(false).IsRequired();
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<JobEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.JobId)
+                .HasConstraintName("FK_TblJobAttachment_TblJob")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.JobId).HasDatabaseName("IX_TblJobAttachment_JobId");
         });
 
     }
