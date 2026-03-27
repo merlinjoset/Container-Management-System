@@ -522,48 +522,52 @@
                 const isActive = tabBase === currentBase;
                 const meta = getMeta(tab.href);
 
-                const a = document.createElement('a');
-                a.className = 'app-tab' + (isActive ? ' active' : '');
-                a.href = tab.href;
+                // Use a div instead of <a> to avoid accidental navigation on close
+                const el = document.createElement('div');
+                el.className = 'app-tab' + (isActive ? ' active' : '');
+                el.style.cursor = 'pointer';
+
+                // Click the tab label/icon area → navigate
+                el.addEventListener('click', function() {
+                    if (!isActive) window.location.href = tab.href;
+                });
 
                 // Icon
                 const icon = document.createElement('i');
                 icon.className = 'app-tab-icon bi ' + (tab.icon || meta.icon);
-                a.appendChild(icon);
+                el.appendChild(icon);
 
                 // Label
                 const lbl = document.createElement('span');
                 lbl.className = 'app-tab-label';
                 lbl.textContent = tab.label || meta.label;
-                a.appendChild(lbl);
+                el.appendChild(lbl);
 
                 // Close button
                 const closeBtn = document.createElement('button');
                 closeBtn.className = 'app-tab-close';
                 closeBtn.innerHTML = '<i class="bi bi-x"></i>';
                 closeBtn.title = 'Close tab';
-                closeBtn.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    // Grab neighbors before removing
+                closeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // don't trigger tab navigate
+
                     const allTabs = getTabs();
-                    const closingIdx = allTabs.findIndex(t => getBaseRoute(t.href) === getBaseRoute(tab.href));
+                    const closingIdx = allTabs.findIndex(t => getBaseRoute(t.href) === tabBase);
                     const rightNeighbor = closingIdx < allTabs.length - 1 ? allTabs[closingIdx + 1] : null;
                     const leftNeighbor = closingIdx > 0 ? allTabs[closingIdx - 1] : null;
 
                     const remaining = removeTab(tab.href);
+
                     if (isActive && remaining.length > 0) {
                         const next = rightNeighbor || leftNeighbor || remaining[0];
                         window.location.href = next.href;
-                    } else if (isActive) {
-                        // No tabs left — just stay on current page, re-render empty bar
-                        renderTabs();
                     } else {
+                        // Non-active tab closed, or last tab closed — just re-render, no navigation
                         renderTabs();
                     }
-                };
-                a.appendChild(closeBtn);
-                bar.appendChild(a);
+                });
+                el.appendChild(closeBtn);
+                bar.appendChild(el);
             });
         }
 
