@@ -374,11 +374,14 @@
                             </ul>
                         </li>
 
-                        @* Schedules *@
-                        <li class="nav-item">
-                            <a class="nav-link @(isSchedules ? "active" : "")" asp-controller="Schedules" asp-action="Index">
-                                <i class="bi bi-calendar3 me-1"></i>Schedules
+                        @* Schedule dropdown *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(isSchedules ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-calendar3 me-1"></i>Schedule
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item @(isSchedules && path.Contains("/viewer") ? "active" : "")" asp-controller="Schedules" asp-action="Viewer">Schedule Viewer</a></li>
+                            </ul>
                         </li>
 
                         @* Placeholder menus *@
