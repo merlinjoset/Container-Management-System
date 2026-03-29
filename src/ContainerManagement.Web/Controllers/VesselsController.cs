@@ -121,7 +121,10 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import() => View();
+        public IActionResult Import()
+        {
+            return View(new List<VesselImportRowDto>());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -130,16 +133,16 @@ namespace ContainerManagement.Web.Controllers
             if (file == null || file.Length == 0)
             {
                 TempData["Error"] = "Please select an Excel file.";
-                return RedirectToAction(nameof(Import));
+                return View(new List<VesselImportRowDto>());
             }
             var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
             if (ext != ".xlsx" && ext != ".xls")
             {
                 TempData["Error"] = "Unsupported file type. Please upload .xlsx or .xls.";
-                return RedirectToAction(nameof(Import));
+                return View(new List<VesselImportRowDto>());
             }
 
-            var rows = new List<(string? Name, string? Code, string? Imo, int? Teus, decimal? Nrt, decimal? Grt, string? Flag, decimal? Speed, int? Year)>();
+            var previewRows = new List<VesselImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
@@ -149,20 +152,97 @@ namespace ContainerManagement.Web.Controllers
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        if (c0?.Contains("vessel") == true && c0.Contains("code")) { rowIndex++; continue; }
+                        if (c0?.Contains("vessel") == true) { rowIndex++; continue; }
                     }
-                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
-                    int? Int(int i) { if (reader.FieldCount <= i) return null; return int.TryParse(reader.GetValue(i)?.ToString(), out var v) ? v : null; }
-                    decimal? Dec(int i) { if (reader.FieldCount <= i) return null; return decimal.TryParse(reader.GetValue(i)?.ToString(), out var v) ? v : null; }
-                    rows.Add((S(0), S(1), S(2), Int(3), Dec(4), Dec(5), S(6), Dec(7), Int(8)));
                     rowIndex++;
+
+                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString()?.Trim() : null;
+
+                    var row = new VesselImportRowDto
+                    {
+                        RowNumber = rowIndex,
+                        VesselName = S(0),
+                        VesselCode = S(1),
+                        ImoCode = S(2),
+                        Flag = S(6)
+                    };
+
+                    // Validate VesselName required
+                    if (string.IsNullOrWhiteSpace(row.VesselName))
+                        row.Errors.Add("Vessel Name is required");
+
+                    // Parse Teus (int)
+                    var teusStr = S(3);
+                    if (!string.IsNullOrWhiteSpace(teusStr))
+                    {
+                        if (int.TryParse(teusStr, out var teus))
+                            row.Teus = teus;
+                        else
+                            row.Errors.Add("TEUs must be a valid integer");
+                    }
+
+                    // Parse NRT (decimal)
+                    var nrtStr = S(4);
+                    if (!string.IsNullOrWhiteSpace(nrtStr))
+                    {
+                        if (decimal.TryParse(nrtStr, out var nrt))
+                            row.NRT = nrt;
+                        else
+                            row.Errors.Add("NRT must be a valid number");
+                    }
+
+                    // Parse GRT (decimal)
+                    var grtStr = S(5);
+                    if (!string.IsNullOrWhiteSpace(grtStr))
+                    {
+                        if (decimal.TryParse(grtStr, out var grt))
+                            row.GRT = grt;
+                        else
+                            row.Errors.Add("GRT must be a valid number");
+                    }
+
+                    // Parse Speed (decimal)
+                    var speedStr = S(7);
+                    if (!string.IsNullOrWhiteSpace(speedStr))
+                    {
+                        if (decimal.TryParse(speedStr, out var speed))
+                            row.Speed = speed;
+                        else
+                            row.Errors.Add("Speed must be a valid number");
+                    }
+
+                    // Parse BuildYear (int)
+                    var yearStr = S(8);
+                    if (!string.IsNullOrWhiteSpace(yearStr))
+                    {
+                        if (int.TryParse(yearStr, out var year))
+                            row.BuildYear = year;
+                        else
+                            row.Errors.Add("Build Year must be a valid integer");
+                    }
+
+                    previewRows.Add(row);
                 }
             }
 
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<VesselImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-            var (added, updated, skipped) = await _vesselService.ImportAsync(rows, userId, ct);
+            var importRows = rows.Select(r => (
+                (string?)r.VesselName, (string?)r.VesselCode, (string?)r.ImoCode,
+                (int?)r.Teus, (decimal?)r.NRT, (decimal?)r.GRT,
+                (string?)r.Flag, (decimal?)r.Speed, (int?)r.BuildYear
+            ));
+
+            var (added, updated, skipped) = await _vesselService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

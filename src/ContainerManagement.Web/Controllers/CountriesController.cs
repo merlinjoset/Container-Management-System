@@ -116,7 +116,7 @@ namespace ContainerManagement.Web.Controllers
         [HttpGet]
         public IActionResult Import()
         {
-            return View();
+            return View(new List<CountryImportRowDto>());
         }
 
         [HttpPost]
@@ -135,31 +135,59 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? Name, string? Code)>();
+            var previewRows = new List<CountryImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        var c1 = reader.GetValue(1)?.ToString()?.Trim().ToLowerInvariant();
-                        if ((c0?.Contains("country") == true && c0.Contains("name")) || (c1?.Contains("code") == true))
+                        if (c0?.Contains("country") == true || c0?.Contains("name") == true)
                         { rowIndex++; continue; }
                     }
-                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString() : null;
-                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString() : null;
-                    rows.Add((name, code));
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(code))
+                    {
+                        var row = new CountryImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            CountryName = name,
+                            CountryCode = code
+                        };
+                        if (string.IsNullOrWhiteSpace(name)) row.Errors.Add("Country Name is required.");
+                        if (string.IsNullOrWhiteSpace(code)) row.Errors.Add("Country Code is required.");
+                        previewRows.Add(row);
+                    }
                     rowIndex++;
                 }
             }
 
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors.";
+
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<CountryImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-            var (added, updated, skipped) = await _countryService.ImportAsync(rows, userId, ct);
+            var importRows = rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.CountryName))
+                .Select(r => ((string?)r.CountryName, (string?)r.CountryCode));
+
+            var (added, updated, skipped) = await _countryService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

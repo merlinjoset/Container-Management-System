@@ -1,6 +1,6 @@
-@model List<ContainerManagement.Application.Dtos.SlotMasters.SlotMasterImportRowDto>
+@model List<ContainerManagement.Application.Dtos.ServiceMasters.ServiceMasterImportRowDto>
 @{
-    ViewData["Title"] = "Import Slots";
+    ViewData["Title"] = "Import Services";
     var showPreview = ViewBag.ShowPreview == true;
 }
 
@@ -25,8 +25,8 @@
 
 <div class="operator-page">
     <div class="import-header">
-        <h4><i class="bi bi-upload me-2"></i>Import Slots</h4>
-        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Slots</a>
+        <h4><i class="bi bi-upload me-2"></i>Import Services</h4>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Services</a>
     </div>
 
     @if (!showPreview)
@@ -34,9 +34,10 @@
         <div class="import-info mb-3">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <strong>Upload an Excel file (.xlsx or .xls) with this column:</strong>
+                    <strong>Upload an Excel file (.xlsx or .xls) with these columns:</strong>
                     <ul class="mt-1">
-                        <li><strong>Column A:</strong> Slot Name (required)</li>
+                        <li><strong>Column A:</strong> Service Name (required)</li>
+                        <li><strong>Column B:</strong> Service Code (required)</li>
                     </ul>
                 </div>
                 <a asp-action="Template" class="btn btn-sm btn-outline-primary">
@@ -99,7 +100,8 @@
                         <thead>
                             <tr>
                                 <th class="row-num">#</th>
-                                <th>Slot Name</th>
+                                <th>Service Name</th>
+                                <th>Service Code</th>
                                 <th style="min-width:120px">Status</th>
                             </tr>
                         </thead>
@@ -111,9 +113,11 @@
                                     <td class="row-num">@row.RowNumber</td>
                                     <td>
                                         <input type="hidden" name="rows[@i].RowNumber" value="@row.RowNumber" />
-                                        <input type="hidden" name="rows[@i].SlotName" value="@row.SlotName" />
-                                        @row.SlotName
+                                        <input type="hidden" name="rows[@i].ServiceName" value="@row.ServiceName" />
+                                        <input type="hidden" name="rows[@i].ServiceCode" value="@row.ServiceCode" />
+                                        @row.ServiceName
                                     </td>
+                                    <td><span class="fw-medium">@row.ServiceCode</span></td>
                                     <td>
                                         @if (row.HasErrors)
                                         {

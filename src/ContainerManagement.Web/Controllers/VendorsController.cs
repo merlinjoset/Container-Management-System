@@ -144,7 +144,11 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import() => View();
+        public async Task<IActionResult> Import(CancellationToken ct)
+        {
+            await PopulateCountriesAsync(null, ct);
+            return View(new List<VendorImportRowDto>());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -162,28 +166,86 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? VendorName, string? VendorCode, string? CountryCode)>();
+            var previewRows = new List<VendorImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        if (c0?.Contains("vendor") == true && c0.Contains("code"))
+                        if (c0?.Contains("vendor") == true)
                         { rowIndex++; continue; }
                     }
-                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
-                    rows.Add((S(0), S(1), S(2)));
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+                    var ccode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(code))
+                    {
+                        previewRows.Add(new VendorImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            VendorName = name,
+                            VendorCode = code,
+                            CountryCode = ccode
+                        });
+                    }
                     rowIndex++;
                 }
             }
 
+            var countries = await _countryService.GetAllAsync(ct);
+
+            foreach (var row in previewRows)
+            {
+                if (string.IsNullOrWhiteSpace(row.VendorName))
+                    row.Errors.Add("Vendor Name is required.");
+
+                if (string.IsNullOrWhiteSpace(row.CountryCode))
+                {
+                    row.Errors.Add("Country Code is required.");
+                }
+                else
+                {
+                    var match = countries.FirstOrDefault(c =>
+                        string.Equals(c.CountryCode, row.CountryCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.CountryId = match.Id;
+                    else
+                        row.Errors.Add($"Country Code '{row.CountryCode}' not found in database.");
+                }
+            }
+
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
+
+            await PopulateCountriesAsync(null, ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<VendorImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
-            var (added, updated, skipped) = await _vendorService.ImportAsync(rows, userId, ct);
+
+            var countries = await _countryService.GetAllAsync(ct);
+
+            var importRows = new List<(string? VendorName, string? VendorCode, string? CountryCode)>();
+            foreach (var row in rows)
+            {
+                var countryCode = countries.FirstOrDefault(c => c.Id == row.CountryId)?.CountryCode;
+                importRows.Add((row.VendorName, row.VendorCode, countryCode));
+            }
+
+            var (added, updated, skipped) = await _vendorService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

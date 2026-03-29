@@ -1,39 +1,190 @@
+@model List<ContainerManagement.Application.Dtos.Terminals.TerminalImportRowDto>
 @{
     ViewData["Title"] = "Import Terminals";
+    var showPreview = ViewBag.ShowPreview == true;
+    var ports = (List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>?)ViewBag.Ports ?? new();
 }
 
-<div class="container mt-4">
-    <h3 class="fw-bold mb-3">Import Terminals</h3>
+@section Styles {
+<style>
+    .import-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+    .import-header h4 { margin: 0; font-weight: 700; }
+    .import-info { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: .5rem; padding: .75rem 1rem; font-size: .85rem; color: #0c4a6e; }
+    .import-info ul { margin: 0; padding-left: 1.25rem; }
+    .preview-card { border: 1px solid #e5e7eb; border-radius: .5rem; overflow: hidden; }
+    .preview-card .card-header { background: #f8fafc; padding: .6rem 1rem; font-weight: 600; font-size: .85rem; display: flex; justify-content: space-between; align-items: center; }
+    .preview-table { margin: 0; font-size: .8rem; }
+    .preview-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 1; font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; padding: .5rem .6rem; }
+    .preview-table td { padding: .35rem .6rem; vertical-align: middle; }
+    .preview-table select { font-size: .78rem; padding: .2rem .4rem; }
+    .preview-table .row-num { width: 40px; text-align: center; color: #9ca3af; font-weight: 600; }
+    .preview-scroll { max-height: 500px; overflow-y: auto; }
+    .unmatched { background: #fef2f2 !important; }
+    .unmatched select { border-color: #fca5a5; }
+    .badge-count { font-size: .75rem; }
+    .btn-confirm { min-width: 140px; }
+</style>
+}
 
-    <div class="alert alert-info d-flex justify-content-between align-items-center">
-        <div>Upload an Excel file (.xlsx or .xls) with these columns:</div>
-        <ul class="mb-0">
-            <li>Column A: Terminal Name</li>
-            <li>Column B: Terminal Code (required)</li>
-            <li>Column C: Port Code (required)</li>
-        </ul>
-        <a asp-action="Template" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-download"></i> Download Template
-        </a>
+<div class="operator-page">
+    <div class="import-header">
+        <h4><i class="bi bi-upload me-2"></i>Import Terminals</h4>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Terminals</a>
     </div>
 
-    <form asp-action="Import" method="post" enctype="multipart/form-data">
-        @Html.AntiForgeryToken()
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-8">
-                        <input class="form-control" type="file" name="file" accept=".xlsx,.xls" />
-                    </div>
-                    <div class="col-md-4 text-md-end">
-                        <a asp-action="Index" class="btn btn-secondary me-2">Cancel</a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-upload"></i> Import
-                        </button>
+    @if (!showPreview)
+    {
+        <!-- Step 1: Upload File -->
+        <div class="import-info mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>Upload an Excel file (.xlsx or .xls) with these columns:</strong>
+                    <ul class="mt-1">
+                        <li><strong>Column A:</strong> Terminal Name (required)</li>
+                        <li><strong>Column B:</strong> Terminal Code</li>
+                        <li><strong>Column C:</strong> Port Code (auto-matched to dropdown)</li>
+                    </ul>
+                </div>
+                <a asp-action="Template" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-download me-1"></i>Download Template
+                </a>
+            </div>
+        </div>
+
+        <form asp-action="Import" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-8">
+                            <input class="form-control form-control-sm" type="file" name="file" accept=".xlsx,.xls" required />
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <button type="submit" class="btn btn-primary btn-sm" id="uploadBtn">
+                                <i class="bi bi-eye me-1"></i>Preview Import
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </form>
+        </form>
+    }
+    else
+    {
+        <!-- Step 2: Preview & Confirm -->
+        var errorCount = Model.Count(r => r.HasErrors);
+        var validCount = Model.Count - errorCount;
+        var errorSummary = ViewBag.ErrorSummary as string;
+
+        if (!string.IsNullOrEmpty(errorSummary))
+        {
+            <div class="alert alert-danger py-2 d-flex align-items-center gap-2" style="font-size:.85rem">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+                <span>@errorSummary</span>
+            </div>
+        }
+
+        <form asp-action="ConfirmImport" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="preview-card shadow-sm">
+                <div class="card-header">
+                    <span>
+                        <i class="bi bi-table me-1"></i>Preview — @Model.Count row(s) parsed
+                        @if (errorCount > 0)
+                        {
+                            <text> · </text><span class="badge bg-danger badge-count">@errorCount error(s)</span>
+                        }
+                        @if (validCount > 0)
+                        {
+                            <text> · </text><span class="badge bg-success badge-count">@validCount valid</span>
+                        }
+                    </span>
+                    <div class="d-flex gap-2">
+                        <a asp-action="Import" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Re-upload
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-sm btn-confirm" id="confirmBtn">
+                            <i class="bi bi-check-lg me-1"></i>Confirm Import
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-scroll">
+                    <table class="table table-bordered preview-table">
+                        <thead>
+                            <tr>
+                                <th class="row-num">#</th>
+                                <th>Terminal Name</th>
+                                <th>Terminal Code</th>
+                                <th style="min-width:200px">Port</th>
+                                <th style="min-width:120px">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.Count; i++)
+                            {
+                                var row = Model[i];
+
+                                <tr class="@(row.HasErrors ? "unmatched" : "")">
+                                    <td class="row-num">@row.RowNumber</td>
+                                    <td>
+                                        <input type="hidden" name="rows[@i].RowNumber" value="@row.RowNumber" />
+                                        <input type="hidden" name="rows[@i].TerminalName" value="@row.TerminalName" />
+                                        <input type="hidden" name="rows[@i].TerminalCode" value="@row.TerminalCode" />
+                                        <input type="hidden" name="rows[@i].PortCode" value="@row.PortCode" />
+                                        <span class="fw-medium">@row.TerminalName</span>
+                                    </td>
+                                    <td>@row.TerminalCode</td>
+                                    <td>
+                                        <select name="rows[@i].PortId" class="form-select form-select-sm @(row.PortId == null ? "border-danger" : "")">
+                                            <option value="">-- Select Port --</option>
+                                            @foreach (var p in ports)
+                                            {
+                                                if (row.PortId.HasValue && p.Value == row.PortId.Value.ToString())
+                                                {
+                                                    <option value="@p.Value" selected="selected">@p.Text</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@p.Value">@p.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        @if (row.HasErrors)
+                                        {
+                                            foreach (var err in row.Errors)
+                                            {
+                                                <small class="text-danger d-block"><i class="bi bi-x-circle me-1"></i>@err</small>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <small class="text-success"><i class="bi bi-check-circle me-1"></i>Valid</small>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </form>
+    }
 </div>
 
+@section Scripts {
+<script>
+    document.getElementById('confirmBtn')?.addEventListener('click', function (e) {
+        const selects = document.querySelectorAll('.preview-table select');
+        let empty = 0;
+        selects.forEach(s => { if (!s.value) empty++; });
+        if (empty > 0) {
+            if (!confirm(`${empty} dropdown(s) are still empty. Rows without Port will be skipped. Continue?`)) {
+                e.preventDefault();
+            }
+        }
+    });
+</script>
+}

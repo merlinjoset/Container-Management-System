@@ -144,9 +144,10 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import()
+        public async Task<IActionResult> Import(CancellationToken ct)
         {
-            return View();
+            await PopulatePortsAsync(null, ct);
+            return View(new List<TerminalImportRowDto>());
         }
 
         [HttpPost]
@@ -165,31 +166,86 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? TerminalName, string? TerminalCode, string? PortCode)>();
+            var previewRows = new List<TerminalImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        if (c0?.Contains("terminal") == true && c0.Contains("code"))
+                        if (c0?.Contains("terminal") == true)
                         { rowIndex++; continue; }
                     }
-                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString() : null;
-                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString() : null;
-                    var pcode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString() : null;
-                    rows.Add((name, code, pcode));
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+                    var pcode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(code))
+                    {
+                        previewRows.Add(new TerminalImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            TerminalName = name,
+                            TerminalCode = code,
+                            PortCode = pcode
+                        });
+                    }
                     rowIndex++;
                 }
             }
 
+            var ports = await _portService.GetAllAsync(ct);
+
+            foreach (var row in previewRows)
+            {
+                if (string.IsNullOrWhiteSpace(row.TerminalName))
+                    row.Errors.Add("Terminal Name is required.");
+
+                if (string.IsNullOrWhiteSpace(row.PortCode))
+                {
+                    row.Errors.Add("Port Code is required.");
+                }
+                else
+                {
+                    var match = ports.FirstOrDefault(p =>
+                        string.Equals(p.PortCode, row.PortCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.PortId = match.Id;
+                    else
+                        row.Errors.Add($"Port Code '{row.PortCode}' not found in database.");
+                }
+            }
+
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
+
+            await PopulatePortsAsync(null, ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<TerminalImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-            var (added, updated, skipped) = await _terminalService.ImportAsync(rows, userId, ct);
+            var ports = await _portService.GetAllAsync(ct);
+
+            var importRows = new List<(string? TerminalName, string? TerminalCode, string? PortCode)>();
+            foreach (var row in rows)
+            {
+                var portCode = ports.FirstOrDefault(p => p.Id == row.PortId)?.PortCode;
+                importRows.Add((row.TerminalName, row.TerminalCode, portCode));
+            }
+
+            var (added, updated, skipped) = await _terminalService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

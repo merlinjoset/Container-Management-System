@@ -159,9 +159,10 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Import()
+        public async Task<IActionResult> Import(CancellationToken ct)
         {
-            return View();
+            await PopulateLookupsAsync(null, null, ct);
+            return View(new List<PortImportRowDto>());
         }
 
         [HttpPost]
@@ -180,11 +181,13 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? PortCode, string? FullName, string? CountryCode, string? RegionCode)>();
+            // Parse Excel rows
+            var previewRows = new List<PortImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
@@ -193,19 +196,98 @@ namespace ContainerManagement.Web.Controllers
                         if (c0?.Contains("port") == true && c0.Contains("code"))
                         { rowIndex++; continue; }
                     }
-                    var pcode = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString() : null;
-                    var name = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString() : null;
-                    var ccode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString() : null;
-                    var rcode = reader.FieldCount > 3 ? reader.GetValue(3)?.ToString() : null;
-                    rows.Add((pcode, name, ccode, rcode));
+                    var pcode = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var name = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+                    var ccode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
+                    var rcode = reader.FieldCount > 3 ? reader.GetValue(3)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(pcode))
+                    {
+                        previewRows.Add(new PortImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            PortCode = pcode,
+                            FullName = name,
+                            CountryCode = ccode,
+                            RegionCode = rcode
+                        });
+                    }
                     rowIndex++;
                 }
             }
 
+            // Match country/region codes to IDs from DB
+            var countries = await _countryService.GetAllAsync(ct);
+            var regions = await _regionService.GetAllAsync(ct);
+
+            foreach (var row in previewRows)
+            {
+                // Validate Port Code
+                if (string.IsNullOrWhiteSpace(row.PortCode))
+                    row.Errors.Add("Port Code is required.");
+
+                // Validate & match Country Code
+                if (string.IsNullOrWhiteSpace(row.CountryCode))
+                {
+                    row.Errors.Add("Country Code is required.");
+                }
+                else
+                {
+                    var match = countries.FirstOrDefault(c =>
+                        string.Equals(c.CountryCode, row.CountryCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.CountryId = match.Id;
+                    else
+                        row.Errors.Add($"Country Code '{row.CountryCode}' not found in database.");
+                }
+
+                // Validate & match Region Code
+                if (string.IsNullOrWhiteSpace(row.RegionCode))
+                {
+                    row.Errors.Add("Region Code is required.");
+                }
+                else
+                {
+                    var match = regions.FirstOrDefault(r =>
+                        string.Equals(r.RegionCode, row.RegionCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.RegionId = match.Id;
+                    else
+                        row.Errors.Add($"Region Code '{row.RegionCode}' not found in database.");
+                }
+            }
+
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
+
+            await PopulateLookupsAsync(null, null, ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<PortImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-            var (added, updated, skipped) = await _portService.ImportAsync(rows, userId, ct);
+            // Convert preview rows to import tuples — use CountryId/RegionId directly
+            var countries = await _countryService.GetAllAsync(ct);
+            var regions = await _regionService.GetAllAsync(ct);
+
+            var importRows = new List<(string? PortCode, string? FullName, string? CountryCode, string? RegionCode)>();
+            foreach (var row in rows)
+            {
+                // Resolve the selected IDs back to codes for the existing ImportAsync method
+                var countryCode = countries.FirstOrDefault(c => c.Id == row.CountryId)?.CountryCode;
+                var regionCode = regions.FirstOrDefault(r => r.Id == row.RegionId)?.RegionCode;
+
+                importRows.Add((row.PortCode, row.FullName, countryCode, regionCode));
+            }
+
+            var (added, updated, skipped) = await _portService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

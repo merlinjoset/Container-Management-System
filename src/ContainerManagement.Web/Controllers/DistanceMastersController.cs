@@ -1,4 +1,5 @@
 using ContainerManagement.Application.Dtos.Distances;
+using ContainerManagement.Application.Dtos.DistanceMasters;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -128,7 +129,11 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import() => View();
+        public async Task<IActionResult> Import(CancellationToken ct)
+        {
+            await PopulatePortsAsync(ct);
+            return View(new List<DistanceMasterImportRowDto>());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -146,29 +151,104 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? FromPortCode, string? ToPortCode, decimal? Distance)>();
+            var previewRows = new List<DistanceMasterImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        if (c0?.Contains("from") == true || c0?.Contains("port") == true) { rowIndex++; continue; }
+                        if (c0?.Contains("from") == true || c0?.Contains("port") == true)
+                        { rowIndex++; continue; }
                     }
-                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
-                    decimal? Dec(int i) { if (reader.FieldCount <= i) return null; return decimal.TryParse(reader.GetValue(i)?.ToString(), out var v) ? v : null; }
-                    rows.Add((S(0), S(1), Dec(2)));
+                    var fromCode = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var toCode = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+                    decimal? distance = null;
+                    if (reader.FieldCount > 2 && decimal.TryParse(reader.GetValue(2)?.ToString(), out var dv))
+                        distance = dv;
+
+                    if (!string.IsNullOrWhiteSpace(fromCode) || !string.IsNullOrWhiteSpace(toCode))
+                    {
+                        previewRows.Add(new DistanceMasterImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            FromPortCode = fromCode,
+                            ToPortCode = toCode,
+                            Distance = distance
+                        });
+                    }
                     rowIndex++;
                 }
             }
 
+            // Match port codes to IDs from DB
+            var ports = await _portService.GetAllAsync(ct);
+
+            foreach (var row in previewRows)
+            {
+                if (string.IsNullOrWhiteSpace(row.FromPortCode))
+                {
+                    row.Errors.Add("From Port Code is required.");
+                }
+                else
+                {
+                    var match = ports.FirstOrDefault(p =>
+                        string.Equals(p.PortCode, row.FromPortCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.FromPortId = match.Id;
+                    else
+                        row.Errors.Add($"From Port Code '{row.FromPortCode}' not found in database.");
+                }
+
+                if (string.IsNullOrWhiteSpace(row.ToPortCode))
+                {
+                    row.Errors.Add("To Port Code is required.");
+                }
+                else
+                {
+                    var match = ports.FirstOrDefault(p =>
+                        string.Equals(p.PortCode, row.ToPortCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.ToPortId = match.Id;
+                    else
+                        row.Errors.Add($"To Port Code '{row.ToPortCode}' not found in database.");
+                }
+
+                if (!row.Distance.HasValue)
+                    row.Errors.Add("Distance is required and must be a valid number.");
+            }
+
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
+
+            await PopulatePortsAsync(ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<DistanceMasterImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-            var (added, updated, skipped) = await _distanceMasterService.ImportAsync(rows, userId, ct);
+            var ports = await _portService.GetAllAsync(ct);
+
+            var importRows = new List<(string? FromPortCode, string? ToPortCode, decimal? Distance)>();
+            foreach (var row in rows)
+            {
+                var fromCode = ports.FirstOrDefault(p => p.Id == row.FromPortId)?.PortCode;
+                var toCode = ports.FirstOrDefault(p => p.Id == row.ToPortId)?.PortCode;
+                importRows.Add((fromCode, toCode, row.Distance));
+            }
+
+            var (added, updated, skipped) = await _distanceMasterService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

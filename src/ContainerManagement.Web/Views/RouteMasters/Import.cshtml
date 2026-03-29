@@ -1,7 +1,8 @@
-@model List<ContainerManagement.Application.Dtos.SlotMasters.SlotMasterImportRowDto>
+@model List<ContainerManagement.Application.Dtos.RouteMasters.RouteMasterImportRowDto>
 @{
-    ViewData["Title"] = "Import Slots";
+    ViewData["Title"] = "Import Routes";
     var showPreview = ViewBag.ShowPreview == true;
+    var ports = (List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>?)ViewBag.Ports ?? new();
 }
 
 @section Styles {
@@ -15,9 +16,11 @@
     .preview-table { margin: 0; font-size: .8rem; }
     .preview-table th { background: #f1f5f9; position: sticky; top: 0; z-index: 1; font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; padding: .5rem .6rem; }
     .preview-table td { padding: .35rem .6rem; vertical-align: middle; }
+    .preview-table select { font-size: .78rem; padding: .2rem .4rem; }
     .preview-table .row-num { width: 40px; text-align: center; color: #9ca3af; font-weight: 600; }
     .preview-scroll { max-height: 500px; overflow-y: auto; }
     .unmatched { background: #fef2f2 !important; }
+    .unmatched select { border-color: #fca5a5; }
     .badge-count { font-size: .75rem; }
     .btn-confirm { min-width: 140px; }
 </style>
@@ -25,18 +28,21 @@
 
 <div class="operator-page">
     <div class="import-header">
-        <h4><i class="bi bi-upload me-2"></i>Import Slots</h4>
-        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Slots</a>
+        <h4><i class="bi bi-upload me-2"></i>Import Routes</h4>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Routes</a>
     </div>
 
     @if (!showPreview)
     {
+        <!-- Step 1: Upload File -->
         <div class="import-info mb-3">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <strong>Upload an Excel file (.xlsx or .xls) with this column:</strong>
+                    <strong>Upload an Excel file (.xlsx or .xls) with these columns:</strong>
                     <ul class="mt-1">
-                        <li><strong>Column A:</strong> Slot Name (required)</li>
+                        <li><strong>Column A:</strong> Route Name (required)</li>
+                        <li><strong>Column B:</strong> Origin Port Code (auto-matched to dropdown)</li>
+                        <li><strong>Column C:</strong> Destination Port Code (auto-matched to dropdown)</li>
                     </ul>
                 </div>
                 <a asp-action="Template" class="btn btn-sm btn-outline-primary">
@@ -44,6 +50,7 @@
                 </a>
             </div>
         </div>
+
         <form asp-action="Import" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div class="card shadow-sm">
@@ -53,7 +60,9 @@
                             <input class="form-control form-control-sm" type="file" name="file" accept=".xlsx,.xls" required />
                         </div>
                         <div class="col-md-4 text-md-end">
-                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-eye me-1"></i>Preview Import</button>
+                            <button type="submit" class="btn btn-primary btn-sm" id="uploadBtn">
+                                <i class="bi bi-eye me-1"></i>Preview Import
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -62,6 +71,7 @@
     }
     else
     {
+        <!-- Step 2: Preview & Confirm -->
         var errorCount = Model.Count(r => r.HasErrors);
         var validCount = Model.Count - errorCount;
         var errorSummary = ViewBag.ErrorSummary as string;
@@ -76,6 +86,7 @@
 
         <form asp-action="ConfirmImport" method="post">
             @Html.AntiForgeryToken()
+
             <div class="preview-card shadow-sm">
                 <div class="card-header">
                     <span>
@@ -90,8 +101,12 @@
                         }
                     </span>
                     <div class="d-flex gap-2">
-                        <a asp-action="Import" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Re-upload</a>
-                        <button type="submit" class="btn btn-primary btn-sm btn-confirm"><i class="bi bi-check-lg me-1"></i>Confirm Import</button>
+                        <a asp-action="Import" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Re-upload
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-sm btn-confirm" id="confirmBtn">
+                            <i class="bi bi-check-lg me-1"></i>Confirm Import
+                        </button>
                     </div>
                 </div>
                 <div class="preview-scroll">
@@ -99,7 +114,9 @@
                         <thead>
                             <tr>
                                 <th class="row-num">#</th>
-                                <th>Slot Name</th>
+                                <th>Route Name</th>
+                                <th style="min-width:220px">Origin Port</th>
+                                <th style="min-width:220px">Destination Port</th>
                                 <th style="min-width:120px">Status</th>
                             </tr>
                         </thead>
@@ -107,12 +124,47 @@
                             @for (var i = 0; i < Model.Count; i++)
                             {
                                 var row = Model[i];
+
                                 <tr class="@(row.HasErrors ? "unmatched" : "")">
                                     <td class="row-num">@row.RowNumber</td>
                                     <td>
                                         <input type="hidden" name="rows[@i].RowNumber" value="@row.RowNumber" />
-                                        <input type="hidden" name="rows[@i].SlotName" value="@row.SlotName" />
-                                        @row.SlotName
+                                        <input type="hidden" name="rows[@i].RouteName" value="@row.RouteName" />
+                                        <input type="hidden" name="rows[@i].OriginCode" value="@row.OriginCode" />
+                                        <input type="hidden" name="rows[@i].DestCode" value="@row.DestCode" />
+                                        <span class="fw-medium">@row.RouteName</span>
+                                    </td>
+                                    <td>
+                                        <select name="rows[@i].OriginPortId" class="form-select form-select-sm @(row.OriginPortId == null ? "border-danger" : "")">
+                                            <option value="">-- Select Port --</option>
+                                            @foreach (var p in ports)
+                                            {
+                                                if (row.OriginPortId.HasValue && p.Value == row.OriginPortId.Value.ToString())
+                                                {
+                                                    <option value="@p.Value" selected="selected">@p.Text</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@p.Value">@p.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="rows[@i].DestPortId" class="form-select form-select-sm @(row.DestPortId == null ? "border-danger" : "")">
+                                            <option value="">-- Select Port --</option>
+                                            @foreach (var p in ports)
+                                            {
+                                                if (row.DestPortId.HasValue && p.Value == row.DestPortId.Value.ToString())
+                                                {
+                                                    <option value="@p.Value" selected="selected">@p.Text</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@p.Value">@p.Text</option>
+                                                }
+                                            }
+                                        </select>
                                     </td>
                                     <td>
                                         @if (row.HasErrors)
@@ -136,3 +188,18 @@
         </form>
     }
 </div>
+
+@section Scripts {
+<script>
+    document.getElementById('confirmBtn')?.addEventListener('click', function (e) {
+        const selects = document.querySelectorAll('.preview-table select');
+        let empty = 0;
+        selects.forEach(s => { if (!s.value) empty++; });
+        if (empty > 0) {
+            if (!confirm(`${empty} dropdown(s) are still empty. Rows without a selected port will be skipped. Continue?`)) {
+                e.preventDefault();
+            }
+        }
+    });
+</script>
+}

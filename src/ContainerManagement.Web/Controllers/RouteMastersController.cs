@@ -1,4 +1,5 @@
 using ContainerManagement.Application.Dtos.Routes;
+using ContainerManagement.Application.Dtos.RouteMasters;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -143,7 +144,11 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import() => View();
+        public async Task<IActionResult> Import(CancellationToken ct)
+        {
+            await PopulatePortsAsync(null, null, ct);
+            return View(new List<RouteMasterImportRowDto>());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -161,11 +166,12 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? RouteName, string? OriginCode, string? DestCode)>();
+            var previewRows = new List<RouteMasterImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
@@ -174,15 +180,88 @@ namespace ContainerManagement.Web.Controllers
                         if (c0?.Contains("route") == true)
                         { rowIndex++; continue; }
                     }
-                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
-                    rows.Add((S(0), S(1), S(2)));
+                    var routeName = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var originCode = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+                    var destCode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(routeName) || !string.IsNullOrWhiteSpace(originCode) || !string.IsNullOrWhiteSpace(destCode))
+                    {
+                        previewRows.Add(new RouteMasterImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            RouteName = routeName,
+                            OriginCode = originCode,
+                            DestCode = destCode
+                        });
+                    }
                     rowIndex++;
                 }
             }
 
+            // Match port codes to IDs from DB
+            var ports = await _portService.GetAllAsync(ct);
+
+            foreach (var row in previewRows)
+            {
+                if (string.IsNullOrWhiteSpace(row.RouteName))
+                    row.Errors.Add("Route Name is required.");
+
+                if (string.IsNullOrWhiteSpace(row.OriginCode))
+                {
+                    row.Errors.Add("Origin Code is required.");
+                }
+                else
+                {
+                    var match = ports.FirstOrDefault(p =>
+                        string.Equals(p.PortCode, row.OriginCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.OriginPortId = match.Id;
+                    else
+                        row.Errors.Add($"Origin Code '{row.OriginCode}' not found in database.");
+                }
+
+                if (string.IsNullOrWhiteSpace(row.DestCode))
+                {
+                    row.Errors.Add("Destination Code is required.");
+                }
+                else
+                {
+                    var match = ports.FirstOrDefault(p =>
+                        string.Equals(p.PortCode, row.DestCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.DestPortId = match.Id;
+                    else
+                        row.Errors.Add($"Destination Code '{row.DestCode}' not found in database.");
+                }
+            }
+
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
+
+            await PopulatePortsAsync(null, null, ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<RouteMasterImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
-            var (added, updated, skipped) = await _routeMasterService.ImportAsync(rows, userId, ct);
+
+            var ports = await _portService.GetAllAsync(ct);
+
+            var importRows = new List<(string? RouteName, string? OriginCode, string? DestCode)>();
+            foreach (var row in rows)
+            {
+                var originCode = ports.FirstOrDefault(p => p.Id == row.OriginPortId)?.PortCode;
+                var destCode = ports.FirstOrDefault(p => p.Id == row.DestPortId)?.PortCode;
+                importRows.Add((row.RouteName, originCode, destCode));
+            }
+
+            var (added, updated, skipped) = await _routeMasterService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

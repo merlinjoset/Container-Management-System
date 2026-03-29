@@ -1,4 +1,5 @@
 using ContainerManagement.Application.Dtos.Services;
+using ContainerManagement.Application.Dtos.ServiceMasters;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -116,7 +117,7 @@ namespace ContainerManagement.Web.Controllers
         [HttpGet]
         public IActionResult Import()
         {
-            return View();
+            return View(new List<ServiceMasterImportRowDto>());
         }
 
         [HttpPost]
@@ -125,10 +126,9 @@ namespace ContainerManagement.Web.Controllers
         {
             if (file == null || file.Length == 0)
             {
-                TempData["Error"] = "Please select an Excel file (.xlsx or .xls).";
+                TempData["Error"] = "Please select an Excel file.";
                 return RedirectToAction(nameof(Import));
             }
-
             var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
             if (ext != ".xlsx" && ext != ".xls")
             {
@@ -136,36 +136,59 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? Name, string? Code)>();
+            var previewRows = new List<ServiceMasterImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        var c1 = reader.GetValue(1)?.ToString()?.Trim().ToLowerInvariant();
-                        if ((c0?.Contains("service") == true && c0.Contains("name")) || (c1?.Contains("code") == true))
-                        {
-                            rowIndex++;
-                            continue;
-                        }
+                        if (c0?.Contains("service") == true || c0?.Contains("name") == true)
+                        { rowIndex++; continue; }
                     }
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
 
-                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString() : null;
-                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString() : null;
-                    rows.Add((name, code));
+                    if (!string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(code))
+                    {
+                        var row = new ServiceMasterImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            ServiceName = name,
+                            ServiceCode = code
+                        };
+                        if (string.IsNullOrWhiteSpace(name)) row.Errors.Add("Service Name is required.");
+                        if (string.IsNullOrWhiteSpace(code)) row.Errors.Add("Service Code is required.");
+                        previewRows.Add(row);
+                    }
                     rowIndex++;
                 }
             }
 
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(userIdStr, out var userId))
-                return Unauthorized();
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors.";
 
-            var (added, updated, skipped) = await _serviceMasterService.ImportAsync(rows, userId, ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<ServiceMasterImportRowDto> rows, CancellationToken ct)
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
+
+            var importRows = rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.ServiceName))
+                .Select(r => ((string?)r.ServiceName, (string?)r.ServiceCode));
+
+            var (added, updated, skipped) = await _serviceMasterService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }

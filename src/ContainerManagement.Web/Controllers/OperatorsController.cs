@@ -162,7 +162,11 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import() => View();
+        public async Task<IActionResult> Import(CancellationToken ct)
+        {
+            await PopulateLookupsAsync(null, null, ct);
+            return View(new List<OperatorImportRowDto>());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -180,11 +184,12 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var rows = new List<(string? OperatorName, string? VendorCode, string? CountryCode)>();
+            var previewRows = new List<OperatorImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
@@ -193,17 +198,83 @@ namespace ContainerManagement.Web.Controllers
                         if (c0?.Contains("operator") == true)
                         { rowIndex++; continue; }
                     }
-                    string? S(int i) => reader.FieldCount > i ? reader.GetValue(i)?.ToString() : null;
-                    rows.Add((S(0), S(1), S(2)));
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+                    var vcode = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
+                    var ccode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        previewRows.Add(new OperatorImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            OperatorName = name,
+                            VendorCode = vcode,
+                            CountryCode = ccode
+                        });
+                    }
                     rowIndex++;
                 }
             }
 
+            var vendors = await _vendorService.GetAllAsync(ct);
+            var countries = await _countryService.GetAllAsync(ct);
+
+            foreach (var row in previewRows)
+            {
+                if (string.IsNullOrWhiteSpace(row.OperatorName))
+                    row.Errors.Add("Operator Name is required.");
+
+                if (!string.IsNullOrWhiteSpace(row.VendorCode))
+                {
+                    var match = vendors.FirstOrDefault(v =>
+                        string.Equals(v.VendorCode, row.VendorCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.VendorId = match.Id;
+                    else
+                        row.Errors.Add($"Vendor Code '{row.VendorCode}' not found in database.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(row.CountryCode))
+                {
+                    var match = countries.FirstOrDefault(c =>
+                        string.Equals(c.CountryCode, row.CountryCode, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                        row.CountryId = match.Id;
+                    else
+                        row.Errors.Add($"Country Code '{row.CountryCode}' not found in database.");
+                }
+            }
+
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
+
+            await PopulateLookupsAsync(null, null, ct);
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<OperatorImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
-            var (added, updated, skipped) = await _operatorService.ImportAsync(rows, userId, ct);
+
+            var vendors = await _vendorService.GetAllAsync(ct);
+            var countries = await _countryService.GetAllAsync(ct);
+
+            var importRows = new List<(string? OperatorName, string? VendorCode, string? CountryCode)>();
+            foreach (var row in rows)
+            {
+                var vendorCode = vendors.FirstOrDefault(v => v.Id == row.VendorId)?.VendorCode;
+                var countryCode = countries.FirstOrDefault(c => c.Id == row.CountryId)?.CountryCode;
+                importRows.Add((row.OperatorName, vendorCode, countryCode));
+            }
+
+            var (added, updated, skipped) = await _operatorService.ImportAsync(importRows, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Updated: {updated}, Skipped: {skipped}.";
-            return RedirectToAction(nameof(Operator));
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]

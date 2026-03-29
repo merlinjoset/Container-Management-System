@@ -1,4 +1,5 @@
 using ContainerManagement.Application.Dtos.Slots;
+using ContainerManagement.Application.Dtos.SlotMasters;
 using ContainerManagement.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -97,7 +98,10 @@ namespace ContainerManagement.Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Import() => View();
+        public IActionResult Import()
+        {
+            return View(new List<SlotMasterImportRowDto>());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -115,27 +119,55 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var names = new List<string?>();
+            var previewRows = new List<SlotMasterImportRowDto>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
+                var rowNum = 1;
                 while (reader.Read())
                 {
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        if (c0?.Contains("slot") == true) { rowIndex++; continue; }
+                        if (c0?.Contains("slot") == true || c0?.Contains("name") == true)
+                        { rowIndex++; continue; }
                     }
-                    names.Add(reader.GetValue(0)?.ToString());
+                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
+
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        var row = new SlotMasterImportRowDto
+                        {
+                            RowNumber = rowNum++,
+                            SlotName = name
+                        };
+                        previewRows.Add(row);
+                    }
                     rowIndex++;
                 }
             }
 
+            var errorCount = previewRows.Count(r => r.HasErrors);
+            if (errorCount > 0)
+                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors.";
+
+            ViewBag.ShowPreview = true;
+            return View(previewRows);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmImport(List<SlotMasterImportRowDto> rows, CancellationToken ct)
+        {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-            var (added, updated, skipped) = await _slotMasterService.ImportAsync(names, userId, ct);
+            var slotNames = rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.SlotName))
+                .Select(r => (string?)r.SlotName);
+
+            var (added, updated, skipped) = await _slotMasterService.ImportAsync(slotNames, userId, ct);
             TempData["Success"] = $"Import completed. Added: {added}, Skipped: {skipped}.";
             return RedirectToAction(nameof(Index));
         }
