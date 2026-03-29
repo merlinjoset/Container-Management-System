@@ -15,3 +15,4 @@ src/ContainerManagement.Domain/obj
 **/appsettings.Local.json
 **/appsettings.Production.json
 /nul
+/src/ContainerManagement.Web/wwwroot/uploads/jobs/7666c59b-4c93-4539-a06b-408f32639114

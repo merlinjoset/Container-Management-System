@@ -7,6 +7,6 @@ namespace ContainerManagement.Domain.Operators
         public Guid Id { get; set; }
         public string OperatorName { get; set; }
         public Guid VendorId { get; set; }
-        public Guid CountryId { get; set; }
+        public bool IsCompetitor { get; set; }
     }
 }

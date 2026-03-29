@@ -3,7 +3,6 @@
     ViewData["Title"] = "Import Operators";
     var showPreview = ViewBag.ShowPreview == true;
     var vendors = (List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>?)ViewBag.Vendors ?? new();
-    var countries = (List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>?)ViewBag.Countries ?? new();
 }
 
 @section Styles {
@@ -43,7 +42,7 @@
                     <ul class="mt-1">
                         <li><strong>Column A:</strong> Operator Name (required)</li>
                         <li><strong>Column B:</strong> Vendor Code (auto-matched to dropdown)</li>
-                        <li><strong>Column C:</strong> Country Code (auto-matched to dropdown)</li>
+                        <li><strong>Column C:</strong> Competitor (Yes/No)</li>
                     </ul>
                 </div>
                 <a asp-action="Template" class="btn btn-sm btn-outline-primary">
@@ -117,7 +116,7 @@
                                 <th class="row-num">#</th>
                                 <th>Operator Name</th>
                                 <th style="min-width:200px">Vendor</th>
-                                <th style="min-width:200px">Country</th>
+                                <th style="width:100px">Competitor</th>
                                 <th style="min-width:120px">Status</th>
                             </tr>
                         </thead>
@@ -132,7 +131,6 @@
                                         <input type="hidden" name="rows[@i].RowNumber" value="@row.RowNumber" />
                                         <input type="hidden" name="rows[@i].OperatorName" value="@row.OperatorName" />
                                         <input type="hidden" name="rows[@i].VendorCode" value="@row.VendorCode" />
-                                        <input type="hidden" name="rows[@i].CountryCode" value="@row.CountryCode" />
                                         <span class="fw-medium">@row.OperatorName</span>
                                     </td>
                                     <td>
@@ -152,18 +150,16 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <select name="rows[@i].CountryId" class="form-select form-select-sm">
-                                            <option value="">-- Select Country --</option>
-                                            @foreach (var c in countries)
+                                        <select name="rows[@i].IsCompetitor" class="form-select form-select-sm">
+                                            @if (row.IsCompetitor)
                                             {
-                                                if (row.CountryId.HasValue && c.Value == row.CountryId.Value.ToString())
-                                                {
-                                                    <option value="@c.Value" selected="selected">@c.Text</option>
-                                                }
-                                                else
-                                                {
-                                                    <option value="@c.Value">@c.Text</option>
-                                                }
+                                                <option value="false">No</option>
+                                                <option value="true" selected="selected">Yes</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="false" selected="selected">No</option>
+                                                <option value="true">Yes</option>
                                             }
                                         </select>
                                     </td>
@@ -193,11 +189,11 @@
 @section Scripts {
 <script>
     document.getElementById('confirmBtn')?.addEventListener('click', function (e) {
-        const selects = document.querySelectorAll('.preview-table select');
+        const selects = document.querySelectorAll('.preview-table select[name*="VendorId"]');
         let empty = 0;
         selects.forEach(s => { if (!s.value) empty++; });
         if (empty > 0) {
-            if (!confirm(`${empty} dropdown(s) are still empty. Rows without Vendor or Country will be skipped. Continue?`)) {
+            if (!confirm(`${empty} Vendor dropdown(s) are still empty. Rows without Vendor will be skipped. Continue?`)) {
                 e.preventDefault();
             }
         }

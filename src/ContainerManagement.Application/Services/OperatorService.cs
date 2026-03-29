@@ -8,31 +8,26 @@ namespace ContainerManagement.Application.Services
     {
         private readonly IOperatorsRepository _operators;
         private readonly IVendorsRepository _vendors;
-        private readonly ICountriesRepository _countries;
 
-        public OperatorService(IOperatorsRepository operators, IVendorsRepository vendors, ICountriesRepository countries)
+        public OperatorService(IOperatorsRepository operators, IVendorsRepository vendors)
         {
             _operators = operators;
             _vendors = vendors;
-            _countries = countries;
         }
 
         public async Task<List<OperatorListItemDto>> GetAllAsync(CancellationToken ct = default)
         {
             var ops = await _operators.GetAllAsync(ct);
             var vendors = await _vendors.GetAllAsync(ct);
-            var countries = await _countries.GetAllAsync(ct);
             var vendorById = vendors.ToDictionary(v => v.Id, v => v);
-            var countryById = countries.ToDictionary(c => c.Id, c => c);
 
             return ops.Select(o => new OperatorListItemDto
             {
                 Id = o.Id,
                 OperatorName = o.OperatorName,
                 VendorId = o.VendorId,
-                CountryId = o.CountryId,
                 VendorName = vendorById.TryGetValue(o.VendorId, out var v) ? v.VendorName : null,
-                CountryName = countryById.TryGetValue(o.CountryId, out var c) ? c.CountryName : null
+                IsCompetitor = o.IsCompetitor
             }).ToList();
         }
 
@@ -44,7 +39,7 @@ namespace ContainerManagement.Application.Services
                 Id = Guid.NewGuid(),
                 OperatorName = dto.OperatorName,
                 VendorId = dto.VendorId,
-                CountryId = dto.CountryId,
+                IsCompetitor = dto.IsCompetitor,
                 IsDeleted = false,
                 CreatedOn = now,
                 ModifiedOn = now,
@@ -63,7 +58,7 @@ namespace ContainerManagement.Application.Services
 
             op.OperatorName = dto.OperatorName;
             op.VendorId = dto.VendorId;
-            op.CountryId = dto.CountryId;
+            op.IsCompetitor = dto.IsCompetitor;
             op.ModifiedOn = DateTime.UtcNow;
             op.ModifiedBy = dto.ModifiedBy;
 
@@ -75,17 +70,14 @@ namespace ContainerManagement.Application.Services
             await _operators.SoftDeleteAsync(id, modifiedBy, ct);
         }
 
-        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? OperatorName, string? VendorCode, string? CountryCode)> rows, Guid userId, CancellationToken ct = default)
+        public async Task<(int added, int updated, int skipped)> ImportAsync(IEnumerable<(string? OperatorName, string? VendorCode, bool IsCompetitor)> rows, Guid userId, CancellationToken ct = default)
         {
             var ops = await _operators.GetAllAsync(ct);
             var vendors = await _vendors.GetAllAsync(ct);
-            var countries = await _countries.GetAllAsync(ct);
             var vByCode = vendors.Where(v => !string.IsNullOrWhiteSpace(v.VendorCode))
                                  .ToDictionary(v => v.VendorCode!, v => v, StringComparer.OrdinalIgnoreCase);
-            var cByCode = countries.Where(c => !string.IsNullOrWhiteSpace(c.CountryCode))
-                                   .ToDictionary(c => c.CountryCode!, c => c, StringComparer.OrdinalIgnoreCase);
 
-            // Use operator name + vendor as identity (since UniqueCode removed)
+            // Use operator name + vendor as identity
             var key = static (string name, Guid vendorId) => $"{name.ToLowerInvariant()}|{vendorId}";
             var opByKey = ops.Where(o => !string.IsNullOrWhiteSpace(o.OperatorName))
                              .ToDictionary(o => key(o.OperatorName!, o.VendorId), o => o);
@@ -95,15 +87,13 @@ namespace ContainerManagement.Application.Services
             {
                 var name = (row.OperatorName ?? string.Empty).Trim();
                 var vcode = (row.VendorCode ?? string.Empty).Trim();
-                var ccode = (row.CountryCode ?? string.Empty).Trim();
                 if (string.IsNullOrWhiteSpace(name)) { skipped++; continue; }
                 if (!vByCode.TryGetValue(vcode, out var vendor)) { skipped++; continue; }
-                if (!cByCode.TryGetValue(ccode, out var country)) { skipped++; continue; }
 
                 var k = key(name, vendor.Id);
                 if (opByKey.TryGetValue(k, out var op))
                 {
-                    op.CountryId = country.Id;
+                    op.IsCompetitor = row.IsCompetitor;
                     op.ModifiedOn = DateTime.UtcNow;
                     op.ModifiedBy = userId;
                     await _operators.UpdateAsync(op, ct);
@@ -117,7 +107,7 @@ namespace ContainerManagement.Application.Services
                         Id = Guid.NewGuid(),
                         OperatorName = name,
                         VendorId = vendor.Id,
-                        CountryId = country.Id,
+                        IsCompetitor = row.IsCompetitor,
                         IsDeleted = false,
                         CreatedOn = now,
                         ModifiedOn = now,

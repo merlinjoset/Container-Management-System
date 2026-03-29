@@ -9,13 +9,10 @@ namespace ContainerManagement.Application.Dtos.Operators
         [Required, StringLength(150)]
         public string OperatorName { get; set; }
 
-        // Unique code removed
-
         [Required]
         public Guid VendorId { get; set; }
 
-        [Required]
-        public Guid CountryId { get; set; }
+        public bool IsCompetitor { get; set; }
 
         public Guid ModifiedBy { get; set; }
     }

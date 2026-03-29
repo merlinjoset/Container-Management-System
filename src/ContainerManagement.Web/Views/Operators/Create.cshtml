@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = "Create Operator";
     var vendors = ViewBag.Vendors as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
-    var countries = ViewBag.Countries as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
 }
 
 <div class="container mt-4">
@@ -22,7 +21,7 @@
                         <input asp-for="OperatorName" class="form-control" />
                         <span asp-validation-for="OperatorName" class="text-danger"></span>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <label asp-for="VendorId" class="form-label">Vendor</label>
                         <select asp-for="VendorId" class="form-select" asp-items="vendors">
@@ -31,11 +30,11 @@
                         <span asp-validation-for="VendorId" class="text-danger"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="CountryId" class="form-label">Country</label>
-                        <select asp-for="CountryId" class="form-select" asp-items="countries">
-                            <option value="">-- Select Country --</option>
+                        <label asp-for="IsCompetitor" class="form-label">Competitor</label>
+                        <select asp-for="IsCompetitor" class="form-select">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
                         </select>
-                        <span asp-validation-for="CountryId" class="text-danger"></span>
                     </div>
                 </div>
             </div>

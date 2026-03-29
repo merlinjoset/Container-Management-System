@@ -279,7 +279,7 @@ public class AppDbContext : DbContext
             // UniqueCode removed per latest requirements
 
             e.Property(x => x.VendorId).IsRequired();
-            e.Property(x => x.CountryId).IsRequired();
+            e.Property(x => x.IsCompetitor).IsRequired().HasDefaultValue(false);
 
             e.Property(x => x.IsDeleted).IsRequired();
             e.Property(x => x.CreatedOn).IsRequired();
@@ -291,12 +291,6 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.VendorId)
                 .HasConstraintName("FK_TblOperator_TblVendor")
-                .OnDelete(DeleteBehavior.NoAction);
-
-            e.HasOne<CountryEntity>()
-                .WithMany()
-                .HasForeignKey(x => x.CountryId)
-                .HasConstraintName("FK_TblOperator_TblCountry")
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

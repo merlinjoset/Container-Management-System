@@ -12,20 +12,18 @@ namespace ContainerManagement.Web.Controllers
     {
         private readonly OperatorService _operatorService;
         private readonly VendorService _vendorService;
-        private readonly CountryService _countryService;
 
-        public OperatorsController(OperatorService operatorService, VendorService vendorService, CountryService countryService)
+        public OperatorsController(OperatorService operatorService, VendorService vendorService)
         {
             _operatorService = operatorService;
             _vendorService = vendorService;
-            _countryService = countryService;
         }
 
         [HttpGet]
         public async Task<IActionResult> Index(CancellationToken ct)
         {
             var list = await _operatorService.GetAllAsync(ct);
-            await PopulateLookupsAsync(null, null, ct);
+            await PopulateLookupsAsync(null, ct);
             return View(list);
         }
 
@@ -33,11 +31,10 @@ namespace ContainerManagement.Web.Controllers
         [HttpGet("/Operator")]
         public IActionResult Operator()
         {
-            // Backward-compat: redirect singular path to Operators index
             return RedirectToAction(nameof(Index));
         }
 
-        private async Task PopulateLookupsAsync(Guid? vendorId, Guid? countryId, CancellationToken ct)
+        private async Task PopulateLookupsAsync(Guid? vendorId, CancellationToken ct)
         {
             var vendors = await _vendorService.GetAllAsync(ct);
             var vendorItems = vendors.Select(v => new SelectListItem
@@ -47,22 +44,13 @@ namespace ContainerManagement.Web.Controllers
                 Selected = vendorId.HasValue && v.Id == vendorId.Value
             }).ToList();
 
-            var countries = await _countryService.GetAllAsync(ct);
-            var countryItems = countries.Select(c => new SelectListItem
-            {
-                Value = c.Id.ToString(),
-                Text = string.IsNullOrWhiteSpace(c.CountryCode) ? c.CountryName : $"{c.CountryCode} - {c.CountryName}",
-                Selected = countryId.HasValue && c.Id == countryId.Value
-            }).ToList();
-
             ViewBag.Vendors = vendorItems;
-            ViewBag.Countries = countryItems;
         }
 
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken ct)
         {
-            await PopulateLookupsAsync(null, null, ct);
+            await PopulateLookupsAsync(null, ct);
             return View(new OperatorCreateDto());
         }
 
@@ -72,7 +60,7 @@ namespace ContainerManagement.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                await PopulateLookupsAsync(dto.VendorId, dto.CountryId, ct);
+                await PopulateLookupsAsync(dto.VendorId, ct);
                 return View(dto);
             }
 
@@ -80,7 +68,7 @@ namespace ContainerManagement.Web.Controllers
             if (!Guid.TryParse(userIdStr, out var userId))
             {
                 ModelState.AddModelError("", "Invalid user session. Please login again.");
-                await PopulateLookupsAsync(dto.VendorId, dto.CountryId, ct);
+                await PopulateLookupsAsync(dto.VendorId, ct);
                 return View(dto);
             }
             dto.CreatedBy = userId;
@@ -94,7 +82,7 @@ namespace ContainerManagement.Web.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
-                await PopulateLookupsAsync(dto.VendorId, dto.CountryId, ct);
+                await PopulateLookupsAsync(dto.VendorId, ct);
                 return View(dto);
             }
         }
@@ -111,10 +99,10 @@ namespace ContainerManagement.Web.Controllers
                 Id = op.Id,
                 OperatorName = op.OperatorName,
                 VendorId = op.VendorId,
-                CountryId = op.CountryId
+                IsCompetitor = op.IsCompetitor
             };
 
-            await PopulateLookupsAsync(dto.VendorId, dto.CountryId, ct);
+            await PopulateLookupsAsync(dto.VendorId, ct);
             return View(dto);
         }
 
@@ -124,7 +112,7 @@ namespace ContainerManagement.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                await PopulateLookupsAsync(dto.VendorId, dto.CountryId, ct);
+                await PopulateLookupsAsync(dto.VendorId, ct);
                 return View(dto);
             }
 
@@ -143,7 +131,7 @@ namespace ContainerManagement.Web.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError("", ex.Message);
-                await PopulateLookupsAsync(dto.VendorId, dto.CountryId, ct);
+                await PopulateLookupsAsync(dto.VendorId, ct);
                 return View(dto);
             }
         }
@@ -164,7 +152,7 @@ namespace ContainerManagement.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Import(CancellationToken ct)
         {
-            await PopulateLookupsAsync(null, null, ct);
+            await PopulateLookupsAsync(null, ct);
             return View(new List<OperatorImportRowDto>());
         }
 
@@ -200,16 +188,18 @@ namespace ContainerManagement.Web.Controllers
                     }
                     var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
                     var vcode = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
-                    var ccode = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
+                    var compText = reader.FieldCount > 2 ? reader.GetValue(2)?.ToString()?.Trim() : null;
 
                     if (!string.IsNullOrWhiteSpace(name))
                     {
+                        var isComp = ParseYesNo(compText);
                         previewRows.Add(new OperatorImportRowDto
                         {
                             RowNumber = rowNum++,
                             OperatorName = name,
                             VendorCode = vcode,
-                            CountryCode = ccode
+                            IsCompetitorText = compText,
+                            IsCompetitor = isComp
                         });
                     }
                     rowIndex++;
@@ -217,7 +207,6 @@ namespace ContainerManagement.Web.Controllers
             }
 
             var vendors = await _vendorService.GetAllAsync(ct);
-            var countries = await _countryService.GetAllAsync(ct);
 
             foreach (var row in previewRows)
             {
@@ -233,23 +222,13 @@ namespace ContainerManagement.Web.Controllers
                     else
                         row.Errors.Add($"Vendor Code '{row.VendorCode}' not found in database.");
                 }
-
-                if (!string.IsNullOrWhiteSpace(row.CountryCode))
-                {
-                    var match = countries.FirstOrDefault(c =>
-                        string.Equals(c.CountryCode, row.CountryCode, StringComparison.OrdinalIgnoreCase));
-                    if (match != null)
-                        row.CountryId = match.Id;
-                    else
-                        row.Errors.Add($"Country Code '{row.CountryCode}' not found in database.");
-                }
             }
 
             var errorCount = previewRows.Count(r => r.HasErrors);
             if (errorCount > 0)
                 ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors. Please correct them before importing.";
 
-            await PopulateLookupsAsync(null, null, ct);
+            await PopulateLookupsAsync(null, ct);
             ViewBag.ShowPreview = true;
             return View(previewRows);
         }
@@ -262,14 +241,12 @@ namespace ContainerManagement.Web.Controllers
             if (!Guid.TryParse(userIdStr, out var userId)) return Unauthorized();
 
             var vendors = await _vendorService.GetAllAsync(ct);
-            var countries = await _countryService.GetAllAsync(ct);
 
-            var importRows = new List<(string? OperatorName, string? VendorCode, string? CountryCode)>();
+            var importRows = new List<(string? OperatorName, string? VendorCode, bool IsCompetitor)>();
             foreach (var row in rows)
             {
                 var vendorCode = vendors.FirstOrDefault(v => v.Id == row.VendorId)?.VendorCode;
-                var countryCode = countries.FirstOrDefault(c => c.Id == row.CountryId)?.CountryCode;
-                importRows.Add((row.OperatorName, vendorCode, countryCode));
+                importRows.Add((row.OperatorName, vendorCode, row.IsCompetitor));
             }
 
             var (added, updated, skipped) = await _operatorService.ImportAsync(importRows, userId, ct);
@@ -284,7 +261,7 @@ namespace ContainerManagement.Web.Controllers
             var ws = wb.AddWorksheet("Operators");
             ws.Cell(1, 1).Value = "Operator Name";
             ws.Cell(1, 2).Value = "Vendor Code";
-            ws.Cell(1, 3).Value = "Country Code";
+            ws.Cell(1, 3).Value = "Competitor (Yes/No)";
             ws.Range(1, 1, 1, 3).Style.Font.Bold = true;
             ws.Range(1, 1, 1, 3).Style.Fill.BackgroundColor = XLColor.LightGray;
             ws.Columns(1, 3).AdjustToContents();
@@ -303,20 +280,15 @@ namespace ContainerManagement.Web.Controllers
             dto.CreatedBy = userId;
             var id = await _operatorService.CreateAsync(dto, ct);
             var vendors = await _vendorService.GetAllAsync(ct);
-            var countries = await _countryService.GetAllAsync(ct);
             var vendorName = vendors.FirstOrDefault(v => v.Id == dto.VendorId)?.VendorName;
-            var countryName = countries.FirstOrDefault(c => c.Id == dto.CountryId)?.CountryName;
-            return Ok(new { success = true, id, operatorName = dto.OperatorName, vendorName, countryName });
+            return Ok(new { success = true, id, operatorName = dto.OperatorName, vendorName, isCompetitor = dto.IsCompetitor });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> InlineUpdate([FromBody] ContainerManagement.Application.Dtos.Operators.OperatorUpdateDto dto, CancellationToken ct)
+        public async Task<IActionResult> InlineUpdate([FromBody] OperatorUpdateDto dto, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(userIdStr, out var userId))
@@ -326,11 +298,9 @@ namespace ContainerManagement.Web.Controllers
             await _operatorService.UpdateAsync(dto, ct);
 
             var vendors = await _vendorService.GetAllAsync(ct);
-            var countries = await _countryService.GetAllAsync(ct);
             var vendorName = vendors.FirstOrDefault(v => v.Id == dto.VendorId)?.VendorName;
-            var countryName = countries.FirstOrDefault(c => c.Id == dto.CountryId)?.CountryName;
 
-            return Ok(new { success = true, operatorName = dto.OperatorName, vendorName, countryName });
+            return Ok(new { success = true, operatorName = dto.OperatorName, vendorName, isCompetitor = dto.IsCompetitor });
         }
 
         [HttpGet]
@@ -341,7 +311,7 @@ namespace ContainerManagement.Web.Controllers
             var ws = wb.AddWorksheet("Operators");
             ws.Cell(1, 1).Value = "Operator Name";
             ws.Cell(1, 2).Value = "Vendor";
-            ws.Cell(1, 3).Value = "Country";
+            ws.Cell(1, 3).Value = "Competitor";
             ws.Range(1, 1, 1, 3).Style.Font.Bold = true;
             ws.Range(1, 1, 1, 3).Style.Fill.BackgroundColor = XLColor.LightGray;
             var row = 2;
@@ -349,13 +319,20 @@ namespace ContainerManagement.Web.Controllers
             {
                 ws.Cell(row, 1).Value = item.OperatorName;
                 ws.Cell(row, 2).Value = item.VendorName;
-                ws.Cell(row, 3).Value = item.CountryName;
+                ws.Cell(row, 3).Value = item.IsCompetitor ? "Yes" : "No";
                 row++;
             }
             ws.Columns(1, 3).AdjustToContents();
             using var ms = new MemoryStream();
             wb.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Operators.xlsx");
+        }
+
+        private static bool ParseYesNo(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            var t = text.Trim().ToLowerInvariant();
+            return t == "yes" || t == "y" || t == "true" || t == "1";
         }
     }
 }

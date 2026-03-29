@@ -8,6 +8,8 @@
     <style>
         .op-toast { position: fixed; right: 1rem; bottom: 1rem; background: #111827; color: #fff; padding: .5rem .75rem; border-radius: .375rem; opacity: 0; transition: opacity .2s ease; }
         .op-toast.show { opacity: .95; }
+        .badge-yes { background: #dc3545; color: #fff; font-size: .7rem; padding: .15rem .4rem; border-radius: .25rem; }
+        .badge-no  { background: #6c757d; color: #fff; font-size: .7rem; padding: .15rem .4rem; border-radius: .25rem; }
     </style>
 }
 
@@ -33,13 +35,13 @@
                             <tr>
                                 <th>Operator Name</th>
                                 <th>Vendor</th>
-                                <th>Country</th>
+                                <th style="width:100px">Competitor</th>
                                 <th style="width:130px;">Actions</th>
                             </tr>
                             <tr class="filter-row">
                                 <th><input id="cf-name" class="form-control form-control-sm" placeholder="Filter..." /></th>
                                 <th><input id="cf-vendor" class="form-control form-control-sm" placeholder="Filter..." /></th>
-                                <th><input id="cf-country" class="form-control form-control-sm" placeholder="Filter..." /></th>
+                                <th></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -56,11 +58,10 @@
                                     { foreach (var v in newVendors){ <option value="@v.Value">@v.Text</option> } }
                                 </select>
                             </td>
-                            <td class="col-country">
-                                <select class="form-select form-select-sm" id="new-country">
-                                    <option value="">-- Country --</option>
-                                    @if (ViewBag.Countries is IEnumerable<SelectListItem> newCountries)
-                                    { foreach (var c in newCountries){ <option value="@c.Value">@c.Text</option> } }
+                            <td class="col-competitor">
+                                <select class="form-select form-select-sm" id="new-competitor">
+                                    <option value="false">No</option>
+                                    <option value="true">Yes</option>
                                 </select>
                             </td>
                             <td>
@@ -86,20 +87,37 @@
                                             {
                                                 foreach (var v in vendorItems)
                                                 {
-                                                    <option value="@v.Value" selected="@(item.VendorId.ToString()==v.Value)">@v.Text</option>
+                                                    if (item.VendorId.ToString() == v.Value)
+                                                    {
+                                                        <option value="@v.Value" selected="selected">@v.Text</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@v.Value">@v.Text</option>
+                                                    }
                                                 }
                                             }
                                         </select>
                                     </td>
-                                    <td class="col-country">
-                                        <span class="disp">@item.CountryName</span>
+                                    <td class="col-competitor">
+                                        @if (item.IsCompetitor)
+                                        {
+                                            <span class="disp badge-yes">Yes</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="disp badge-no">No</span>
+                                        }
                                         <select class="form-select form-select-sm edit d-none">
-                                            @if (ViewBag.Countries is IEnumerable<SelectListItem> countryItems)
+                                            @if (item.IsCompetitor)
                                             {
-                                                foreach (var c in countryItems)
-                                                {
-                                                    <option value="@c.Value" selected="@(item.CountryId.ToString()==c.Value)">@c.Text</option>
-                                                }
+                                                <option value="false">No</option>
+                                                <option value="true" selected="selected">Yes</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="false" selected="selected">No</option>
+                                                <option value="true">Yes</option>
                                             }
                                         </select>
                                     </td>
@@ -151,19 +169,17 @@
             function applyFilter(){
                 const fName = (q('#cf-name')?.value || '').toLowerCase();
                 const fVendor = (q('#cf-vendor')?.value || '').toLowerCase();
-                const fCountry = (q('#cf-country')?.value || '').toLowerCase();
                 let count = 0;
                 rows.forEach(r => {
                     const name = r.querySelector('.col-name .disp')?.textContent.trim().toLowerCase() || '';
                     const vendor = r.querySelector('.col-vendor .disp')?.textContent.trim().toLowerCase() || '';
-                    const country = r.querySelector('.col-country .disp')?.textContent.trim().toLowerCase() || '';
-                    const show = (!fName || name.includes(fName)) && (!fVendor || vendor.includes(fVendor)) && (!fCountry || country.includes(fCountry));
+                    const show = (!fName || name.includes(fName)) && (!fVendor || vendor.includes(fVendor));
                     r.style.display = show ? '' : 'none';
                     if (show) count++;
                 });
                 if (total) total.textContent = count;
             }
-            ['#cf-name','#cf-vendor','#cf-country'].forEach(id => {
+            ['#cf-name','#cf-vendor'].forEach(id => {
                 const el = q(id);
                 if (el) el.addEventListener('input', applyFilter);
             });
@@ -183,7 +199,7 @@
             const btnCancelNew = q('#btn-cancel-new');
 
             function showNewRow(){ newRow.classList.remove('d-none'); q('#new-name')?.focus(); }
-            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-name').value=''; q('#new-vendor').value=''; q('#new-country').value=''; }
+            function hideNewRow(){ newRow.classList.add('d-none'); q('#new-name').value=''; q('#new-vendor').value=''; q('#new-competitor').value='false'; }
 
             btnNew?.addEventListener('click', showNewRow);
             btnCancelNew?.addEventListener('click', hideNewRow);
@@ -191,18 +207,22 @@
             btnSaveNew?.addEventListener('click', async ()=>{
                 const name = q('#new-name').value.trim();
                 const vendorId = q('#new-vendor').value;
-                const countryId = q('#new-country').value;
-                if(!name||!vendorId||!countryId){ alert('All fields are required.'); return; }
-                const payload = { operatorName:name, vendorId, countryId };
+                const isCompetitor = q('#new-competitor').value === 'true';
+                if(!name||!vendorId){ alert('Operator Name and Vendor are required.'); return; }
+                const payload = { operatorName:name, vendorId, isCompetitor };
                 const resp = await fetch('/Operators/InlineCreate',{ method:'POST', headers:{ 'Content-Type':'application/json','RequestVerificationToken': getToken() }, body: JSON.stringify(payload) });
                 if(resp.ok){
                     const data = await resp.json();
+                    const compBadge = data.isCompetitor ? '<span class="disp badge-yes">Yes</span>' : '<span class="disp badge-no">No</span>';
+                    const compSelect = data.isCompetitor
+                        ? '<select class="form-select form-select-sm edit d-none"><option value="false">No</option><option value="true" selected>Yes</option></select>'
+                        : '<select class="form-select form-select-sm edit d-none"><option value="false" selected>No</option><option value="true">Yes</option></select>';
                     const tr = document.createElement('tr');
                     tr.setAttribute('data-id', data.id);
                     tr.innerHTML = `
                         <td class="col-name"><span class="disp">${data.operatorName||''}</span><input class="form-control form-control-sm edit d-none" value="${data.operatorName||''}" /></td>
                         <td class="col-vendor"><span class="disp">${data.vendorName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-vendor').innerHTML}</select></td>
-                        <td class="col-country"><span class="disp">${data.countryName||''}</span><select class="form-select form-select-sm edit d-none">${q('#new-country').innerHTML}</select></td>
+                        <td class="col-competitor">${compBadge}${compSelect}</td>
                         <td><div class="d-flex gap-2 align-items-center">
                             <button type="button" class="btn btn-sm btn-outline-primary btn-edit" title="Edit"><i class="bi bi-pencil"></i></button>
                             <button type="button" class="btn btn-sm btn-success d-none btn-save" title="Save"><i class="bi bi-check-lg"></i></button>
@@ -214,7 +234,6 @@
                             </form>
                         </div></td>`;
                     if(vendorId) tr.querySelector('.col-vendor select').value = vendorId;
-                    if(countryId) tr.querySelector('.col-country select').value = countryId;
                     newRow.after(tr);
                     wireEditRow(tr);
                     rows.push(tr);
@@ -224,7 +243,6 @@
                 } else { const err = await resp.text(); alert('Failed to create: ' + err); }
             });
 
-            // Extracted so new rows can reuse the edit wiring
             function wireEditRow(r){
                 const btnEdit = r.querySelector('.btn-edit');
                 const btnSave = r.querySelector('.btn-save');
@@ -241,7 +259,7 @@
                     orig = {
                         name: r.querySelector('.col-name input').value,
                         vendor: r.querySelector('.col-vendor select').value,
-                        country: r.querySelector('.col-country select').value
+                        competitor: r.querySelector('.col-competitor select').value
                     };
                     toggles();
                 });
@@ -249,7 +267,7 @@
                     if (orig){
                         r.querySelector('.col-name input').value = orig.name;
                         r.querySelector('.col-vendor select').value = orig.vendor;
-                        r.querySelector('.col-country select').value = orig.country;
+                        r.querySelector('.col-competitor select').value = orig.competitor;
                     }
                     toggles();
                 });
@@ -259,7 +277,7 @@
                         id: id,
                         operatorName: r.querySelector('.col-name input').value,
                         vendorId: r.querySelector('.col-vendor select').value,
-                        countryId: r.querySelector('.col-country select').value
+                        isCompetitor: r.querySelector('.col-competitor select').value === 'true'
                     };
                     const resp = await fetch('/Operators/InlineUpdate', {
                         method: 'POST',
@@ -273,7 +291,16 @@
                         const data = await resp.json();
                         r.querySelector('.col-name .disp').textContent = data.operatorName || payload.operatorName;
                         r.querySelector('.col-vendor .disp').textContent = data.vendorName || '';
-                        r.querySelector('.col-country .disp').textContent = data.countryName || '';
+                        // Update competitor badge
+                        const compCell = r.querySelector('.col-competitor');
+                        const badge = compCell.querySelector('.disp');
+                        if (data.isCompetitor) {
+                            badge.textContent = 'Yes';
+                            badge.className = 'disp badge-yes';
+                        } else {
+                            badge.textContent = 'No';
+                            badge.className = 'disp badge-no';
+                        }
                         toggles();
                         showToast('Saved');
                     } else {

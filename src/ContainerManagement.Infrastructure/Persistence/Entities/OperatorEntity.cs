@@ -5,7 +5,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Entities
         public Guid Id { get; set; }
         public string OperatorName { get; set; }
         public Guid VendorId { get; set; }
-        public Guid CountryId { get; set; }
+        public bool IsCompetitor { get; set; }
 
         public bool IsDeleted { get; set; } = false;
         public DateTime CreatedOn { get; set; }

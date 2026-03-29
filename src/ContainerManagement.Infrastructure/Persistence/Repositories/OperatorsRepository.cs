@@ -25,7 +25,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                     Id = x.Id,
                     OperatorName = x.OperatorName,
                     VendorId = x.VendorId,
-                    CountryId = x.CountryId,
+                    IsCompetitor = x.IsCompetitor,
                     IsDeleted = x.IsDeleted,
                     CreatedOn = x.CreatedOn,
                     ModifiedOn = x.ModifiedOn,
@@ -45,7 +45,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                     Id = x.Id,
                     OperatorName = x.OperatorName,
                     VendorId = x.VendorId,
-                    CountryId = x.CountryId,
+                    IsCompetitor = x.IsCompetitor,
                     IsDeleted = x.IsDeleted,
                     CreatedOn = x.CreatedOn,
                     ModifiedOn = x.ModifiedOn,
@@ -62,7 +62,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                 Id = op.Id == Guid.Empty ? Guid.NewGuid() : op.Id,
                 OperatorName = op.OperatorName,
                 VendorId = op.VendorId,
-                CountryId = op.CountryId,
+                IsCompetitor = op.IsCompetitor,
                 IsDeleted = false,
                 CreatedOn = op.CreatedOn == default ? DateTime.UtcNow : op.CreatedOn,
                 ModifiedOn = op.ModifiedOn == default ? DateTime.UtcNow : op.ModifiedOn,
@@ -85,7 +85,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
 
             entity.OperatorName = op.OperatorName;
             entity.VendorId = op.VendorId;
-            entity.CountryId = op.CountryId;
+            entity.IsCompetitor = op.IsCompetitor;
             entity.ModifiedOn = DateTime.UtcNow;
             entity.ModifiedBy = op.ModifiedBy;
 
