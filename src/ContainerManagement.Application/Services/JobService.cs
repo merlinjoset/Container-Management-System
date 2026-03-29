@@ -179,7 +179,7 @@ namespace ContainerManagement.Application.Services
                 FileSize = att.FileSize,
                 IsScreenshot = att.IsScreenshot,
                 CreatedOn = DateTime.UtcNow,
-                Url = $"/uploads/jobs/{jobId}/{storedFileName}"
+                Url = $"/jobs/downloadattachment?id={att.Id}"
             };
         }
 
@@ -206,7 +206,7 @@ namespace ContainerManagement.Application.Services
             FileSize = a.FileSize,
             IsScreenshot = a.IsScreenshot,
             CreatedOn = a.CreatedOn,
-            Url = $"/uploads/jobs/{a.JobId}/{a.StoredFileName}"
+            Url = $"/jobs/downloadattachment?id={a.Id}"
         };
     }
 }

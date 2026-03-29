@@ -141,7 +141,17 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-app.UseStaticFiles();
+// Ensure uploads folder exists on startup
+var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads", "jobs");
+Directory.CreateDirectory(uploadsPath);
+
+// Serve all file types from wwwroot (including .xlsx, .pdf, etc.)
+var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+provider.Mappings[".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+provider.Mappings[".xls"] = "application/vnd.ms-excel";
+provider.Mappings[".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+provider.Mappings[".pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = provider });
 app.UseRouting();
 
 app.Use(async (context, next) =>

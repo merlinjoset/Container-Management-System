@@ -108,6 +108,18 @@ namespace ContainerManagement.Web.Controllers
         // ── Attachments ──
 
         [HttpGet]
+        public async Task<IActionResult> DownloadAttachment(Guid id, CancellationToken ct)
+        {
+            var att = await _jobService.GetAttachmentByIdAsync(id, ct);
+            if (att == null) return NotFound();
+
+            var filePath = Path.Combine(_env.WebRootPath, "uploads", "jobs", att.JobId.ToString(), att.StoredFileName);
+            if (!System.IO.File.Exists(filePath)) return NotFound("File not found on disk.");
+
+            return PhysicalFile(filePath, att.ContentType, att.FileName);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetAttachments(Guid jobId, CancellationToken ct)
         {
             try
