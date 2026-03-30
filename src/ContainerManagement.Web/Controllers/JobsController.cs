@@ -113,10 +113,16 @@ namespace ContainerManagement.Web.Controllers
             var att = await _jobService.GetAttachmentByIdAsync(id, ct);
             if (att == null) return NotFound();
 
-            var filePath = Path.Combine(_env.WebRootPath, "uploads", "jobs", att.JobId.ToString(), att.StoredFileName);
-            if (!System.IO.File.Exists(filePath)) return NotFound("File not found on disk.");
+            // Serve from DB
+            if (att.FileData != null && att.FileData.Length > 0)
+                return File(att.FileData, att.ContentType, att.FileName);
 
-            return PhysicalFile(filePath, att.ContentType, att.FileName);
+            // Fallback: serve from disk (legacy files uploaded before DB storage)
+            var filePath = Path.Combine(_env.WebRootPath, "uploads", "jobs", att.JobId.ToString(), att.StoredFileName);
+            if (System.IO.File.Exists(filePath))
+                return PhysicalFile(filePath, att.ContentType, att.FileName);
+
+            return NotFound("File not found.");
         }
 
         [HttpGet]
@@ -146,17 +152,17 @@ namespace ContainerManagement.Web.Controllers
 
                 var ext = Path.GetExtension(file.FileName);
                 var storedName = $"{Guid.NewGuid()}{ext}";
-                var dir = Path.Combine(_env.WebRootPath, "uploads", "jobs", jobId.ToString());
-                Directory.CreateDirectory(dir);
 
-                var filePath = Path.Combine(dir, storedName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                // Read file bytes for DB storage
+                byte[] fileBytes;
+                using (var ms = new MemoryStream())
                 {
-                    await file.CopyToAsync(stream, ct);
+                    await file.CopyToAsync(ms, ct);
+                    fileBytes = ms.ToArray();
                 }
 
                 var result = await _jobService.AddAttachmentAsync(
-                    jobId, file.FileName, storedName, file.ContentType, file.Length, isScreenshot, userId, ct);
+                    jobId, file.FileName, storedName, file.ContentType, file.Length, isScreenshot, fileBytes, userId, ct);
 
                 return Ok(new { success = true, data = result });
             }
@@ -198,14 +204,9 @@ namespace ContainerManagement.Web.Controllers
 
                 var storedName = $"{Guid.NewGuid()}{ext}";
                 var fileName = $"screenshot-{DateTime.UtcNow:yyyyMMdd-HHmmss}{ext}";
-                var dir = Path.Combine(_env.WebRootPath, "uploads", "jobs", req.JobId.ToString());
-                Directory.CreateDirectory(dir);
-
-                var filePath = Path.Combine(dir, storedName);
-                await System.IO.File.WriteAllBytesAsync(filePath, bytes, ct);
 
                 var result = await _jobService.AddAttachmentAsync(
-                    req.JobId, fileName, storedName, contentType, bytes.Length, true, userId, ct);
+                    req.JobId, fileName, storedName, contentType, bytes.Length, true, bytes, userId, ct);
 
                 return Ok(new { success = true, data = result });
             }
@@ -222,15 +223,6 @@ namespace ContainerManagement.Web.Controllers
             {
                 if (!TryGetUserId(out var userId))
                     return Unauthorized(new { success = false, message = "Invalid session." });
-
-                var att = await _jobService.GetAttachmentByIdAsync(req.Id, ct);
-                if (att == null)
-                    return NotFound(new { success = false, message = "Attachment not found." });
-
-                // Delete file from disk
-                var filePath = Path.Combine(_env.WebRootPath, "uploads", "jobs", att.JobId.ToString(), att.StoredFileName);
-                if (System.IO.File.Exists(filePath))
-                    System.IO.File.Delete(filePath);
 
                 var ok = await _jobService.DeleteAttachmentAsync(req.Id, userId, ct);
                 return ok

@@ -9,6 +9,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Entities
         public string ContentType { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public bool IsScreenshot { get; set; }
+        public byte[]? FileData { get; set; }
 
         public bool IsDeleted { get; set; } = false;
         public DateTime CreatedOn { get; set; }

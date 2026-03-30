@@ -17,7 +17,22 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                 .AsNoTracking()
                 .Where(x => x.JobId == jobId && !x.IsDeleted)
                 .OrderByDescending(x => x.CreatedOn)
-                .Select(x => MapToDomain(x))
+                .Select(x => new JobAttachment
+                {
+                    Id = x.Id,
+                    JobId = x.JobId,
+                    FileName = x.FileName,
+                    StoredFileName = x.StoredFileName,
+                    ContentType = x.ContentType,
+                    FileSize = x.FileSize,
+                    IsScreenshot = x.IsScreenshot,
+                    // FileData intentionally excluded for list queries
+                    CreatedOn = x.CreatedOn,
+                    ModifiedOn = x.ModifiedOn,
+                    CreatedBy = x.CreatedBy,
+                    ModifiedBy = x.ModifiedBy,
+                    IsDeleted = x.IsDeleted
+                })
                 .ToListAsync(ct);
         }
 
@@ -42,6 +57,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
                 ContentType = att.ContentType,
                 FileSize = att.FileSize,
                 IsScreenshot = att.IsScreenshot,
+                FileData = att.FileData,
                 CreatedOn = now,
                 ModifiedOn = now,
                 CreatedBy = att.CreatedBy,
@@ -76,6 +92,7 @@ namespace ContainerManagement.Infrastructure.Persistence.Repositories
             ContentType = x.ContentType,
             FileSize = x.FileSize,
             IsScreenshot = x.IsScreenshot,
+            FileData = x.FileData,
             CreatedOn = x.CreatedOn,
             ModifiedOn = x.ModifiedOn,
             CreatedBy = x.CreatedBy,

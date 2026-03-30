@@ -512,6 +512,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.ContentType).HasMaxLength(200).IsRequired();
             e.Property(x => x.FileSize).IsRequired();
             e.Property(x => x.IsScreenshot).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.FileData).HasColumnType("bytea");
 
             e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
             e.Property(x => x.CreatedOn).IsRequired();

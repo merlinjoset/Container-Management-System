@@ -11,5 +11,6 @@ namespace ContainerManagement.Domain.Jobs
         public string ContentType { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public bool IsScreenshot { get; set; }
+        public byte[]? FileData { get; set; }
     }
 }

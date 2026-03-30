@@ -154,7 +154,7 @@ namespace ContainerManagement.Application.Services
         }
 
         public async Task<JobAttachmentDto> AddAttachmentAsync(Guid jobId, string fileName, string storedFileName,
-            string contentType, long fileSize, bool isScreenshot, Guid createdBy, CancellationToken ct = default)
+            string contentType, long fileSize, bool isScreenshot, byte[] fileData, Guid createdBy, CancellationToken ct = default)
         {
             var att = new JobAttachment
             {
@@ -165,6 +165,7 @@ namespace ContainerManagement.Application.Services
                 ContentType = contentType,
                 FileSize = fileSize,
                 IsScreenshot = isScreenshot,
+                FileData = fileData,
                 CreatedBy = createdBy
             };
 
