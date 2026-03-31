@@ -13,7 +13,7 @@ public class VoyagePortDepartureDto
     public Guid? NextPortId { get; set; }
     public string? NextPortCode { get; set; }
     public DateTime? ETANextPort { get; set; }
-    public string? TugsOut { get; set; }
+    public int? TugsOut { get; set; }
     public decimal? DepDraftFwdMtr { get; set; }
     public decimal? DepDraftAftMtr { get; set; }
     public decimal? DepDraftMeanMtr { get; set; }
@@ -24,4 +24,7 @@ public class VoyagePortDepartureDto
     public string? Remarks { get; set; }
     public Guid CreatedBy { get; set; }
     public Guid ModifiedBy { get; set; }
+
+    // Dynamic tug usage rows
+    public List<TugUsageDto> TugUsages { get; set; } = new();
 }

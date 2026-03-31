@@ -279,8 +279,8 @@
         var isJobs = path.StartsWith("/jobs");
         var isSchedules = path.StartsWith("/schedules");
 
-        var globalMastersActive = isOperators || isRegions || isCountries || isPorts || isTerminals || isVendors || isServices || isRoutes || isDistances || isSlots;
-        var operationsActive = isVessels || isVoyages;
+        var globalMastersActive = isOperators || isVessels || isRegions || isCountries || isPorts || isTerminals || isVendors || isServices || isRoutes || isDistances || isSlots;
+        var scheduleActive = isSchedules || isVoyages;
 
         var display =
         User.FindFirstValue(ClaimTypes.Email)
@@ -355,6 +355,7 @@
                                 <li><a class="dropdown-item @(isTerminals ? "active" : "")" asp-controller="Terminals" asp-action="Index">Terminals</a></li>
                                 <li><a class="dropdown-item @(isVendors ? "active" : "")" asp-controller="Vendors" asp-action="Index">Vendors</a></li>
                                 <li><a class="dropdown-item @(isOperators ? "active" : "")" asp-controller="Operators" asp-action="Index">Operators</a></li>
+                                <li><a class="dropdown-item @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a></li>
                                 <li><hr class="dropdown-divider" /></li>
                                 <li><a class="dropdown-item @(isServices ? "active" : "")" asp-controller="ServiceMasters" asp-action="Index">Services</a></li>
                                 <li><a class="dropdown-item @(isRoutes ? "active" : "")" asp-controller="RouteMasters" asp-action="Index">Routes</a></li>
@@ -363,23 +364,18 @@
                             </ul>
                         </li>
 
-                        @* Operations dropdown *@
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle @(operationsActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-box-seam me-1"></i>Operations
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item @(isVessels ? "active" : "")" asp-controller="Vessels" asp-action="Index">Vessels</a></li>
-                                <li><a class="dropdown-item @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a></li>
-                            </ul>
+                        @* Operations (placeholder) *@
+                        <li class="nav-item">
+                            <a class="nav-link" href="#"><i class="bi bi-box-seam me-1"></i>Operations</a>
                         </li>
 
                         @* Schedule dropdown *@
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle @(isSchedules ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
+                            <a class="nav-link dropdown-toggle @(scheduleActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-calendar3 me-1"></i>Schedule
                             </a>
                             <ul class="dropdown-menu">
+                                <li><a class="dropdown-item @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a></li>
                                 <li><a class="dropdown-item @(isSchedules && path.Contains("/viewer") ? "active" : "")" asp-controller="Schedules" asp-action="Viewer">Schedule Viewer</a></li>
                             </ul>
                         </li>

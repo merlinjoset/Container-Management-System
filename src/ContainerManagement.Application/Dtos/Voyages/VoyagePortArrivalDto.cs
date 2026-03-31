@@ -14,7 +14,7 @@ public class VoyagePortArrivalDto
     public string? NextPortCode { get; set; }
     public DateTime? PilotOnBoard { get; set; }
     public DateTime? CommencedCargoOperation { get; set; }
-    public string? TugsIn { get; set; }
+    public int? TugsIn { get; set; }
     public decimal? ArrivalDraftFwdMtr { get; set; }
     public decimal? ArrivalDraftAftMtr { get; set; }
     public decimal? ArrivalDraftMeanMtr { get; set; }
@@ -26,4 +26,7 @@ public class VoyagePortArrivalDto
     public DateTime? EstimatedETD { get; set; }
     public Guid CreatedBy { get; set; }
     public Guid ModifiedBy { get; set; }
+
+    // Dynamic tug usage rows
+    public List<TugUsageDto> TugUsages { get; set; } = new();
 }

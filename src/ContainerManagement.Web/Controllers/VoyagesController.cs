@@ -448,7 +448,7 @@ namespace ContainerManagement.Web.Controllers
 
             // Row 13: Tugs In
             ws.Cell(13, 1).Value = "Tugs In"; labelFont(ws.Cell(13, 1));
-            ws.Cell(13, 2).Value = arrival.TugsIn ?? ""; valFont(ws.Cell(13, 2));
+            ws.Cell(13, 2).Value = arrival.TugsIn ?? 0; valFont(ws.Cell(13, 2));
 
             // Row 14-16: Draft
             ws.Cell(14, 1).Value = "Arrival Draft (Fwd) in meters "; labelFont(ws.Cell(14, 1));
@@ -586,7 +586,7 @@ namespace ContainerManagement.Web.Controllers
 
             // Row 12: Tugs Out
             ws.Cell(12, 1).Value = "Tugs Out"; labelFont(ws.Cell(12, 1));
-            ws.Cell(12, 2).Value = departure.TugsOut ?? ""; valFont(ws.Cell(12, 2));
+            ws.Cell(12, 2).Value = departure.TugsOut ?? 0; valFont(ws.Cell(12, 2));
 
             // Row 13-15: Draft
             ws.Cell(13, 1).Value = "Dep. Draft (Fwd) in meters "; labelFont(ws.Cell(13, 1));

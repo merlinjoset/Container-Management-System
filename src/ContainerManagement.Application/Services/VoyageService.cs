@@ -16,6 +16,7 @@ public class VoyageService
     private readonly ITerminalsRepository _terminalsRepo;
     private readonly IVoyagePortArrivalsRepository _arrivalsRepo;
     private readonly IVoyagePortDeparturesRepository _departuresRepo;
+    private readonly ITugUsageRepository _tugUsageRepo;
 
     public VoyageService(
         IVoyagesRepository voyagesRepo,
@@ -26,7 +27,8 @@ public class VoyageService
         IPortsRepository portsMasterRepo,
         ITerminalsRepository terminalsRepo,
         IVoyagePortArrivalsRepository arrivalsRepo,
-        IVoyagePortDeparturesRepository departuresRepo)
+        IVoyagePortDeparturesRepository departuresRepo,
+        ITugUsageRepository tugUsageRepo)
     {
         _voyagesRepo = voyagesRepo;
         _portsRepo = portsRepo;
@@ -37,6 +39,7 @@ public class VoyageService
         _terminalsRepo = terminalsRepo;
         _arrivalsRepo = arrivalsRepo;
         _departuresRepo = departuresRepo;
+        _tugUsageRepo = tugUsageRepo;
     }
 
     public async Task<List<VoyageListItemDto>> GetAllAsync(CancellationToken ct = default)
@@ -382,7 +385,7 @@ public class VoyageService
         var ports = await _portsMasterRepo.GetAllAsync(ct);
         var portLookup = ports.ToDictionary(p => p.Id, p => p.PortCode ?? p.FullName);
 
-        return new VoyagePortArrivalDto
+        var dto = new VoyagePortArrivalDto
         {
             Id = arrival.Id,
             VoyagePortId = arrival.VoyagePortId,
@@ -406,6 +409,17 @@ public class VoyageService
             BallastWater = arrival.BallastWater,
             Remarks = arrival.Remarks
         };
+
+        // Load tug usages
+        var tugUsages = await _tugUsageRepo.GetByArrivalIdAsync(arrival.Id, ct);
+        dto.TugUsages = tugUsages.Select(t => new TugUsageDto
+        {
+            Id = t.Id,
+            TugNumber = t.TugNumber,
+            Hours = t.Hours
+        }).ToList();
+
+        return dto;
     }
 
     public async Task<Guid> SaveArrivalAsync(VoyagePortArrivalDto dto, CancellationToken ct = default)
@@ -434,6 +448,9 @@ public class VoyageService
             existing.ModifiedBy = dto.ModifiedBy;
 
             await _arrivalsRepo.UpdateAsync(existing, ct);
+
+            // Save tug usage rows
+            await SaveTugUsagesForArrivalAsync(existing.Id, dto.TugUsages, dto.ModifiedBy, ct);
 
             // Update ETD on VoyagePort if provided
             if (dto.EstimatedETD.HasValue)
@@ -469,12 +486,41 @@ public class VoyageService
 
             await _arrivalsRepo.AddAsync(arrival, ct);
 
+            // Save tug usage rows
+            await SaveTugUsagesForArrivalAsync(arrival.Id, dto.TugUsages, dto.CreatedBy, ct);
+
             // Update ETD on VoyagePort if provided
             if (dto.EstimatedETD.HasValue)
                 await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.EstimatedETD.Value, dto.CreatedBy, ct);
 
             return arrival.Id;
         }
+    }
+
+    private async Task SaveTugUsagesForArrivalAsync(Guid arrivalId, List<TugUsageDto> tugDtos, Guid userId, CancellationToken ct)
+    {
+        var tugs = tugDtos.Select(t => new TugUsage
+        {
+            TugNumber = t.TugNumber,
+            Hours = t.Hours,
+            CreatedBy = userId,
+            ModifiedBy = userId
+        }).ToList();
+
+        await _tugUsageRepo.ReplaceForArrivalAsync(arrivalId, tugs, ct);
+    }
+
+    private async Task SaveTugUsagesForDepartureAsync(Guid departureId, List<TugUsageDto> tugDtos, Guid userId, CancellationToken ct)
+    {
+        var tugs = tugDtos.Select(t => new TugUsage
+        {
+            TugNumber = t.TugNumber,
+            Hours = t.Hours,
+            CreatedBy = userId,
+            ModifiedBy = userId
+        }).ToList();
+
+        await _tugUsageRepo.ReplaceForDepartureAsync(departureId, tugs, ct);
     }
 
     // ── Vessel Departure ──
@@ -487,7 +533,7 @@ public class VoyageService
         var ports = await _portsMasterRepo.GetAllAsync(ct);
         var portLookup = ports.ToDictionary(p => p.Id, p => p.PortCode ?? p.FullName);
 
-        return new VoyagePortDepartureDto
+        var result = new VoyagePortDepartureDto
         {
             Id = dep.Id,
             VoyagePortId = dep.VoyagePortId,
@@ -510,6 +556,17 @@ public class VoyageService
             BallastWater = dep.BallastWater,
             Remarks = dep.Remarks
         };
+
+        // Load tug usages
+        var tugUsages = await _tugUsageRepo.GetByDepartureIdAsync(dep.Id, ct);
+        result.TugUsages = tugUsages.Select(t => new TugUsageDto
+        {
+            Id = t.Id,
+            TugNumber = t.TugNumber,
+            Hours = t.Hours
+        }).ToList();
+
+        return result;
     }
 
     public async Task<Guid> SaveDepartureAsync(VoyagePortDepartureDto dto, CancellationToken ct = default)
@@ -538,6 +595,9 @@ public class VoyageService
             existing.ModifiedBy = dto.ModifiedBy;
 
             await _departuresRepo.UpdateAsync(existing, ct);
+
+            // Save tug usage rows
+            await SaveTugUsagesForDepartureAsync(existing.Id, dto.TugUsages, dto.ModifiedBy, ct);
 
             if (dto.ActualETD.HasValue)
                 await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.ActualETD.Value, dto.ModifiedBy, ct);
@@ -571,6 +631,9 @@ public class VoyageService
             };
 
             await _departuresRepo.AddAsync(departure, ct);
+
+            // Save tug usage rows
+            await SaveTugUsagesForDepartureAsync(departure.Id, dto.TugUsages, dto.CreatedBy, ct);
 
             if (dto.ActualETD.HasValue)
                 await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.ActualETD.Value, dto.CreatedBy, ct);

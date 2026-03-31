@@ -14,7 +14,7 @@ public class VoyagePortArrival : AuditableEntity
     public Guid? NextPortId { get; set; }
     public DateTime? PilotOnBoard { get; set; }
     public DateTime? CommencedCargoOperation { get; set; }
-    public string? TugsIn { get; set; }
+    public int? TugsIn { get; set; }
     public decimal? ArrivalDraftFwdMtr { get; set; }
     public decimal? ArrivalDraftAftMtr { get; set; }
     public decimal? ArrivalDraftMeanMtr { get; set; }

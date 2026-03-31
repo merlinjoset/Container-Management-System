@@ -70,6 +70,25 @@
         /* Export button */
         .btn-export { font-size: .72rem; padding: .25rem .6rem; background: #065f46; color: #fff; border: none; border-radius: .3rem; }
         .btn-export:hover { background: #047857; color: #fff; }
+
+        /* Filter input placeholder */
+        .voy-filter::placeholder { color: rgba(255,255,255,.4); }
+        .voy-filter:focus { background: rgba(255,255,255,.15) !important; color: #fff !important; border-color: rgba(255,255,255,.4) !important; box-shadow: none; }
+
+        /* Pagination */
+        .voy-pagination {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: .35rem .75rem; background: #f8fafc; border-top: 1px solid #e5e7eb; font-size: .72rem;
+        }
+        .voy-pagination .page-info { color: #6b7280; }
+        .voy-pagination .page-btns { display: flex; gap: .2rem; }
+        .voy-pagination .page-btn {
+            padding: .15rem .45rem; border: 1px solid #d1d5db; border-radius: .25rem;
+            background: #fff; color: #374151; cursor: pointer; font-size: .7rem; min-width: 26px; text-align: center;
+        }
+        .voy-pagination .page-btn:hover { background: #eff6ff; border-color: #93c5fd; }
+        .voy-pagination .page-btn.active { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+        .voy-pagination .page-btn.disabled { opacity: .4; pointer-events: none; }
     </style>
 }
 
@@ -86,9 +105,12 @@
             <div class="voy-list-wrap">
                 <div class="voy-list-header">
                     <span><i class="bi bi-ship me-1"></i> Voyage List</span>
-                    <span style="font-size:.7rem; opacity:.7;">Click a row to view port rotation</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="voy-count" style="font-size:.7rem; opacity:.7;">@(Model?.Count ?? 0) voyage(s)</span>
+                        <span style="font-size:.7rem; opacity:.7;">| Click a row to view port rotation</span>
+                    </div>
                 </div>
-                <div style="max-height: 260px; overflow: auto;">
+                <div>
                     <table>
                         <thead>
                             <tr>
@@ -100,18 +122,28 @@
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
+                            <tr style="background:#1e2940;">
+                                <th style="padding:.25rem .4rem;"><input type="text" class="form-control form-control-sm voy-filter" id="vf-vessel" placeholder="Search..." style="font-size:.68rem; padding:.15rem .35rem; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2);" /></th>
+                                <th style="padding:.25rem .4rem;"><input type="text" class="form-control form-control-sm voy-filter" id="vf-scode" placeholder="Search..." style="font-size:.68rem; padding:.15rem .35rem; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2);" /></th>
+                                <th style="padding:.25rem .4rem;"><input type="text" class="form-control form-control-sm voy-filter" id="vf-sname" placeholder="Search..." style="font-size:.68rem; padding:.15rem .35rem; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2);" /></th>
+                                <th style="padding:.25rem .4rem;"><input type="text" class="form-control form-control-sm voy-filter" id="vf-operator" placeholder="Search..." style="font-size:.68rem; padding:.15rem .35rem; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2);" /></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
                         </thead>
                         <tbody id="voy-list-body">
                             @if (Model != null && Model.Any())
                             {
-                                foreach (var v in Model)
+                                foreach (var v in Model.OrderByDescending(x => x.CreatedOn))
                                 {
                                     <tr data-id="@v.Id"
                                         data-vessel="@v.VesselName"
                                         data-service-code="@v.ServiceCode"
                                         data-service-name="@v.ServiceName"
                                         data-operator="@v.OperatorName"
-                                        data-slot="@v.VoyageType">
+                                        data-slot="@v.VoyageType"
+                                        data-created="@v.CreatedOn.ToString("yyyy-MM-dd")">
                                         <td>@v.VesselName</td>
                                         <td>@v.ServiceCode</td>
                                         <td>@v.ServiceName</td>
@@ -136,11 +168,13 @@
                             }
                             else
                             {
-                                <tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No voyages found. Click "New Voyage" to create one.</td></tr>
+                                <tr id="no-data-row"><td colspan="7" class="text-center text-muted" style="padding:2rem;">No voyages found. Click "New Voyage" to create one.</td></tr>
                             }
                         </tbody>
                     </table>
                 </div>
+                <!-- Pagination bar -->
+                <div class="voy-pagination" id="voy-pagination"></div>
             </div>
 
             @* ── Port Rotation Detail Panel ── *@
@@ -224,9 +258,94 @@
             // Expose selectedId for export
             window.getSelectedVoyageId = function() { return selectedId; };
 
+            // ── Filter + Pagination logic ──
+            var PAGE_SIZE = 5;
+            var allRows = Array.prototype.slice.call(listBody.querySelectorAll('tr[data-id]'));
+            var voyCount = document.getElementById('voy-count');
+            var paginationBar = document.getElementById('voy-pagination');
+            var filters = document.querySelectorAll('.voy-filter');
+            var filteredRows = allRows.slice();
+            var currentPage = 1;
+
+            function getFilteredRows() {
+                var fVessel = (document.getElementById('vf-vessel').value || '').toLowerCase();
+                var fScode = (document.getElementById('vf-scode').value || '').toLowerCase();
+                var fSname = (document.getElementById('vf-sname').value || '').toLowerCase();
+                var fOp = (document.getElementById('vf-operator').value || '').toLowerCase();
+                var result = [];
+                for (var k = 0; k < allRows.length; k++) {
+                    var r = allRows[k];
+                    var vessel = (r.getAttribute('data-vessel') || '').toLowerCase();
+                    var scode = (r.getAttribute('data-service-code') || '').toLowerCase();
+                    var sname = (r.getAttribute('data-service-name') || '').toLowerCase();
+                    var op = (r.getAttribute('data-operator') || '').toLowerCase();
+                    if ((!fVessel || vessel.indexOf(fVessel) !== -1) &&
+                        (!fScode || scode.indexOf(fScode) !== -1) &&
+                        (!fSname || sname.indexOf(fSname) !== -1) &&
+                        (!fOp || op.indexOf(fOp) !== -1)) {
+                        result.push(r);
+                    }
+                }
+                return result;
+            }
+
+            function renderPage() {
+                filteredRows = getFilteredRows();
+                var totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                // Hide all rows, then show only current page
+                for (var k = 0; k < allRows.length; k++) allRows[k].style.display = 'none';
+                var start = (currentPage - 1) * PAGE_SIZE;
+                var end = Math.min(start + PAGE_SIZE, filteredRows.length);
+                for (var k = start; k < end; k++) filteredRows[k].style.display = '';
+
+                // Update count
+                if (voyCount) voyCount.textContent = filteredRows.length + ' voyage(s)';
+
+                // Render pagination bar
+                renderPagination(totalPages);
+            }
+
+            function renderPagination(totalPages) {
+                if (filteredRows.length <= PAGE_SIZE) {
+                    paginationBar.innerHTML = '<span class="page-info">Showing ' + filteredRows.length + ' of ' + filteredRows.length + ' voyage(s)</span>';
+                    return;
+                }
+                var start = (currentPage - 1) * PAGE_SIZE + 1;
+                var end = Math.min(currentPage * PAGE_SIZE, filteredRows.length);
+                var html = '<span class="page-info">Showing ' + start + '–' + end + ' of ' + filteredRows.length + ' voyage(s)</span>';
+                html += '<div class="page-btns">';
+                html += '<span class="page-btn' + (currentPage <= 1 ? ' disabled' : '') + '" data-page="' + (currentPage - 1) + '">‹</span>';
+                for (var p = 1; p <= totalPages; p++) {
+                    html += '<span class="page-btn' + (p === currentPage ? ' active' : '') + '" data-page="' + p + '">' + p + '</span>';
+                }
+                html += '<span class="page-btn' + (currentPage >= totalPages ? ' disabled' : '') + '" data-page="' + (currentPage + 1) + '">›</span>';
+                html += '</div>';
+                paginationBar.innerHTML = html;
+
+                // Wire page clicks
+                var btns = paginationBar.querySelectorAll('.page-btn:not(.disabled)');
+                for (var b = 0; b < btns.length; b++) {
+                    btns[b].addEventListener('click', function() {
+                        currentPage = parseInt(this.getAttribute('data-page'));
+                        renderPage();
+                    });
+                }
+            }
+
+            for (var fi = 0; fi < filters.length; fi++) {
+                filters[fi].addEventListener('input', function() {
+                    currentPage = 1;
+                    renderPage();
+                });
+            }
+
+            // Initial render
+            renderPage();
+
             // Attach click to voyage rows
-            var rows = listBody.querySelectorAll('tr[data-id]');
-            for (var i = 0; i < rows.length; i++) {
+            for (var i = 0; i < allRows.length; i++) {
                 (function(row) {
                     row.addEventListener('click', function() {
                         var id = row.getAttribute('data-id');
@@ -234,7 +353,6 @@
                         selectedId = id;
 
                         // Highlight selected row
-                        var allRows = listBody.querySelectorAll('tr[data-id]');
                         for (var j = 0; j < allRows.length; j++) allRows[j].classList.remove('selected');
                         row.classList.add('selected');
 
@@ -248,7 +366,7 @@
                         // Load ports
                         loadPorts(id);
                     });
-                })(rows[i]);
+                })(allRows[i]);
             }
 
             function loadPorts(voyageId) {
@@ -324,9 +442,9 @@
                     });
             }
 
-            // Auto-select first voyage if available
-            if (rows.length > 0) {
-                rows[0].click();
+            // Auto-select first visible voyage if available
+            if (filteredRows.length > 0) {
+                filteredRows[0].click();
             }
         })();
 

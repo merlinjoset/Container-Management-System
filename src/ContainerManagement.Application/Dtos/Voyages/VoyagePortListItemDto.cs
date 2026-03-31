@@ -29,7 +29,7 @@ public class VoyagePortListItemDto
     // Arrival report fields
     public DateTime? ArrPilotOnBoard { get; set; }
     public DateTime? ArrCommencedCargoOp { get; set; }
-    public string? ArrTugsIn { get; set; }
+    public int? ArrTugsIn { get; set; }
     public decimal? ArrDraftFwd { get; set; }
     public decimal? ArrDraftAft { get; set; }
     public decimal? ArrDraftMean { get; set; }
@@ -43,7 +43,7 @@ public class VoyagePortListItemDto
     public DateTime? DepCompleteCargoOp { get; set; }
     public DateTime? DepPilotOnBoard { get; set; }
     public DateTime? DepUnberthFAOP { get; set; }
-    public string? DepTugsOut { get; set; }
+    public int? DepTugsOut { get; set; }
     public decimal? DepDraftFwd { get; set; }
     public decimal? DepDraftAft { get; set; }
     public decimal? DepDraftMean { get; set; }

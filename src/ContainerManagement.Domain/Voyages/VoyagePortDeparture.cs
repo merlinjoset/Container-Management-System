@@ -14,7 +14,7 @@ public class VoyagePortDeparture : AuditableEntity
     public DateTime? ActualETD { get; set; }
     public Guid? NextPortId { get; set; }
     public DateTime? ETANextPort { get; set; }
-    public string? TugsOut { get; set; }
+    public int? TugsOut { get; set; }
     public decimal? DepDraftFwdMtr { get; set; }
     public decimal? DepDraftAftMtr { get; set; }
     public decimal? DepDraftMeanMtr { get; set; }

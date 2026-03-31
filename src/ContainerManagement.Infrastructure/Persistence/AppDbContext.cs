@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<VoyagePortDepartureEntity> VoyagePortDepartures => Set<VoyagePortDepartureEntity>();
     public DbSet<JobEntity> Jobs => Set<JobEntity>();
     public DbSet<JobAttachmentEntity> JobAttachments => Set<JobAttachmentEntity>();
+    public DbSet<TugUsageEntity> TugUsages => Set<TugUsageEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -549,7 +550,7 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.NextPortId)
                 .HasConstraintName("FK_TblVoyagePortArrival_TblPorts_Next")
                 .OnDelete(DeleteBehavior.NoAction);
-            e.Property(x => x.TugsIn).HasMaxLength(50);
+            e.Property(x => x.TugsIn);
             e.Property(x => x.ArrivalDraftFwdMtr).HasColumnType("decimal(10,2)");
             e.Property(x => x.ArrivalDraftAftMtr).HasColumnType("decimal(10,2)");
             e.Property(x => x.ArrivalDraftMeanMtr).HasColumnType("decimal(10,2)");
@@ -616,6 +617,37 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.VoyagePortId)
                 .IsUnique()
                 .HasDatabaseName("IX_TblVoyagePortDeparture_VoyagePortId");
+        });
+
+        // ---------------- TblTugUsage ----------------
+        b.Entity<TugUsageEntity>(e =>
+        {
+            e.ToTable("TblTugUsage");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.TugNumber).IsRequired();
+            e.Property(x => x.Hours).HasColumnType("decimal(5,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortArrivalEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.ArrivalId)
+                .HasConstraintName("FK_TblTugUsage_TblVoyagePortArrival")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne<VoyagePortDepartureEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.DepartureId)
+                .HasConstraintName("FK_TblTugUsage_TblVoyagePortDeparture")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.ArrivalId).HasDatabaseName("IX_TblTugUsage_ArrivalId");
+            e.HasIndex(x => x.DepartureId).HasDatabaseName("IX_TblTugUsage_DepartureId");
         });
 
     }

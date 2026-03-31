@@ -167,7 +167,7 @@
             <div class="row g-3">
                 <div class="col-md-2">
                     <label class="form-label">Tugs In</label>
-                    <input type="text" class="form-control form-control-sm" id="tugsIn" value="@Model.TugsIn" maxlength="50" />
+                    <input type="number" min="0" max="5" step="1" class="form-control form-control-sm" id="tugsIn" value="@Model.TugsIn" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Draft Fwd (m)</label>
@@ -181,6 +181,11 @@
                     <label class="form-label">Draft Mean (m)</label>
                     <input type="number" step="0.01" class="form-control form-control-sm" id="draftMean" value="@Model.ArrivalDraftMeanMtr" />
                 </div>
+            </div>
+            <!-- Tug Usage (dynamic rows based on Tugs In count) -->
+            <div id="tugUsageSection" class="mt-3" style="display:none;">
+                <label class="form-label fw-bold" style="font-size:.78rem;"><i class="bi bi-clock-history me-1"></i>Tug Usage (hrs)</label>
+                <div class="row g-2" id="tugUsageRow"></div>
             </div>
         </div>
     </div>
@@ -291,7 +296,60 @@
 
     function val(id) { return document.getElementById(id)?.value?.trim() || null; }
     function numVal(id) { var v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; }
+    function intVal(id) { var v = document.getElementById(id)?.value; return v ? parseInt(v, 10) : null; }
     function guidVal(id) { var v = document.getElementById(id)?.value; return v || null; }
+
+    function collectTugUsages() {
+        var inputs = document.querySelectorAll('.tug-hours-input');
+        var result = [];
+        for (var i = 0; i < inputs.length; i++) {
+            var tugNum = parseInt(inputs[i].getAttribute('data-tug'), 10);
+            var hrs = inputs[i].value ? parseFloat(inputs[i].value) : null;
+            result.push({ tugNumber: tugNum, hours: hrs });
+        }
+        return result;
+    }
+
+    // ── Tug Usage: dynamically create/remove tug hour inputs ──
+    (function() {
+        var tugsInEl = document.getElementById('tugsIn');
+        var tugSection = document.getElementById('tugUsageSection');
+        var tugRow = document.getElementById('tugUsageRow');
+
+        // Pre-load existing tug usage data from server
+        var existingTugs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TugUsages ?? new List<ContainerManagement.Application.Dtos.Voyages.TugUsageDto>()));
+
+        function getExistingHours(tugNum) {
+            for (var i = 0; i < existingTugs.length; i++) {
+                if (existingTugs[i].tugNumber === tugNum) return existingTugs[i].hours;
+            }
+            return '';
+        }
+
+        function updateTugRows() {
+            var count = parseInt(tugsInEl.value, 10) || 0;
+            if (count < 0) { count = 0; tugsInEl.value = 0; }
+            if (count > 5) { count = 5; tugsInEl.value = 5; }
+
+            tugSection.style.display = count > 0 ? '' : 'none';
+            tugRow.innerHTML = '';
+
+            for (var i = 1; i <= count; i++) {
+                var col = document.createElement('div');
+                col.className = 'col-auto';
+                var hrs = getExistingHours(i);
+                col.innerHTML =
+                    '<label class="form-label" style="font-size:.72rem;">Tug ' + i + '</label>' +
+                    '<input type="number" step="0.01" min="0" class="form-control form-control-sm tug-hours-input" ' +
+                    'data-tug="' + i + '" value="' + (hrs != null && hrs !== '' ? hrs : '') + '" style="max-width:90px;" />';
+                tugRow.appendChild(col);
+            }
+        }
+
+        tugsInEl.addEventListener('input', updateTugRows);
+        tugsInEl.addEventListener('change', updateTugRows);
+        updateTugRows(); // initial state
+    })();
 
     // Convert DD/MM/YYYY to YYYY-MM-DD
     function dmyToIso(dmy) {
@@ -390,7 +448,8 @@
             nextPortId: guidVal('nextPortId'),
             pilotOnBoard: combineDT('pilotOnBoard_date', 'pilotOnBoard_time'),
             commencedCargoOperation: combineDT('commencedCargoOp_date', 'commencedCargoOp_time'),
-            tugsIn: val('tugsIn'),
+            tugsIn: intVal('tugsIn'),
+            tugUsages: collectTugUsages(),
             arrivalDraftFwdMtr: numVal('draftFwd'),
             arrivalDraftAftMtr: numVal('draftAft'),
             arrivalDraftMeanMtr: numVal('draftMean'),
