@@ -18,8 +18,6 @@ public class VoyagePortDeparture : AuditableEntity
     public decimal? DepDraftFwdMtr { get; set; }
     public decimal? DepDraftAftMtr { get; set; }
     public decimal? DepDraftMeanMtr { get; set; }
-    public decimal? FuelOil { get; set; }
-    public decimal? DieselOil { get; set; }
     public decimal? FreshWater { get; set; }
     public decimal? BallastWater { get; set; }
     public string? Remarks { get; set; }

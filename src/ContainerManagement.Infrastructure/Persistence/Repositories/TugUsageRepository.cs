@@ -33,33 +33,56 @@ public class TugUsageRepository : ITugUsageRepository
 
     public async Task ReplaceForArrivalAsync(Guid arrivalId, List<TugUsage> tugs, CancellationToken ct = default)
     {
-        // Soft-delete existing
+        // Deduplicate by TugNumber — keep last
+        var deduped = tugs
+            .GroupBy(t => t.TugNumber)
+            .Select(g => g.Last())
+            .ToList();
+
         var existing = await _db.Set<TugUsageEntity>()
             .Where(x => x.ArrivalId == arrivalId && !x.IsDeleted)
             .ToListAsync(ct);
-        foreach (var e in existing)
+
+        var existingByNum = existing.ToDictionary(e => e.TugNumber);
+        var incomingNums = new HashSet<int>(deduped.Select(t => t.TugNumber));
+        var now = DateTime.UtcNow;
+
+        // Soft-delete rows no longer in input
+        foreach (var e in existing.Where(e => !incomingNums.Contains(e.TugNumber)))
         {
             e.IsDeleted = true;
-            e.ModifiedOn = DateTime.UtcNow;
+            e.ModifiedOn = now;
         }
 
-        // Add new rows
-        var now = DateTime.UtcNow;
-        foreach (var t in tugs)
+        // Upsert
+        foreach (var t in deduped)
         {
-            _db.Set<TugUsageEntity>().Add(new TugUsageEntity
+            if (existingByNum.TryGetValue(t.TugNumber, out var entity))
             {
-                Id = Guid.NewGuid(),
-                ArrivalId = arrivalId,
-                DepartureId = null,
-                TugNumber = t.TugNumber,
-                Hours = t.Hours,
-                IsDeleted = false,
-                CreatedOn = now,
-                ModifiedOn = now,
-                CreatedBy = t.CreatedBy,
-                ModifiedBy = t.CreatedBy
-            });
+                // Update only if changed
+                if (entity.Hours != t.Hours)
+                {
+                    entity.Hours = t.Hours;
+                    entity.ModifiedOn = now;
+                    entity.ModifiedBy = t.CreatedBy;
+                }
+            }
+            else
+            {
+                _db.Set<TugUsageEntity>().Add(new TugUsageEntity
+                {
+                    Id = Guid.NewGuid(),
+                    ArrivalId = arrivalId,
+                    DepartureId = null,
+                    TugNumber = t.TugNumber,
+                    Hours = t.Hours,
+                    IsDeleted = false,
+                    CreatedOn = now,
+                    ModifiedOn = now,
+                    CreatedBy = t.CreatedBy,
+                    ModifiedBy = t.CreatedBy
+                });
+            }
         }
 
         await _db.SaveChangesAsync(ct);
@@ -67,31 +90,55 @@ public class TugUsageRepository : ITugUsageRepository
 
     public async Task ReplaceForDepartureAsync(Guid departureId, List<TugUsage> tugs, CancellationToken ct = default)
     {
+        // Deduplicate by TugNumber — keep last
+        var deduped = tugs
+            .GroupBy(t => t.TugNumber)
+            .Select(g => g.Last())
+            .ToList();
+
         var existing = await _db.Set<TugUsageEntity>()
             .Where(x => x.DepartureId == departureId && !x.IsDeleted)
             .ToListAsync(ct);
-        foreach (var e in existing)
+
+        var existingByNum = existing.ToDictionary(e => e.TugNumber);
+        var incomingNums = new HashSet<int>(deduped.Select(t => t.TugNumber));
+        var now = DateTime.UtcNow;
+
+        // Soft-delete rows no longer in input
+        foreach (var e in existing.Where(e => !incomingNums.Contains(e.TugNumber)))
         {
             e.IsDeleted = true;
-            e.ModifiedOn = DateTime.UtcNow;
+            e.ModifiedOn = now;
         }
 
-        var now = DateTime.UtcNow;
-        foreach (var t in tugs)
+        // Upsert
+        foreach (var t in deduped)
         {
-            _db.Set<TugUsageEntity>().Add(new TugUsageEntity
+            if (existingByNum.TryGetValue(t.TugNumber, out var entity))
             {
-                Id = Guid.NewGuid(),
-                ArrivalId = null,
-                DepartureId = departureId,
-                TugNumber = t.TugNumber,
-                Hours = t.Hours,
-                IsDeleted = false,
-                CreatedOn = now,
-                ModifiedOn = now,
-                CreatedBy = t.CreatedBy,
-                ModifiedBy = t.CreatedBy
-            });
+                if (entity.Hours != t.Hours)
+                {
+                    entity.Hours = t.Hours;
+                    entity.ModifiedOn = now;
+                    entity.ModifiedBy = t.CreatedBy;
+                }
+            }
+            else
+            {
+                _db.Set<TugUsageEntity>().Add(new TugUsageEntity
+                {
+                    Id = Guid.NewGuid(),
+                    ArrivalId = null,
+                    DepartureId = departureId,
+                    TugNumber = t.TugNumber,
+                    Hours = t.Hours,
+                    IsDeleted = false,
+                    CreatedOn = now,
+                    ModifiedOn = now,
+                    CreatedBy = t.CreatedBy,
+                    ModifiedBy = t.CreatedBy
+                });
+            }
         }
 
         await _db.SaveChangesAsync(ct);

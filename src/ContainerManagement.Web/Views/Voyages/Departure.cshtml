@@ -110,17 +110,17 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Pilot On Board</label>
-                    <div class="d-flex gap-2">
-                        <input type="text" class="form-control form-control-sm date-dmy" id="pilotOnBoard_date" value="@(Model.PilotOnBoard?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
-                        <input type="text" class="form-control form-control-sm time-24" id="pilotOnBoard_time" value="@(Model.PilotOnBoard?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
-                    </div>
-                </div>
-                <div class="col-md-4">
                     <label class="form-label">Unberth (FAOP)</label>
                     <div class="d-flex gap-2">
                         <input type="text" class="form-control form-control-sm date-dmy" id="unberthFAOP_date" value="@(Model.UnberthFAOP?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
                         <input type="text" class="form-control form-control-sm time-24" id="unberthFAOP_time" value="@(Model.UnberthFAOP?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Pilot On Board</label>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm date-dmy" id="pilotOnBoard_date" value="@(Model.PilotOnBoard?.ToString("dd/MM/yyyy"))" placeholder="dd/mm/yyyy" maxlength="10" />
+                        <input type="text" class="form-control form-control-sm time-24" id="pilotOnBoard_time" value="@(Model.PilotOnBoard?.ToString("HH:mm"))" placeholder="hh:mm" maxlength="5" style="max-width:80px; text-align:center;" />
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -149,7 +149,7 @@
             <div class="row g-3">
                 <div class="col-md-2">
                     <label class="form-label">Tugs Out</label>
-                    <input type="text" class="form-control form-control-sm" id="tugsOut" value="@Model.TugsOut" maxlength="50" />
+                    <input type="number" min="0" max="5" step="1" class="form-control form-control-sm" id="tugsOut" value="@Model.TugsOut" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Draft Fwd (m)</label>
@@ -164,6 +164,11 @@
                     <input type="number" step="0.01" class="form-control form-control-sm" id="draftMean" value="@Model.DepDraftMeanMtr" />
                 </div>
             </div>
+            <!-- Tug Usage (dynamic rows based on Tugs Out count) -->
+            <div id="tugOutUsageSection" class="mt-3" style="display:none;">
+                <label class="form-label fw-bold" style="font-size:.78rem;"><i class="bi bi-clock-history me-1"></i>Tug Usage (hrs)</label>
+                <div class="row g-2" id="tugOutUsageRow"></div>
+            </div>
         </div>
     </div>
 
@@ -171,15 +176,64 @@
     <div class="dep-section">
         <div class="dep-section-header"><i class="bi bi-fuel-pump"></i> Bunkers On Departure</div>
         <div class="dep-section-body">
+            <!-- Bunker Supply -->
+            <label class="form-label fw-bold mb-2" style="font-size:.78rem;"><i class="bi bi-box-arrow-in-down me-1"></i>Bunker Supply</label>
+            <table class="table table-sm table-bordered mb-3" style="font-size:.8rem; max-width:400px;">
+                <thead class="table-light">
+                    <tr>
+                        <th></th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-center">Rate/Mts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var supplyFuels = new[] { "VLSFO", "MGO", "HFO" };
+                        var supplyLabels = new[] { "VLSFO (mts)", "MGO mts", "HFO mts" };
+                    }
+                    @for (var sf = 0; sf < supplyFuels.Length; sf++)
+                    {
+                        var ft = supplyFuels[sf];
+                        var existingSupply = Model.BunkerSupplies.FirstOrDefault(s => s.FuelType == ft);
+                        <tr>
+                            <td class="fw-semibold" style="white-space:nowrap; color:#475569;">@supplyLabels[sf]</td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-supply-input" data-fuel="@ft" data-field="qty" value="@existingSupply?.Qty" /></td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-supply-input" data-fuel="@ft" data-field="rate" value="@existingSupply?.RateMts" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Bunker On Departure readings -->
+            <label class="form-label fw-bold mb-2" style="font-size:.78rem;"><i class="bi bi-fuel-pump me-1"></i>Bunkers on Departure</label>
+            <table class="table table-sm table-bordered mb-3" style="font-size:.8rem; max-width:500px;">
+                <thead class="table-light">
+                    <tr>
+                        <th></th>
+                        <th class="text-center">VLSFO (mts)</th>
+                        <th class="text-center">MGO mts</th>
+                        <th class="text-center">HFO mts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var depBunkerPoints = new[] { "CompleteCargo", "PilotOnBoard", "Departure" };
+                        var depBunkerLabels = new[] { "Complete Cargo Operation", "Pilot On Board", "Departure" };
+                    }
+                    @for (var dp = 0; dp < depBunkerPoints.Length; dp++)
+                    {
+                        var pt = depBunkerPoints[dp];
+                        var existingDep = Model.Bunkers.FirstOrDefault(b => b.ReadingPoint == pt);
+                        <tr>
+                            <td class="fw-semibold" style="white-space:nowrap; color:#475569;">@depBunkerLabels[dp]</td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-dep-input" data-point="@pt" data-fuel="vlsfo" value="@existingDep?.VlsfoMts" /></td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-dep-input" data-point="@pt" data-fuel="mgo" value="@existingDep?.MgoMts" /></td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-dep-input" data-point="@pt" data-fuel="hfo" value="@existingDep?.HfoMts" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
             <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Fuel Oil</label>
-                    <input type="number" step="0.01" class="form-control form-control-sm" id="fuelOil" value="@Model.FuelOil" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Diesel Oil</label>
-                    <input type="number" step="0.01" class="form-control form-control-sm" id="dieselOil" value="@Model.DieselOil" />
-                </div>
                 <div class="col-md-3">
                     <label class="form-label">Fresh Water</label>
                     <input type="number" step="0.01" class="form-control form-control-sm" id="freshWater" value="@Model.FreshWater" />
@@ -273,7 +327,89 @@
 
     function val(id) { return document.getElementById(id)?.value?.trim() || null; }
     function numVal(id) { var v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; }
+    function intVal(id) { var v = document.getElementById(id)?.value; return v ? parseInt(v, 10) : null; }
     function guidVal(id) { var v = document.getElementById(id)?.value; return v || null; }
+
+    function collectTugOutUsages() {
+        var inputs = document.querySelectorAll('.tug-out-hours-input');
+        var result = [];
+        for (var i = 0; i < inputs.length; i++) {
+            var tugNum = parseInt(inputs[i].getAttribute('data-tug'), 10);
+            var hrs = inputs[i].value ? parseFloat(inputs[i].value) : null;
+            result.push({ tugNumber: tugNum, hours: hrs });
+        }
+        return result;
+    }
+
+    function collectBunkerSupply() {
+        var inputs = document.querySelectorAll('.bunker-supply-input');
+        var map = {};
+        for (var i = 0; i < inputs.length; i++) {
+            var fuel = inputs[i].getAttribute('data-fuel');
+            var field = inputs[i].getAttribute('data-field');
+            if (!map[fuel]) map[fuel] = { fuelType: fuel, qty: null, rateMts: null };
+            var v = inputs[i].value ? parseFloat(inputs[i].value) : null;
+            if (field === 'qty') map[fuel].qty = v;
+            else if (field === 'rate') map[fuel].rateMts = v;
+        }
+        return Object.values(map);
+    }
+
+    function collectBunkersOnDeparture() {
+        var inputs = document.querySelectorAll('.bunker-dep-input');
+        var map = {};
+        for (var i = 0; i < inputs.length; i++) {
+            var pt = inputs[i].getAttribute('data-point');
+            var fuel = inputs[i].getAttribute('data-fuel');
+            if (!map[pt]) map[pt] = { readingPoint: pt, vlsfoMts: null, mgoMts: null, hfoMts: null };
+            var v = inputs[i].value ? parseFloat(inputs[i].value) : null;
+            if (fuel === 'vlsfo') map[pt].vlsfoMts = v;
+            else if (fuel === 'mgo') map[pt].mgoMts = v;
+            else if (fuel === 'hfo') map[pt].hfoMts = v;
+        }
+        return Object.values(map);
+    }
+
+    // ── Tug Out Usage: dynamically create/remove tug hour inputs ──
+    (function() {
+        var tugsOutEl = document.getElementById('tugsOut');
+        var tugSection = document.getElementById('tugOutUsageSection');
+        var tugRow = document.getElementById('tugOutUsageRow');
+
+        // Pre-load existing tug usage data from server
+        var existingTugs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TugUsages ?? new List<ContainerManagement.Application.Dtos.Voyages.TugUsageDto>()));
+
+        function getExistingHours(tugNum) {
+            for (var i = 0; i < existingTugs.length; i++) {
+                if (existingTugs[i].tugNumber === tugNum) return existingTugs[i].hours;
+            }
+            return '';
+        }
+
+        function updateTugOutRows() {
+            var count = parseInt(tugsOutEl.value, 10) || 0;
+            if (count < 0) { count = 0; tugsOutEl.value = 0; }
+            if (count > 5) { count = 5; tugsOutEl.value = 5; }
+
+            tugSection.style.display = count > 0 ? '' : 'none';
+            tugRow.innerHTML = '';
+
+            for (var i = 1; i <= count; i++) {
+                var col = document.createElement('div');
+                col.className = 'col-auto';
+                var hrs = getExistingHours(i);
+                col.innerHTML =
+                    '<label class="form-label" style="font-size:.72rem;">Tug ' + i + '</label>' +
+                    '<input type="number" step="0.01" min="0" class="form-control form-control-sm tug-out-hours-input" ' +
+                    'data-tug="' + i + '" value="' + (hrs != null && hrs !== '' ? hrs : '') + '" style="max-width:90px;" />';
+                tugRow.appendChild(col);
+            }
+        }
+
+        tugsOutEl.addEventListener('input', updateTugOutRows);
+        tugsOutEl.addEventListener('change', updateTugOutRows);
+        updateTugOutRows();
+    })();
 
     function dmyToIso(dmy) {
         if (!dmy) return null;
@@ -359,12 +495,13 @@
             actualETD: combineDT('actualETD_date', 'actualETD_time'),
             nextPortId: guidVal('nextPortId'),
             etaNextPort: combineDT('etaNextPort_date', 'etaNextPort_time'),
-            tugsOut: val('tugsOut'),
+            tugsOut: intVal('tugsOut'),
+            tugUsages: collectTugOutUsages(),
             depDraftFwdMtr: numVal('draftFwd'),
             depDraftAftMtr: numVal('draftAft'),
             depDraftMeanMtr: numVal('draftMean'),
-            fuelOil: numVal('fuelOil'),
-            dieselOil: numVal('dieselOil'),
+            bunkerSupplies: collectBunkerSupply(),
+            bunkers: collectBunkersOnDeparture(),
             freshWater: numVal('freshWater'),
             ballastWater: numVal('ballastWater'),
             remarks: val('remarks')

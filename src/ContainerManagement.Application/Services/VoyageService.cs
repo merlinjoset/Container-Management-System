@@ -17,6 +17,9 @@ public class VoyageService
     private readonly IVoyagePortArrivalsRepository _arrivalsRepo;
     private readonly IVoyagePortDeparturesRepository _departuresRepo;
     private readonly ITugUsageRepository _tugUsageRepo;
+    private readonly IBunkerOnArrivalRepository _bunkerRepo;
+    private readonly IBunkerOnDepartureRepository _bunkerDepRepo;
+    private readonly IBunkerSupplyRepository _bunkerSupplyRepo;
 
     public VoyageService(
         IVoyagesRepository voyagesRepo,
@@ -28,7 +31,10 @@ public class VoyageService
         ITerminalsRepository terminalsRepo,
         IVoyagePortArrivalsRepository arrivalsRepo,
         IVoyagePortDeparturesRepository departuresRepo,
-        ITugUsageRepository tugUsageRepo)
+        ITugUsageRepository tugUsageRepo,
+        IBunkerOnArrivalRepository bunkerRepo,
+        IBunkerOnDepartureRepository bunkerDepRepo,
+        IBunkerSupplyRepository bunkerSupplyRepo)
     {
         _voyagesRepo = voyagesRepo;
         _portsRepo = portsRepo;
@@ -40,6 +46,9 @@ public class VoyageService
         _arrivalsRepo = arrivalsRepo;
         _departuresRepo = departuresRepo;
         _tugUsageRepo = tugUsageRepo;
+        _bunkerRepo = bunkerRepo;
+        _bunkerDepRepo = bunkerDepRepo;
+        _bunkerSupplyRepo = bunkerSupplyRepo;
     }
 
     public async Task<List<VoyageListItemDto>> GetAllAsync(CancellationToken ct = default)
@@ -143,8 +152,6 @@ public class VoyageService
                 dto.ArrDraftFwd = arrival.ArrivalDraftFwdMtr;
                 dto.ArrDraftAft = arrival.ArrivalDraftAftMtr;
                 dto.ArrDraftMean = arrival.ArrivalDraftMeanMtr;
-                dto.ArrFuelOil = arrival.FuelOil;
-                dto.ArrDieselOil = arrival.DieselOil;
                 dto.ArrFreshWater = arrival.FreshWater;
                 dto.ArrBallastWater = arrival.BallastWater;
                 dto.ArrRemarks = arrival.Remarks;
@@ -161,8 +168,6 @@ public class VoyageService
                 dto.DepDraftFwd = departure.DepDraftFwdMtr;
                 dto.DepDraftAft = departure.DepDraftAftMtr;
                 dto.DepDraftMean = departure.DepDraftMeanMtr;
-                dto.DepFuelOil = departure.FuelOil;
-                dto.DepDieselOil = departure.DieselOil;
                 dto.DepFreshWater = departure.FreshWater;
                 dto.DepBallastWater = departure.BallastWater;
                 dto.DepRemarks = departure.Remarks;
@@ -403,8 +408,6 @@ public class VoyageService
             ArrivalDraftFwdMtr = arrival.ArrivalDraftFwdMtr,
             ArrivalDraftAftMtr = arrival.ArrivalDraftAftMtr,
             ArrivalDraftMeanMtr = arrival.ArrivalDraftMeanMtr,
-            FuelOil = arrival.FuelOil,
-            DieselOil = arrival.DieselOil,
             FreshWater = arrival.FreshWater,
             BallastWater = arrival.BallastWater,
             Remarks = arrival.Remarks
@@ -417,6 +420,16 @@ public class VoyageService
             Id = t.Id,
             TugNumber = t.TugNumber,
             Hours = t.Hours
+        }).ToList();
+
+        // Load bunker on arrival readings
+        var bunkers = await _bunkerRepo.GetByArrivalIdAsync(arrival.Id, ct);
+        dto.Bunkers = bunkers.Select(b => new BunkerOnArrivalDto
+        {
+            ReadingPoint = b.ReadingPoint,
+            VlsfoMts = b.VlsfoMts,
+            MgoMts = b.MgoMts,
+            HfoMts = b.HfoMts
         }).ToList();
 
         return dto;
@@ -440,8 +453,6 @@ public class VoyageService
             existing.ArrivalDraftFwdMtr = dto.ArrivalDraftFwdMtr;
             existing.ArrivalDraftAftMtr = dto.ArrivalDraftAftMtr;
             existing.ArrivalDraftMeanMtr = dto.ArrivalDraftMeanMtr;
-            existing.FuelOil = dto.FuelOil;
-            existing.DieselOil = dto.DieselOil;
             existing.FreshWater = dto.FreshWater;
             existing.BallastWater = dto.BallastWater;
             existing.Remarks = dto.Remarks;
@@ -451,6 +462,9 @@ public class VoyageService
 
             // Save tug usage rows
             await SaveTugUsagesForArrivalAsync(existing.Id, dto.TugUsages, dto.ModifiedBy, ct);
+
+            // Save bunker on arrival readings
+            await SaveBunkersForArrivalAsync(existing.Id, dto.Bunkers, dto.ModifiedBy, ct);
 
             // Update ETD on VoyagePort if provided
             if (dto.EstimatedETD.HasValue)
@@ -476,8 +490,6 @@ public class VoyageService
                 ArrivalDraftFwdMtr = dto.ArrivalDraftFwdMtr,
                 ArrivalDraftAftMtr = dto.ArrivalDraftAftMtr,
                 ArrivalDraftMeanMtr = dto.ArrivalDraftMeanMtr,
-                FuelOil = dto.FuelOil,
-                DieselOil = dto.DieselOil,
                 FreshWater = dto.FreshWater,
                 BallastWater = dto.BallastWater,
                 Remarks = dto.Remarks,
@@ -488,6 +500,9 @@ public class VoyageService
 
             // Save tug usage rows
             await SaveTugUsagesForArrivalAsync(arrival.Id, dto.TugUsages, dto.CreatedBy, ct);
+
+            // Save bunker on arrival readings
+            await SaveBunkersForArrivalAsync(arrival.Id, dto.Bunkers, dto.CreatedBy, ct);
 
             // Update ETD on VoyagePort if provided
             if (dto.EstimatedETD.HasValue)
@@ -523,6 +538,50 @@ public class VoyageService
         await _tugUsageRepo.ReplaceForDepartureAsync(departureId, tugs, ct);
     }
 
+    private async Task SaveBunkersForArrivalAsync(Guid arrivalId, List<BunkerOnArrivalDto> bunkerDtos, Guid userId, CancellationToken ct)
+    {
+        var bunkers = bunkerDtos.Select(b => new BunkerOnArrival
+        {
+            ReadingPoint = b.ReadingPoint,
+            VlsfoMts = b.VlsfoMts,
+            MgoMts = b.MgoMts,
+            HfoMts = b.HfoMts,
+            CreatedBy = userId,
+            ModifiedBy = userId
+        }).ToList();
+
+        await _bunkerRepo.ReplaceForArrivalAsync(arrivalId, bunkers, ct);
+    }
+
+    private async Task SaveBunkersForDepartureAsync(Guid departureId, List<BunkerOnDepartureDto> bunkerDtos, Guid userId, CancellationToken ct)
+    {
+        var bunkers = bunkerDtos.Select(b => new BunkerOnDeparture
+        {
+            ReadingPoint = b.ReadingPoint,
+            VlsfoMts = b.VlsfoMts,
+            MgoMts = b.MgoMts,
+            HfoMts = b.HfoMts,
+            CreatedBy = userId,
+            ModifiedBy = userId
+        }).ToList();
+
+        await _bunkerDepRepo.ReplaceForDepartureAsync(departureId, bunkers, ct);
+    }
+
+    private async Task SaveBunkerSupplyAsync(Guid departureId, List<BunkerSupplyDto> supplyDtos, Guid userId, CancellationToken ct)
+    {
+        var supplies = supplyDtos.Select(s => new BunkerSupply
+        {
+            FuelType = s.FuelType,
+            Qty = s.Qty,
+            RateMts = s.RateMts,
+            CreatedBy = userId,
+            ModifiedBy = userId
+        }).ToList();
+
+        await _bunkerSupplyRepo.ReplaceForDepartureAsync(departureId, supplies, ct);
+    }
+
     // ── Vessel Departure ──
 
     public async Task<VoyagePortDepartureDto?> GetDepartureByVoyagePortIdAsync(Guid voyagePortId, CancellationToken ct = default)
@@ -550,8 +609,6 @@ public class VoyageService
             DepDraftFwdMtr = dep.DepDraftFwdMtr,
             DepDraftAftMtr = dep.DepDraftAftMtr,
             DepDraftMeanMtr = dep.DepDraftMeanMtr,
-            FuelOil = dep.FuelOil,
-            DieselOil = dep.DieselOil,
             FreshWater = dep.FreshWater,
             BallastWater = dep.BallastWater,
             Remarks = dep.Remarks
@@ -564,6 +621,25 @@ public class VoyageService
             Id = t.Id,
             TugNumber = t.TugNumber,
             Hours = t.Hours
+        }).ToList();
+
+        // Load bunker supply (received)
+        var supplies = await _bunkerSupplyRepo.GetByDepartureIdAsync(dep.Id, ct);
+        result.BunkerSupplies = supplies.Select(s => new BunkerSupplyDto
+        {
+            FuelType = s.FuelType,
+            Qty = s.Qty,
+            RateMts = s.RateMts
+        }).ToList();
+
+        // Load bunker on departure readings
+        var depBunkers = await _bunkerDepRepo.GetByDepartureIdAsync(dep.Id, ct);
+        result.Bunkers = depBunkers.Select(b => new BunkerOnDepartureDto
+        {
+            ReadingPoint = b.ReadingPoint,
+            VlsfoMts = b.VlsfoMts,
+            MgoMts = b.MgoMts,
+            HfoMts = b.HfoMts
         }).ToList();
 
         return result;
@@ -587,8 +663,6 @@ public class VoyageService
             existing.DepDraftFwdMtr = dto.DepDraftFwdMtr;
             existing.DepDraftAftMtr = dto.DepDraftAftMtr;
             existing.DepDraftMeanMtr = dto.DepDraftMeanMtr;
-            existing.FuelOil = dto.FuelOil;
-            existing.DieselOil = dto.DieselOil;
             existing.FreshWater = dto.FreshWater;
             existing.BallastWater = dto.BallastWater;
             existing.Remarks = dto.Remarks;
@@ -598,6 +672,12 @@ public class VoyageService
 
             // Save tug usage rows
             await SaveTugUsagesForDepartureAsync(existing.Id, dto.TugUsages, dto.ModifiedBy, ct);
+
+            // Save bunker supply
+            await SaveBunkerSupplyAsync(existing.Id, dto.BunkerSupplies, dto.ModifiedBy, ct);
+
+            // Save bunker on departure readings
+            await SaveBunkersForDepartureAsync(existing.Id, dto.Bunkers, dto.ModifiedBy, ct);
 
             if (dto.ActualETD.HasValue)
                 await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.ActualETD.Value, dto.ModifiedBy, ct);
@@ -622,8 +702,6 @@ public class VoyageService
                 DepDraftFwdMtr = dto.DepDraftFwdMtr,
                 DepDraftAftMtr = dto.DepDraftAftMtr,
                 DepDraftMeanMtr = dto.DepDraftMeanMtr,
-                FuelOil = dto.FuelOil,
-                DieselOil = dto.DieselOil,
                 FreshWater = dto.FreshWater,
                 BallastWater = dto.BallastWater,
                 Remarks = dto.Remarks,
@@ -634,6 +712,12 @@ public class VoyageService
 
             // Save tug usage rows
             await SaveTugUsagesForDepartureAsync(departure.Id, dto.TugUsages, dto.CreatedBy, ct);
+
+            // Save bunker supply
+            await SaveBunkerSupplyAsync(departure.Id, dto.BunkerSupplies, dto.CreatedBy, ct);
+
+            // Save bunker on departure readings
+            await SaveBunkersForDepartureAsync(departure.Id, dto.Bunkers, dto.CreatedBy, ct);
 
             if (dto.ActualETD.HasValue)
                 await _portsRepo.UpdateETDAsync(dto.VoyagePortId, dto.ActualETD.Value, dto.CreatedBy, ct);

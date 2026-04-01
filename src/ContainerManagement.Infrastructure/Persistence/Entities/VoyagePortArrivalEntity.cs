@@ -16,8 +16,6 @@ public class VoyagePortArrivalEntity
     public decimal? ArrivalDraftFwdMtr { get; set; }
     public decimal? ArrivalDraftAftMtr { get; set; }
     public decimal? ArrivalDraftMeanMtr { get; set; }
-    public decimal? FuelOil { get; set; }
-    public decimal? DieselOil { get; set; }
     public decimal? FreshWater { get; set; }
     public decimal? BallastWater { get; set; }
     public string? Remarks { get; set; }

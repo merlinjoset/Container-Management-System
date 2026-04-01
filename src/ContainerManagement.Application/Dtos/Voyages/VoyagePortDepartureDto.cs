@@ -17,8 +17,6 @@ public class VoyagePortDepartureDto
     public decimal? DepDraftFwdMtr { get; set; }
     public decimal? DepDraftAftMtr { get; set; }
     public decimal? DepDraftMeanMtr { get; set; }
-    public decimal? FuelOil { get; set; }
-    public decimal? DieselOil { get; set; }
     public decimal? FreshWater { get; set; }
     public decimal? BallastWater { get; set; }
     public string? Remarks { get; set; }
@@ -27,4 +25,10 @@ public class VoyagePortDepartureDto
 
     // Dynamic tug usage rows
     public List<TugUsageDto> TugUsages { get; set; } = new();
+
+    // Bunker supply (received)
+    public List<BunkerSupplyDto> BunkerSupplies { get; set; } = new();
+
+    // Bunker on departure readings
+    public List<BunkerOnDepartureDto> Bunkers { get; set; } = new();
 }

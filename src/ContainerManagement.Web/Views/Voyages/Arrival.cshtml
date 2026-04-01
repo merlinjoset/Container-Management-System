@@ -194,15 +194,34 @@
     <div class="arrival-section">
         <div class="arrival-section-header"><i class="bi bi-fuel-pump"></i> Bunkers On Arrival</div>
         <div class="arrival-section-body">
+            <table class="table table-sm table-bordered mb-3" style="font-size:.8rem; max-width:500px;">
+                <thead class="table-light">
+                    <tr>
+                        <th></th>
+                        <th class="text-center">VLSFO (mts)</th>
+                        <th class="text-center">MGO mts</th>
+                        <th class="text-center">HFO mts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var bunkerPoints = new[] { "ArrivalTime", "PilotOnBoard", "ArrivalBerth" };
+                        var bunkerLabels = new[] { "Arrival Time (End of Passage)", "Pilot On Board", "Arrival Berth" };
+                    }
+                    @for (var bp = 0; bp < bunkerPoints.Length; bp++)
+                    {
+                        var pt = bunkerPoints[bp];
+                        var existing = Model.Bunkers.FirstOrDefault(b => b.ReadingPoint == pt);
+                        <tr>
+                            <td class="fw-semibold" style="white-space:nowrap; color:#475569;">@bunkerLabels[bp]</td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-arr-input" data-point="@pt" data-fuel="vlsfo" value="@existing?.VlsfoMts" /></td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-arr-input" data-point="@pt" data-fuel="mgo" value="@existing?.MgoMts" /></td>
+                            <td><input type="number" step="0.01" min="0" class="form-control form-control-sm bunker-arr-input" data-point="@pt" data-fuel="hfo" value="@existing?.HfoMts" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
             <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Fuel Oil</label>
-                    <input type="number" step="0.01" class="form-control form-control-sm" id="fuelOil" value="@Model.FuelOil" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Diesel Oil</label>
-                    <input type="number" step="0.01" class="form-control form-control-sm" id="dieselOil" value="@Model.DieselOil" />
-                </div>
                 <div class="col-md-3">
                     <label class="form-label">Fresh Water</label>
                     <input type="number" step="0.01" class="form-control form-control-sm" id="freshWater" value="@Model.FreshWater" />
@@ -298,6 +317,21 @@
     function numVal(id) { var v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; }
     function intVal(id) { var v = document.getElementById(id)?.value; return v ? parseInt(v, 10) : null; }
     function guidVal(id) { var v = document.getElementById(id)?.value; return v || null; }
+
+    function collectBunkersOnArrival() {
+        var inputs = document.querySelectorAll('.bunker-arr-input');
+        var map = {};
+        for (var i = 0; i < inputs.length; i++) {
+            var pt = inputs[i].getAttribute('data-point');
+            var fuel = inputs[i].getAttribute('data-fuel');
+            if (!map[pt]) map[pt] = { readingPoint: pt, vlsfoMts: null, mgoMts: null, hfoMts: null };
+            var v = inputs[i].value ? parseFloat(inputs[i].value) : null;
+            if (fuel === 'vlsfo') map[pt].vlsfoMts = v;
+            else if (fuel === 'mgo') map[pt].mgoMts = v;
+            else if (fuel === 'hfo') map[pt].hfoMts = v;
+        }
+        return Object.values(map);
+    }
 
     function collectTugUsages() {
         var inputs = document.querySelectorAll('.tug-hours-input');
@@ -453,8 +487,7 @@
             arrivalDraftFwdMtr: numVal('draftFwd'),
             arrivalDraftAftMtr: numVal('draftAft'),
             arrivalDraftMeanMtr: numVal('draftMean'),
-            fuelOil: numVal('fuelOil'),
-            dieselOil: numVal('dieselOil'),
+            bunkers: collectBunkersOnArrival(),
             freshWater: numVal('freshWater'),
             ballastWater: numVal('ballastWater'),
             remarks: val('remarks'),

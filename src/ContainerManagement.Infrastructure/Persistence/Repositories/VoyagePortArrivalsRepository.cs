@@ -51,8 +51,6 @@ public class VoyagePortArrivalsRepository : IVoyagePortArrivalsRepository
         entity.ArrivalDraftFwdMtr = arrival.ArrivalDraftFwdMtr;
         entity.ArrivalDraftAftMtr = arrival.ArrivalDraftAftMtr;
         entity.ArrivalDraftMeanMtr = arrival.ArrivalDraftMeanMtr;
-        entity.FuelOil = arrival.FuelOil;
-        entity.DieselOil = arrival.DieselOil;
         entity.FreshWater = arrival.FreshWater;
         entity.BallastWater = arrival.BallastWater;
         entity.Remarks = arrival.Remarks;
@@ -90,8 +88,6 @@ public class VoyagePortArrivalsRepository : IVoyagePortArrivalsRepository
         ArrivalDraftFwdMtr = e.ArrivalDraftFwdMtr,
         ArrivalDraftAftMtr = e.ArrivalDraftAftMtr,
         ArrivalDraftMeanMtr = e.ArrivalDraftMeanMtr,
-        FuelOil = e.FuelOil,
-        DieselOil = e.DieselOil,
         FreshWater = e.FreshWater,
         BallastWater = e.BallastWater,
         Remarks = e.Remarks,
@@ -121,8 +117,6 @@ public class VoyagePortArrivalsRepository : IVoyagePortArrivalsRepository
             ArrivalDraftFwdMtr = d.ArrivalDraftFwdMtr,
             ArrivalDraftAftMtr = d.ArrivalDraftAftMtr,
             ArrivalDraftMeanMtr = d.ArrivalDraftMeanMtr,
-            FuelOil = d.FuelOil,
-            DieselOil = d.DieselOil,
             FreshWater = d.FreshWater,
             BallastWater = d.BallastWater,
             Remarks = d.Remarks,

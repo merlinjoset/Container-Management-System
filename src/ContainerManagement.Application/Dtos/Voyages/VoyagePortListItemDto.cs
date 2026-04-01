@@ -33,8 +33,6 @@ public class VoyagePortListItemDto
     public decimal? ArrDraftFwd { get; set; }
     public decimal? ArrDraftAft { get; set; }
     public decimal? ArrDraftMean { get; set; }
-    public decimal? ArrFuelOil { get; set; }
-    public decimal? ArrDieselOil { get; set; }
     public decimal? ArrFreshWater { get; set; }
     public decimal? ArrBallastWater { get; set; }
     public string? ArrRemarks { get; set; }
@@ -47,8 +45,6 @@ public class VoyagePortListItemDto
     public decimal? DepDraftFwd { get; set; }
     public decimal? DepDraftAft { get; set; }
     public decimal? DepDraftMean { get; set; }
-    public decimal? DepFuelOil { get; set; }
-    public decimal? DepDieselOil { get; set; }
     public decimal? DepFreshWater { get; set; }
     public decimal? DepBallastWater { get; set; }
     public string? DepRemarks { get; set; }

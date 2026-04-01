@@ -284,7 +284,7 @@ namespace ContainerManagement.Web.Controllers
             var ws2 = wb.AddWorksheet("Arrival Reports");
             var arrHeaders = new[] { "Port", "Voy No", "Actual ETA", "Actual ETB", "Pilot On Board", "Commenced Cargo Ops",
                 "Tugs In", "Draft Fwd(m)", "Draft Aft(m)", "Draft Mean(m)",
-                "Fuel Oil", "Diesel Oil", "Fresh Water", "Ballast Water", "Remarks" };
+                "Fresh Water", "Ballast Water", "Remarks" };
             for (int i = 0; i < arrHeaders.Length; i++)
                 ws2.Cell(1, i + 1).Value = arrHeaders[i];
             ws2.Range(1, 1, 1, arrHeaders.Length).Style.Font.Bold = true;
@@ -303,11 +303,9 @@ namespace ContainerManagement.Web.Controllers
                 ws2.Cell(row, 8).Value = p.ArrDraftFwd;
                 ws2.Cell(row, 9).Value = p.ArrDraftAft;
                 ws2.Cell(row, 10).Value = p.ArrDraftMean;
-                ws2.Cell(row, 11).Value = p.ArrFuelOil;
-                ws2.Cell(row, 12).Value = p.ArrDieselOil;
-                ws2.Cell(row, 13).Value = p.ArrFreshWater;
-                ws2.Cell(row, 14).Value = p.ArrBallastWater;
-                ws2.Cell(row, 15).Value = p.ArrRemarks;
+                ws2.Cell(row, 11).Value = p.ArrFreshWater;
+                ws2.Cell(row, 12).Value = p.ArrBallastWater;
+                ws2.Cell(row, 13).Value = p.ArrRemarks;
                 if (p.HasArrival) ws2.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#f0fdf4");
                 row++;
             }
@@ -317,7 +315,7 @@ namespace ContainerManagement.Web.Controllers
             var ws3 = wb.AddWorksheet("Departure Reports");
             var depHeaders = new[] { "Port", "Voy No", "Actual ETD", "Complete Cargo Ops", "Pilot On Board",
                 "Unberth FAOP", "Tugs Out", "Draft Fwd(m)", "Draft Aft(m)", "Draft Mean(m)",
-                "Fuel Oil", "Diesel Oil", "Fresh Water", "Ballast Water", "Remarks" };
+                "Fresh Water", "Ballast Water", "Remarks" };
             for (int i = 0; i < depHeaders.Length; i++)
                 ws3.Cell(1, i + 1).Value = depHeaders[i];
             ws3.Range(1, 1, 1, depHeaders.Length).Style.Font.Bold = true;
@@ -336,11 +334,9 @@ namespace ContainerManagement.Web.Controllers
                 ws3.Cell(row, 8).Value = p.DepDraftFwd;
                 ws3.Cell(row, 9).Value = p.DepDraftAft;
                 ws3.Cell(row, 10).Value = p.DepDraftMean;
-                ws3.Cell(row, 11).Value = p.DepFuelOil;
-                ws3.Cell(row, 12).Value = p.DepDieselOil;
-                ws3.Cell(row, 13).Value = p.DepFreshWater;
-                ws3.Cell(row, 14).Value = p.DepBallastWater;
-                ws3.Cell(row, 15).Value = p.DepRemarks;
+                ws3.Cell(row, 11).Value = p.DepFreshWater;
+                ws3.Cell(row, 12).Value = p.DepBallastWater;
+                ws3.Cell(row, 13).Value = p.DepRemarks;
                 if (p.HasDeparture) ws3.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#fffbeb");
                 row++;
             }
@@ -460,31 +456,25 @@ namespace ContainerManagement.Web.Controllers
             ws.Cell(16, 1).Value = "Arrival Draft (Mean) in meters "; labelFont(ws.Cell(16, 1));
             ws.Cell(16, 2).Value = arrival.ArrivalDraftMeanMtr?.ToString("0.##") ?? ""; valFont(ws.Cell(16, 2));
 
-            // Row 17-20: Bunkers
+            // Row 17-18: Bunkers
             ws.Cell(17, 1).Value = "Bunkers On Arrival"; labelFont(ws.Cell(17, 1));
-            ws.Cell(17, 2).Value = "Fuel Oil"; labelFont(ws.Cell(17, 2));
-            ws.Cell(17, 3).Value = arrival.FuelOil?.ToString("0.#") ?? ""; valFont(ws.Cell(17, 3));
-            ws.Range(17, 1, 20, 1).Merge();
+            ws.Cell(17, 2).Value = "Fresh Water"; labelFont(ws.Cell(17, 2));
+            ws.Cell(17, 3).Value = arrival.FreshWater?.ToString("0.#") ?? ""; valFont(ws.Cell(17, 3));
+            ws.Range(17, 1, 18, 1).Merge();
             ws.Cell(17, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             ws.Cell(17, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
-            ws.Cell(18, 2).Value = "Diesel Oil"; labelFont(ws.Cell(18, 2));
-            ws.Cell(18, 3).Value = arrival.DieselOil?.ToString("0.#") ?? ""; valFont(ws.Cell(18, 3));
+            ws.Cell(18, 2).Value = "Ballast Water"; labelFont(ws.Cell(18, 2));
+            ws.Cell(18, 3).Value = arrival.BallastWater?.ToString("0.#") ?? ""; valFont(ws.Cell(18, 3));
 
-            ws.Cell(19, 2).Value = "Fresh Water"; labelFont(ws.Cell(19, 2));
-            ws.Cell(19, 3).Value = arrival.FreshWater?.ToString("0.#") ?? ""; valFont(ws.Cell(19, 3));
-
-            ws.Cell(20, 2).Value = "Ballast Water"; labelFont(ws.Cell(20, 2));
-            ws.Cell(20, 3).Value = arrival.BallastWater?.ToString("0.#") ?? ""; valFont(ws.Cell(20, 3));
-
-            // Row 21: Remarks (merge B and C for value)
-            ws.Cell(21, 1).Value = "REMARKS:"; ws.Cell(21, 1).Style.Font.Bold = true; ws.Cell(21, 1).Style.Font.FontSize = 12;
-            ws.Cell(21, 2).Value = arrival.Remarks ?? ""; valFont(ws.Cell(21, 2));
-            ws.Range(21, 2, 21, 3).Merge();
-            ws.Cell(21, 2).Style.Alignment.WrapText = true;
+            // Row 19: Remarks (merge B and C for value)
+            ws.Cell(19, 1).Value = "REMARKS:"; ws.Cell(19, 1).Style.Font.Bold = true; ws.Cell(19, 1).Style.Font.FontSize = 12;
+            ws.Cell(19, 2).Value = arrival.Remarks ?? ""; valFont(ws.Cell(19, 2));
+            ws.Range(19, 2, 19, 3).Merge();
+            ws.Cell(19, 2).Style.Alignment.WrapText = true;
 
             // Add borders to all used cells
-            var usedRange = ws.Range(1, 1, 21, 4);
+            var usedRange = ws.Range(1, 1, 19, 4);
             usedRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             usedRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
@@ -598,31 +588,25 @@ namespace ContainerManagement.Web.Controllers
             ws.Cell(15, 1).Value = "Dep. Draft (Mean) in meters "; labelFont(ws.Cell(15, 1));
             ws.Cell(15, 2).Value = departure.DepDraftMeanMtr?.ToString("0.##") ?? ""; valFont(ws.Cell(15, 2));
 
-            // Row 16-19: Bunkers
+            // Row 16-17: Bunkers
             ws.Cell(16, 1).Value = "Bunkers on Departure"; labelFont(ws.Cell(16, 1));
-            ws.Cell(16, 2).Value = "Fuel Oil"; labelFont(ws.Cell(16, 2));
-            ws.Cell(16, 3).Value = departure.FuelOil?.ToString("0.#") ?? ""; valFont(ws.Cell(16, 3));
-            ws.Range(16, 1, 19, 1).Merge();
+            ws.Cell(16, 2).Value = "Fresh Water"; labelFont(ws.Cell(16, 2));
+            ws.Cell(16, 3).Value = departure.FreshWater?.ToString("0.#") ?? ""; valFont(ws.Cell(16, 3));
+            ws.Range(16, 1, 17, 1).Merge();
             ws.Cell(16, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             ws.Cell(16, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
-            ws.Cell(17, 2).Value = "Diesel Oil"; labelFont(ws.Cell(17, 2));
-            ws.Cell(17, 3).Value = departure.DieselOil?.ToString("0.#") ?? ""; valFont(ws.Cell(17, 3));
+            ws.Cell(17, 2).Value = "Ballast Water"; labelFont(ws.Cell(17, 2));
+            ws.Cell(17, 3).Value = departure.BallastWater?.ToString("0.#") ?? ""; valFont(ws.Cell(17, 3));
 
-            ws.Cell(18, 2).Value = "Fresh Water"; labelFont(ws.Cell(18, 2));
-            ws.Cell(18, 3).Value = departure.FreshWater?.ToString("0.#") ?? ""; valFont(ws.Cell(18, 3));
-
-            ws.Cell(19, 2).Value = "Ballast Water "; labelFont(ws.Cell(19, 2));
-            ws.Cell(19, 3).Value = departure.BallastWater?.ToString("0.#") ?? ""; valFont(ws.Cell(19, 3));
-
-            // Row 20: Remarks (merge B and C for value)
-            ws.Cell(20, 1).Value = "Remarks :"; ws.Cell(20, 1).Style.Font.Bold = true; ws.Cell(20, 1).Style.Font.FontSize = 11;
-            ws.Cell(20, 2).Value = departure.Remarks ?? ""; valFont(ws.Cell(20, 2));
-            ws.Range(20, 2, 20, 3).Merge();
-            ws.Cell(20, 2).Style.Alignment.WrapText = true;
+            // Row 18: Remarks (merge B and C for value)
+            ws.Cell(18, 1).Value = "Remarks :"; ws.Cell(18, 1).Style.Font.Bold = true; ws.Cell(18, 1).Style.Font.FontSize = 11;
+            ws.Cell(18, 2).Value = departure.Remarks ?? ""; valFont(ws.Cell(18, 2));
+            ws.Range(18, 2, 18, 3).Merge();
+            ws.Cell(18, 2).Style.Alignment.WrapText = true;
 
             // Add borders to all used cells
-            var usedRange = ws.Range(1, 1, 20, 4);
+            var usedRange = ws.Range(1, 1, 18, 4);
             usedRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             usedRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 

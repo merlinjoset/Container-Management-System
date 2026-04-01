@@ -51,8 +51,6 @@ public class VoyagePortDeparturesRepository : IVoyagePortDeparturesRepository
         entity.DepDraftFwdMtr = departure.DepDraftFwdMtr;
         entity.DepDraftAftMtr = departure.DepDraftAftMtr;
         entity.DepDraftMeanMtr = departure.DepDraftMeanMtr;
-        entity.FuelOil = departure.FuelOil;
-        entity.DieselOil = departure.DieselOil;
         entity.FreshWater = departure.FreshWater;
         entity.BallastWater = departure.BallastWater;
         entity.Remarks = departure.Remarks;
@@ -90,8 +88,6 @@ public class VoyagePortDeparturesRepository : IVoyagePortDeparturesRepository
         DepDraftFwdMtr = e.DepDraftFwdMtr,
         DepDraftAftMtr = e.DepDraftAftMtr,
         DepDraftMeanMtr = e.DepDraftMeanMtr,
-        FuelOil = e.FuelOil,
-        DieselOil = e.DieselOil,
         FreshWater = e.FreshWater,
         BallastWater = e.BallastWater,
         Remarks = e.Remarks,
@@ -121,8 +117,6 @@ public class VoyagePortDeparturesRepository : IVoyagePortDeparturesRepository
             DepDraftFwdMtr = d.DepDraftFwdMtr,
             DepDraftAftMtr = d.DepDraftAftMtr,
             DepDraftMeanMtr = d.DepDraftMeanMtr,
-            FuelOil = d.FuelOil,
-            DieselOil = d.DieselOil,
             FreshWater = d.FreshWater,
             BallastWater = d.BallastWater,
             Remarks = d.Remarks,

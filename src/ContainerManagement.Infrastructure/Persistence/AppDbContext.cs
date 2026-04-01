@@ -28,6 +28,9 @@ public class AppDbContext : DbContext
     public DbSet<JobEntity> Jobs => Set<JobEntity>();
     public DbSet<JobAttachmentEntity> JobAttachments => Set<JobAttachmentEntity>();
     public DbSet<TugUsageEntity> TugUsages => Set<TugUsageEntity>();
+    public DbSet<BunkerOnArrivalEntity> BunkerOnArrivals => Set<BunkerOnArrivalEntity>();
+    public DbSet<BunkerOnDepartureEntity> BunkerOnDepartures => Set<BunkerOnDepartureEntity>();
+    public DbSet<BunkerSupplyEntity> BunkerSupplies => Set<BunkerSupplyEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -554,8 +557,6 @@ public class AppDbContext : DbContext
             e.Property(x => x.ArrivalDraftFwdMtr).HasColumnType("decimal(10,2)");
             e.Property(x => x.ArrivalDraftAftMtr).HasColumnType("decimal(10,2)");
             e.Property(x => x.ArrivalDraftMeanMtr).HasColumnType("decimal(10,2)");
-            e.Property(x => x.FuelOil).HasColumnType("decimal(10,2)");
-            e.Property(x => x.DieselOil).HasColumnType("decimal(10,2)");
             e.Property(x => x.FreshWater).HasColumnType("decimal(10,2)");
             e.Property(x => x.BallastWater).HasColumnType("decimal(10,2)");
             e.Property(x => x.Remarks).HasMaxLength(2000);
@@ -590,8 +591,6 @@ public class AppDbContext : DbContext
             e.Property(x => x.DepDraftFwdMtr).HasColumnType("decimal(10,2)");
             e.Property(x => x.DepDraftAftMtr).HasColumnType("decimal(10,2)");
             e.Property(x => x.DepDraftMeanMtr).HasColumnType("decimal(10,2)");
-            e.Property(x => x.FuelOil).HasColumnType("decimal(10,2)");
-            e.Property(x => x.DieselOil).HasColumnType("decimal(10,2)");
             e.Property(x => x.FreshWater).HasColumnType("decimal(10,2)");
             e.Property(x => x.BallastWater).HasColumnType("decimal(10,2)");
             e.Property(x => x.Remarks).HasMaxLength(2000);
@@ -648,6 +647,86 @@ public class AppDbContext : DbContext
 
             e.HasIndex(x => x.ArrivalId).HasDatabaseName("IX_TblTugUsage_ArrivalId");
             e.HasIndex(x => x.DepartureId).HasDatabaseName("IX_TblTugUsage_DepartureId");
+        });
+
+        // ---------------- TblBunkerOnArrival ----------------
+        b.Entity<BunkerOnArrivalEntity>(e =>
+        {
+            e.ToTable("TblBunkerOnArrival");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.ArrivalId).IsRequired();
+            e.Property(x => x.ReadingPoint).HasMaxLength(50).IsRequired();
+            e.Property(x => x.VlsfoMts).HasColumnType("decimal(10,2)");
+            e.Property(x => x.MgoMts).HasColumnType("decimal(10,2)");
+            e.Property(x => x.HfoMts).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortArrivalEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.ArrivalId)
+                .HasConstraintName("FK_TblBunkerOnArrival_TblVoyagePortArrival")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.ArrivalId).HasDatabaseName("IX_TblBunkerOnArrival_ArrivalId");
+        });
+
+        // ---------------- TblBunkerOnDeparture ----------------
+        b.Entity<BunkerOnDepartureEntity>(e =>
+        {
+            e.ToTable("TblBunkerOnDeparture");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.DepartureId).IsRequired();
+            e.Property(x => x.ReadingPoint).HasMaxLength(50).IsRequired();
+            e.Property(x => x.VlsfoMts).HasColumnType("decimal(10,2)");
+            e.Property(x => x.MgoMts).HasColumnType("decimal(10,2)");
+            e.Property(x => x.HfoMts).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortDepartureEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.DepartureId)
+                .HasConstraintName("FK_TblBunkerOnDeparture_TblVoyagePortDeparture")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.DepartureId).HasDatabaseName("IX_TblBunkerOnDeparture_DepartureId");
+        });
+
+        // ---------------- TblBunkerSupply ----------------
+        b.Entity<BunkerSupplyEntity>(e =>
+        {
+            e.ToTable("TblBunkerSupply");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.DepartureId).IsRequired();
+            e.Property(x => x.FuelType).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Qty).HasColumnType("decimal(10,2)");
+            e.Property(x => x.RateMts).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortDepartureEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.DepartureId)
+                .HasConstraintName("FK_TblBunkerSupply_TblVoyagePortDeparture")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.DepartureId).HasDatabaseName("IX_TblBunkerSupply_DepartureId");
         });
 
     }

@@ -26,6 +26,9 @@ namespace ContainerManagement.Infrastructure
             services.AddScoped<IJobsRepository, JobsRepository>();
             services.AddScoped<IJobAttachmentsRepository, JobAttachmentsRepository>();
             services.AddScoped<ITugUsageRepository, TugUsageRepository>();
+            services.AddScoped<IBunkerOnArrivalRepository, BunkerOnArrivalRepository>();
+            services.AddScoped<IBunkerOnDepartureRepository, BunkerOnDepartureRepository>();
+            services.AddScoped<IBunkerSupplyRepository, BunkerSupplyRepository>();
 
             return services;
         }
