@@ -221,6 +221,7 @@
                     }
                 </tbody>
             </table>
+            <div id="bunkerArrivalError" class="alert alert-danger py-2 d-none" style="font-size:.8rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i><span id="bunkerArrivalErrorMsg"></span></div>
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label">Fresh Water</label>
@@ -467,8 +468,57 @@
         btn.disabled = on;
     }
 
+    function showBunkerArrivalError(msg) {
+        var wrap = document.getElementById('bunkerArrivalError');
+        var span = document.getElementById('bunkerArrivalErrorMsg');
+        span.textContent = msg;
+        wrap.classList.remove('d-none');
+    }
+
+    function clearBunkerArrivalError() {
+        var wrap = document.getElementById('bunkerArrivalError');
+        wrap.classList.add('d-none');
+        document.getElementById('bunkerArrivalErrorMsg').textContent = '';
+    }
+
+    function validateBunkersOnArrival() {
+        clearBunkerArrivalError();
+        // Bunker quantities must decrease sequentially: ArrivalTime >= PilotOnBoard >= ArrivalBerth
+        var points = ['ArrivalTime', 'PilotOnBoard', 'ArrivalBerth'];
+        var fuels = ['vlsfo', 'mgo', 'hfo'];
+        var fuelLabels = { vlsfo: 'VLSFO', mgo: 'MGO', hfo: 'HFO' };
+        var pointLabels = { ArrivalTime: 'Arrival Time', PilotOnBoard: 'Pilot On Board', ArrivalBerth: 'Arrival Berth' };
+
+        for (var f = 0; f < fuels.length; f++) {
+            var fuel = fuels[f];
+            var prev = null;
+            var prevPt = null;
+            for (var p = 0; p < points.length; p++) {
+                var el = document.querySelector('.bunker-arr-input[data-point="' + points[p] + '"][data-fuel="' + fuel + '"]');
+                var v = el && el.value ? parseFloat(el.value) : null;
+                if (v !== null && prev !== null && v > prev) {
+                    showBunkerArrivalError(
+                        fuelLabels[fuel] + ' at "' + pointLabels[points[p]] + '" is ' + v +
+                        ' mts, but it was ' + prev + ' mts at "' + pointLabels[prevPt] + '". ' +
+                        'Fuel is consumed during operations, so the quantity should decrease or remain the same at each stage.'
+                    );
+                    el.focus();
+                    return false;
+                }
+                if (v !== null) { prev = v; prevPt = points[p]; }
+            }
+        }
+        return true;
+    }
+
+    // Live validation on bunker inputs
+    document.querySelectorAll('.bunker-arr-input').forEach(function(el) {
+        el.addEventListener('blur', validateBunkersOnArrival);
+    });
+
     async function saveArrival() {
         if (!validateDates()) return;
+        if (!validateBunkersOnArrival()) return;
 
         setLoading(true);
 
