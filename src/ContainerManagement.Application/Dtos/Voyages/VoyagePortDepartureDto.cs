@@ -31,4 +31,7 @@ public class VoyagePortDepartureDto
 
     // Bunker on departure readings
     public List<BunkerOnDepartureDto> Bunkers { get; set; } = new();
+
+    // Bunker on arrival readings (read-only, loaded from arrival report for validation)
+    public List<BunkerOnArrivalDto> ArrivalBunkers { get; set; } = new();
 }

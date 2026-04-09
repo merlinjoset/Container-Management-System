@@ -584,6 +584,21 @@ public class VoyageService
 
     // ── Vessel Departure ──
 
+    public async Task<List<BunkerOnArrivalDto>> GetArrivalBunkersByVoyagePortIdAsync(Guid voyagePortId, CancellationToken ct = default)
+    {
+        var arrival = await _arrivalsRepo.GetByVoyagePortIdAsync(voyagePortId, ct);
+        if (arrival == null) return new List<BunkerOnArrivalDto>();
+
+        var arrivalBunkers = await _bunkerRepo.GetByArrivalIdAsync(arrival.Id, ct);
+        return arrivalBunkers.Select(b => new BunkerOnArrivalDto
+        {
+            ReadingPoint = b.ReadingPoint,
+            VlsfoMts = b.VlsfoMts,
+            MgoMts = b.MgoMts,
+            HfoMts = b.HfoMts
+        }).ToList();
+    }
+
     public async Task<VoyagePortDepartureDto?> GetDepartureByVoyagePortIdAsync(Guid voyagePortId, CancellationToken ct = default)
     {
         var dep = await _departuresRepo.GetByVoyagePortIdAsync(voyagePortId, ct);
@@ -641,6 +656,20 @@ public class VoyageService
             MgoMts = b.MgoMts,
             HfoMts = b.HfoMts
         }).ToList();
+
+        // Load arrival bunkers for the SAME VoyagePortId (for departure validation baseline)
+        var arrival = await _arrivalsRepo.GetByVoyagePortIdAsync(voyagePortId, ct);
+        if (arrival != null)
+        {
+            var arrivalBunkers = await _bunkerRepo.GetByArrivalIdAsync(arrival.Id, ct);
+            result.ArrivalBunkers = arrivalBunkers.Select(b => new BunkerOnArrivalDto
+            {
+                ReadingPoint = b.ReadingPoint,
+                VlsfoMts = b.VlsfoMts,
+                MgoMts = b.MgoMts,
+                HfoMts = b.HfoMts
+            }).ToList();
+        }
 
         return result;
     }

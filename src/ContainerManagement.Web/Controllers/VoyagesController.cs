@@ -192,11 +192,19 @@ namespace ContainerManagement.Web.Controllers
 
             var departure = await _voyageService.GetDepartureByVoyagePortIdAsync(id, ct);
 
+            // For new departures, still load arrival bunkers for validation baseline
+            if (departure == null)
+            {
+                departure = new VoyagePortDepartureDto { VoyagePortId = id };
+                var arrivalBunkers = await _voyageService.GetArrivalBunkersByVoyagePortIdAsync(id, ct);
+                departure.ArrivalBunkers = arrivalBunkers;
+            }
+
             ViewBag.VoyagePort = portItem;
             ViewBag.ParentVoyage = parentVoyage;
             await PopulateDropdownsAsync(ct);
 
-            return View(departure ?? new VoyagePortDepartureDto { VoyagePortId = id });
+            return View(departure);
         }
 
         [HttpPost]

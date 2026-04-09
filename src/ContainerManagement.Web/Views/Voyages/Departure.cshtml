@@ -495,67 +495,68 @@
         document.getElementById('bunkerDepErrorMsg').textContent = '';
     }
 
-    function validateBunkersOnDeparture() {
-        clearBunkerDepError();
-        // 1. Bunker departure readings must decrease sequentially: CompleteCargo >= PilotOnBoard >= Departure
-        var depPoints = ['CompleteCargo', 'PilotOnBoard', 'Departure'];
-        var fuels = ['vlsfo', 'mgo', 'hfo'];
-        var fuelLabels = { vlsfo: 'VLSFO', mgo: 'MGO', hfo: 'HFO' };
-        var depPointLabels = { CompleteCargo: 'Complete Cargo', PilotOnBoard: 'Pilot On Board', Departure: 'Departure' };
+    // Arrival bunker data loaded from the arrival report (used as validation baseline)
+    var arrivalBunkers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ArrivalBunkers ?? new List<ContainerManagement.Application.Dtos.Voyages.BunkerOnArrivalDto>(),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 
-        for (var f = 0; f < fuels.length; f++) {
-            var fuel = fuels[f];
-            var prev = null;
-            var prevPt = null;
-            for (var p = 0; p < depPoints.length; p++) {
-                var el = document.querySelector('.bunker-dep-input[data-point="' + depPoints[p] + '"][data-fuel="' + fuel + '"]');
-                var v = el && el.value ? parseFloat(el.value) : null;
-                if (v !== null && prev !== null && v > prev) {
-                    showBunkerDepError(
-                        fuelLabels[fuel] + ' at "' + depPointLabels[depPoints[p]] + '" is ' + v +
-                        ' mts, but it was ' + prev + ' mts at "' + depPointLabels[prevPt] + '". ' +
-                        'Fuel is consumed during operations, so the quantity should decrease or remain the same at each stage.'
-                    );
-                    el.focus();
-                    return false;
-                }
-                if (v !== null) { prev = v; prevPt = depPoints[p]; }
+    function getArrivalBunker(fuel) {
+        // Use Arrival Berth reading (last arrival reading — most relevant baseline)
+        // Fall back to Pilot On Board, then Arrival Time if Arrival Berth is empty
+        var preferredOrder = ['ArrivalBerth', 'PilotOnBoard', 'ArrivalTime'];
+        for (var i = 0; i < preferredOrder.length; i++) {
+            var row = arrivalBunkers.find(function(b) { return b.readingPoint === preferredOrder[i]; });
+            if (row) {
+                var key = fuel === 'vlsfo' ? 'vlsfoMts' : (fuel === 'mgo' ? 'mgoMts' : 'hfoMts');
+                if (row[key] != null) return { value: row[key], point: preferredOrder[i] };
             }
         }
+        return null;
+    }
 
-        // 2. Max departure quantity = Complete Cargo reading + Supply Qty
+    function validateBunkersOnDeparture() {
+        clearBunkerDepError();
+
+        var fuels = ['vlsfo', 'mgo', 'hfo'];
+        var fuelLabels = { vlsfo: 'VLSFO', mgo: 'MGO', hfo: 'HFO' };
         var fuelKeys = { vlsfo: 'VLSFO', mgo: 'MGO', hfo: 'HFO' };
+        var depPointLabels = { CompleteCargo: 'Complete Cargo Operation', PilotOnBoard: 'Pilot On Board', Departure: 'Departure' };
+        var arrivalPointLabels = { ArrivalTime: 'Arrival Time', PilotOnBoard: 'Pilot On Board', ArrivalBerth: 'Arrival Berth' };
+
         for (var f = 0; f < fuels.length; f++) {
             var fuel = fuels[f];
             var fuelKey = fuelKeys[fuel];
 
-            var baseEl = document.querySelector('.bunker-dep-input[data-point="CompleteCargo"][data-fuel="' + fuel + '"]');
-            var baseline = baseEl && baseEl.value ? parseFloat(baseEl.value) : null;
+            // Baseline = Bunker on Arrival reading (Arrival Berth preferred)
+            var arrBase = getArrivalBunker(fuel);
+            if (arrBase === null) continue; // No arrival data — skip validation for this fuel
 
+            var arrivalQty = arrBase.value;
+            var arrivalPoint = arrBase.point;
+
+            // Read supply for this fuel
             var supplyEl = document.querySelector('.bunker-supply-input[data-fuel="' + fuelKey + '"][data-field="qty"]');
             var supplyQty = supplyEl && supplyEl.value ? parseFloat(supplyEl.value) : 0;
 
-            if (baseline !== null) {
-                var maxAllowed = baseline + supplyQty;
+            // Max allowed = Arrival bunker + Supply — no departure reading may exceed this
+            var maxAllowed = arrivalQty + supplyQty;
 
-                var checkPoints = ['PilotOnBoard', 'Departure'];
-                for (var cp = 0; cp < checkPoints.length; cp++) {
-                    var chkEl = document.querySelector('.bunker-dep-input[data-point="' + checkPoints[cp] + '"][data-fuel="' + fuel + '"]');
-                    var chkVal = chkEl && chkEl.value ? parseFloat(chkEl.value) : null;
-                    if (chkVal !== null && chkVal > maxAllowed) {
-                        var msg = fuelLabels[fuel] + ' at "' + depPointLabels[checkPoints[cp]] + '" is ' + chkVal + ' mts, ';
-                        if (supplyQty > 0) {
-                            msg += 'which exceeds the maximum allowed of ' + maxAllowed + ' mts. ' +
-                                'Calculated as: Complete Cargo (' + baseline + ' mts) + Bunker Supply (' + supplyQty + ' mts) = ' + maxAllowed + ' mts. ' +
-                                'The departure quantity cannot be more than what was available after bunkering.';
-                        } else {
-                            msg += 'which exceeds the Complete Cargo quantity of ' + baseline + ' mts. ' +
-                                'No bunker supply was received, so the quantity should only decrease from the Complete Cargo reading.';
-                        }
-                        showBunkerDepError(msg);
-                        chkEl.focus();
-                        return false;
+            // Check all three departure readings
+            var depPoints = ['CompleteCargo', 'PilotOnBoard', 'Departure'];
+            for (var p = 0; p < depPoints.length; p++) {
+                var el = document.querySelector('.bunker-dep-input[data-point="' + depPoints[p] + '"][data-fuel="' + fuel + '"]');
+                var v = el && el.value ? parseFloat(el.value) : null;
+                if (v !== null && v > maxAllowed) {
+                    var msg = fuelLabels[fuel] + ' at "' + depPointLabels[depPoints[p]] + '" is ' + v + ' mts, which exceeds the maximum allowed of ' + maxAllowed + ' mts. ';
+                    if (supplyQty > 0) {
+                        msg += 'Calculated as: Bunker on Arrival — ' + arrivalPointLabels[arrivalPoint] + ' (' + arrivalQty + ' mts) + Bunker Supply (' + supplyQty + ' mts) = ' + maxAllowed + ' mts. ' +
+                               'The departure quantity cannot be more than the stock available after bunkering.';
+                    } else {
+                        msg += 'Based on Bunker on Arrival — ' + arrivalPointLabels[arrivalPoint] + ' (' + arrivalQty + ' mts). No bunker supply was received, so the departure quantity cannot exceed the arrival reading.';
                     }
+                    showBunkerDepError(msg);
+                    el.focus();
+                    return false;
                 }
             }
         }
@@ -563,8 +564,50 @@
         return true;
     }
 
-    // Live validation on bunker and supply inputs
-    document.querySelectorAll('.bunker-dep-input, .bunker-supply-input').forEach(function(el) {
+    // Block invalid values immediately on input (clamp and show error)
+    function clampBunkerDepInput(el) {
+        var fuel = el.getAttribute('data-fuel');
+        if (!fuel) return;
+
+        var fuelKeys = { vlsfo: 'VLSFO', mgo: 'MGO', hfo: 'HFO' };
+        var fuelKey = fuelKeys[fuel];
+        var fuelLabels = { vlsfo: 'VLSFO', mgo: 'MGO', hfo: 'HFO' };
+
+        var arrBase = getArrivalBunker(fuel);
+        if (arrBase === null) return;
+
+        var supplyEl = document.querySelector('.bunker-supply-input[data-fuel="' + fuelKey + '"][data-field="qty"]');
+        var supplyQty = supplyEl && supplyEl.value ? parseFloat(supplyEl.value) : 0;
+        var maxAllowed = arrBase.value + supplyQty;
+
+        var v = el.value ? parseFloat(el.value) : null;
+        if (v !== null && v > maxAllowed) {
+            // Clamp the value to the max allowed
+            el.value = maxAllowed;
+            var arrivalPointLabels = { ArrivalTime: 'Arrival Time', PilotOnBoard: 'Pilot On Board', ArrivalBerth: 'Arrival Berth' };
+            var msg = fuelLabels[fuel] + ' cannot exceed ' + maxAllowed + ' mts. ';
+            if (supplyQty > 0) {
+                msg += 'Max = Bunker on Arrival — ' + arrivalPointLabels[arrBase.point] + ' (' + arrBase.value + ' mts) + Bunker Supply (' + supplyQty + ' mts) = ' + maxAllowed + ' mts. Value has been capped.';
+            } else {
+                msg += 'Based on Bunker on Arrival — ' + arrivalPointLabels[arrBase.point] + ' (' + arrBase.value + ' mts). No bunker supply received. Value has been capped.';
+            }
+            showBunkerDepError(msg);
+        }
+    }
+
+    // When supply changes, re-check all departure inputs (max increases/decreases)
+    function recheckAllBunkerDepInputs() {
+        document.querySelectorAll('.bunker-dep-input').forEach(clampBunkerDepInput);
+        validateBunkersOnDeparture();
+    }
+
+    // Live validation — block on input, full validation on blur
+    document.querySelectorAll('.bunker-dep-input').forEach(function(el) {
+        el.addEventListener('input', function() { clampBunkerDepInput(el); });
+        el.addEventListener('blur', validateBunkersOnDeparture);
+    });
+    document.querySelectorAll('.bunker-supply-input').forEach(function(el) {
+        el.addEventListener('input', recheckAllBunkerDepInputs);
         el.addEventListener('blur', validateBunkersOnDeparture);
     });
 
