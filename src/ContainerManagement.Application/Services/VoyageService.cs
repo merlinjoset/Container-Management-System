@@ -20,6 +20,11 @@ public class VoyageService
     private readonly IBunkerOnArrivalRepository _bunkerRepo;
     private readonly IBunkerOnDepartureRepository _bunkerDepRepo;
     private readonly IBunkerSupplyRepository _bunkerSupplyRepo;
+    private readonly ITosRepository _tosRepo;
+    private readonly ITosStoppageRepository _tosStoppageRepo;
+    private readonly ICraneProductivityRepository _craneProductivityRepo;
+    private readonly IShipProductivityRepository _shipProductivityRepo;
+    private readonly ITosSummaryRepository _tosSummaryRepo;
 
     public VoyageService(
         IVoyagesRepository voyagesRepo,
@@ -34,7 +39,12 @@ public class VoyageService
         ITugUsageRepository tugUsageRepo,
         IBunkerOnArrivalRepository bunkerRepo,
         IBunkerOnDepartureRepository bunkerDepRepo,
-        IBunkerSupplyRepository bunkerSupplyRepo)
+        IBunkerSupplyRepository bunkerSupplyRepo,
+        ITosRepository tosRepo,
+        ITosStoppageRepository tosStoppageRepo,
+        ICraneProductivityRepository craneProductivityRepo,
+        IShipProductivityRepository shipProductivityRepo,
+        ITosSummaryRepository tosSummaryRepo)
     {
         _voyagesRepo = voyagesRepo;
         _portsRepo = portsRepo;
@@ -49,6 +59,11 @@ public class VoyageService
         _bunkerRepo = bunkerRepo;
         _bunkerDepRepo = bunkerDepRepo;
         _bunkerSupplyRepo = bunkerSupplyRepo;
+        _tosRepo = tosRepo;
+        _tosStoppageRepo = tosStoppageRepo;
+        _craneProductivityRepo = craneProductivityRepo;
+        _shipProductivityRepo = shipProductivityRepo;
+        _tosSummaryRepo = tosSummaryRepo;
     }
 
     public async Task<List<VoyageListItemDto>> GetAllAsync(CancellationToken ct = default)
@@ -119,6 +134,7 @@ public class VoyageService
         {
             var arrival = await _arrivalsRepo.GetByVoyagePortIdAsync(p.Id, ct);
             var departure = await _departuresRepo.GetByVoyagePortIdAsync(p.Id, ct);
+            var tos = await _tosRepo.GetByVoyagePortIdAsync(p.Id, ct);
             var dto = new VoyagePortListItemDto
             {
                 Id = p.Id,
@@ -138,7 +154,8 @@ public class VoyageService
                 Distance = p.Distance,
                 SortOrder = p.SortOrder,
                 HasArrival = arrival != null && arrival.ActualETA.HasValue && arrival.ActualETB.HasValue,
-                HasDeparture = departure != null && departure.ActualETD.HasValue
+                HasDeparture = departure != null && departure.ActualETD.HasValue,
+                HasTos = tos != null
             };
 
             // Populate actual dates from arrival
@@ -753,5 +770,192 @@ public class VoyageService
 
             return departure.Id;
         }
+    }
+
+    // ── TOS (Terminal Operating System) ──
+
+    public async Task<TosDto?> GetTosByVoyagePortIdAsync(Guid voyagePortId, CancellationToken ct = default)
+    {
+        var tos = await _tosRepo.GetByVoyagePortIdAsync(voyagePortId, ct);
+        if (tos == null) return null;
+
+        var dto = new TosDto
+        {
+            Id = tos.Id,
+            VoyagePortId = tos.VoyagePortId,
+            DischargeMoves = tos.DischargeMoves,
+            LoadMoves = tos.LoadMoves,
+            Restows = tos.Restows,
+            TotalHatchCover = tos.TotalHatchCover,
+            NoOfBin = tos.NoOfBin,
+            TotalMoves = tos.TotalMoves
+        };
+
+        // Load crane productivity (separate table)
+        var cp = await _craneProductivityRepo.GetByTosIdAsync(tos.Id, ct);
+        if (cp != null)
+        {
+            dto.CraneProductivity = new CraneProductivityDto
+            {
+                Id = cp.Id,
+                CranesPerSI = cp.CranesPerSI,
+                ActualCranes = cp.ActualCranes,
+                TotalOpsTime = cp.TotalOpsTime,
+                NonProductiveTime = cp.NonProductiveTime,
+                CraneWorkingHrs = cp.CraneWorkingHrs,
+                CraneProductivityPerHr = cp.CraneProductivityPerHr,
+                MovesPerCrane = cp.MovesPerCrane
+            };
+        }
+
+        // Load ship productivity (separate table)
+        var sp = await _shipProductivityRepo.GetByTosIdAsync(tos.Id, ct);
+        if (sp != null)
+        {
+            dto.ShipProductivity = new ShipProductivityDto
+            {
+                Id = sp.Id,
+                PortStayTime = sp.PortStayTime,
+                ProductivityPerHr = sp.ProductivityPerHr,
+                MovesPerCrane = sp.MovesPerCrane
+            };
+        }
+
+        // Load TOS summary (separate table)
+        var summary = await _tosSummaryRepo.GetByTosIdAsync(tos.Id, ct);
+        if (summary != null)
+        {
+            dto.Summary = new TosSummaryDto
+            {
+                Id = summary.Id,
+                VesselTurnaroundTime = summary.VesselTurnaroundTime,
+                BerthingDelay = summary.BerthingDelay,
+                TotalMoves = summary.TotalMoves,
+                NonProductiveTime = summary.NonProductiveTime,
+                TerminalProductivity = summary.TerminalProductivity,
+                ShipProductivity = summary.ShipProductivity
+            };
+        }
+
+        var stoppages = await _tosStoppageRepo.GetByTosIdAsync(tos.Id, ct);
+        dto.Stoppages = stoppages.Select(s => new TosStoppageDto
+        {
+            Id = s.Id,
+            RowNumber = s.RowNumber,
+            FromDateTime = s.FromDateTime,
+            ToDateTime = s.ToDateTime,
+            NonProductiveHours = s.NonProductiveHours,
+            Reason = s.Reason
+        }).ToList();
+
+        return dto;
+    }
+
+    public async Task<Guid> SaveTosAsync(TosDto dto, CancellationToken ct = default)
+    {
+        var existing = await _tosRepo.GetByVoyagePortIdAsync(dto.VoyagePortId, ct);
+
+        Guid tosId;
+        if (existing != null)
+        {
+            existing.DischargeMoves = dto.DischargeMoves;
+            existing.LoadMoves = dto.LoadMoves;
+            existing.Restows = dto.Restows;
+            existing.TotalHatchCover = dto.TotalHatchCover;
+            existing.NoOfBin = dto.NoOfBin;
+            existing.TotalMoves = dto.TotalMoves;
+            existing.ModifiedBy = dto.ModifiedBy;
+
+            await _tosRepo.UpdateAsync(existing, ct);
+            tosId = existing.Id;
+        }
+        else
+        {
+            var tos = new Tos
+            {
+                Id = Guid.NewGuid(),
+                VoyagePortId = dto.VoyagePortId,
+                DischargeMoves = dto.DischargeMoves,
+                LoadMoves = dto.LoadMoves,
+                Restows = dto.Restows,
+                TotalHatchCover = dto.TotalHatchCover,
+                NoOfBin = dto.NoOfBin,
+                TotalMoves = dto.TotalMoves,
+                CreatedBy = dto.CreatedBy
+            };
+
+            await _tosRepo.AddAsync(tos, ct);
+            tosId = tos.Id;
+        }
+
+        // Save stoppages — skip entirely empty rows
+        var stoppages = dto.Stoppages
+            .Where(s => s.FromDateTime.HasValue || s.ToDateTime.HasValue || s.NonProductiveHours.HasValue || !string.IsNullOrWhiteSpace(s.Reason))
+            .Select((s, idx) => new TosStoppage
+            {
+                RowNumber = idx + 1,
+                FromDateTime = s.FromDateTime,
+                ToDateTime = s.ToDateTime,
+                NonProductiveHours = s.NonProductiveHours,
+                Reason = s.Reason,
+                CreatedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy,
+                ModifiedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy
+            }).ToList();
+
+        await _tosStoppageRepo.ReplaceForTosAsync(tosId, stoppages, ct);
+
+        // Save Crane Productivity (separate table)
+        if (dto.CraneProductivity != null)
+        {
+            var cp = new CraneProductivity
+            {
+                TosId = tosId,
+                CranesPerSI = dto.CraneProductivity.CranesPerSI,
+                ActualCranes = dto.CraneProductivity.ActualCranes,
+                TotalOpsTime = dto.CraneProductivity.TotalOpsTime,
+                NonProductiveTime = dto.CraneProductivity.NonProductiveTime,
+                CraneWorkingHrs = dto.CraneProductivity.CraneWorkingHrs,
+                CraneProductivityPerHr = dto.CraneProductivity.CraneProductivityPerHr,
+                MovesPerCrane = dto.CraneProductivity.MovesPerCrane,
+                CreatedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy,
+                ModifiedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy
+            };
+            await _craneProductivityRepo.UpsertAsync(cp, ct);
+        }
+
+        // Save Ship Productivity (separate table)
+        if (dto.ShipProductivity != null)
+        {
+            var sp = new ShipProductivity
+            {
+                TosId = tosId,
+                PortStayTime = dto.ShipProductivity.PortStayTime,
+                ProductivityPerHr = dto.ShipProductivity.ProductivityPerHr,
+                MovesPerCrane = dto.ShipProductivity.MovesPerCrane,
+                CreatedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy,
+                ModifiedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy
+            };
+            await _shipProductivityRepo.UpsertAsync(sp, ct);
+        }
+
+        // Save TOS Summary (separate table)
+        if (dto.Summary != null)
+        {
+            var summary = new TosSummary
+            {
+                TosId = tosId,
+                VesselTurnaroundTime = dto.Summary.VesselTurnaroundTime,
+                BerthingDelay = dto.Summary.BerthingDelay,
+                TotalMoves = dto.Summary.TotalMoves,
+                NonProductiveTime = dto.Summary.NonProductiveTime,
+                TerminalProductivity = dto.Summary.TerminalProductivity,
+                ShipProductivity = dto.Summary.ShipProductivity,
+                CreatedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy,
+                ModifiedBy = dto.ModifiedBy != Guid.Empty ? dto.ModifiedBy : dto.CreatedBy
+            };
+            await _tosSummaryRepo.UpsertAsync(summary, ct);
+        }
+
+        return tosId;
     }
 }

@@ -441,21 +441,24 @@
 
         // path → { label, icon }
         const tabMeta = {
-            '/jobs':            { label: 'Dashboard',  icon: 'bi-kanban' },
-            '/operators':       { label: 'Operators',  icon: 'bi-building' },
-            '/regions':         { label: 'Regions',    icon: 'bi-globe2' },
-            '/countries':       { label: 'Countries',  icon: 'bi-flag' },
-            '/ports':           { label: 'Ports',      icon: 'bi-geo-alt' },
-            '/terminals':       { label: 'Terminals',  icon: 'bi-pin-map' },
-            '/vendors':         { label: 'Vendors',    icon: 'bi-shop' },
-            '/servicemasters':  { label: 'Services',   icon: 'bi-truck' },
-            '/routemasters':    { label: 'Routes',     icon: 'bi-signpost-2' },
-            '/distancemasters': { label: 'Distances',  icon: 'bi-rulers' },
-            '/slotmasters':     { label: 'Slots',      icon: 'bi-grid-3x3' },
-            '/vessels':         { label: 'Vessels',    icon: 'bi-water' },
-            '/voyages':         { label: 'Voyages',    icon: 'bi-compass' },
-            '/schedules':       { label: 'Schedules',  icon: 'bi-calendar3' },
-            '/users':           { label: 'Users',      icon: 'bi-people' }
+            '/jobs':              { label: 'Dashboard',  icon: 'bi-kanban' },
+            '/operators':         { label: 'Operators',  icon: 'bi-building' },
+            '/regions':           { label: 'Regions',    icon: 'bi-globe2' },
+            '/countries':         { label: 'Countries',  icon: 'bi-flag' },
+            '/ports':             { label: 'Ports',      icon: 'bi-geo-alt' },
+            '/terminals':         { label: 'Terminals',  icon: 'bi-pin-map' },
+            '/vendors':           { label: 'Vendors',    icon: 'bi-shop' },
+            '/servicemasters':    { label: 'Services',   icon: 'bi-truck' },
+            '/routemasters':      { label: 'Routes',     icon: 'bi-signpost-2' },
+            '/distancemasters':   { label: 'Distances',  icon: 'bi-rulers' },
+            '/slotmasters':       { label: 'Slots',      icon: 'bi-grid-3x3' },
+            '/vessels':           { label: 'Vessels',    icon: 'bi-water' },
+            '/voyages/arrival':   { label: 'Arrival',    icon: 'bi-clipboard-data' },
+            '/voyages/departure': { label: 'Departure',  icon: 'bi-box-arrow-right' },
+            '/voyages/tos':       { label: 'TOS',        icon: 'bi-clipboard2-data' },
+            '/voyages':           { label: 'Voyages',    icon: 'bi-compass' },
+            '/schedules':         { label: 'Schedules',  icon: 'bi-calendar3' },
+            '/users':             { label: 'Users',      icon: 'bi-people' }
         };
 
         function getTabs() {
@@ -466,7 +469,9 @@
 
         function getBaseRoute(href) {
             const p = href.toLowerCase().replace(/\/+$/, '');
-            for (const prefix of Object.keys(tabMeta)) {
+            // Match longer prefixes first so /voyages/arrival wins over /voyages
+            const prefixes = Object.keys(tabMeta).sort((a, b) => b.length - a.length);
+            for (const prefix of prefixes) {
                 if (p === prefix || p.startsWith(prefix + '/')) return prefix;
             }
             return p;

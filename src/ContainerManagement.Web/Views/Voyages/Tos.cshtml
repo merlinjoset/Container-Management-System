@@ -1,0 +1,729 @@
+@using ContainerManagement.Application.Dtos.Voyages
+@model TosDto
+@{
+    ViewData["Title"] = "TOS Report";
+    var port = ViewBag.VoyagePort as VoyagePortListItemDto;
+    var voyage = ViewBag.ParentVoyage as VoyageListItemDto;
+    var isEdit = Model.Id != Guid.Empty;
+}
+
+@section Styles {
+<style>
+    .tos-page { max-width: 960px; }
+    .tos-header {
+        background: linear-gradient(135deg, #065f46, #047857);
+        color: #fff; border-radius: .5rem; padding: 1rem 1.25rem; margin-bottom: 1rem;
+    }
+    .tos-header h5 { margin: 0; font-weight: 700; font-size: 1rem; }
+    .tos-header .subtitle { font-size: .75rem; opacity: .8; margin-top: .2rem; }
+    .tos-context { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .tos-context .ctx-item { font-size: .78rem; }
+    .tos-context .ctx-label { font-weight: 600; color: #065f46; margin-right: .25rem; }
+    .tos-context .ctx-value { color: #374151; }
+    .tos-section {
+        background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; margin-bottom: 1rem; overflow: hidden;
+    }
+    .tos-section-header {
+        background: #ecfdf5; padding: .5rem .85rem; font-size: .78rem; font-weight: 600; color: #065f46;
+        border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: .4rem;
+    }
+    .tos-section-body { padding: .75rem 1rem; }
+    .tos-section .form-label { font-size: .72rem; font-weight: 600; color: #475569; margin-bottom: .15rem; }
+    .tos-section .form-control, .tos-section .form-select { font-size: .78rem; }
+    .tos-footer { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+    .computed-field { background-color: #f3f4f6 !important; }
+    .stoppage-table { font-size: .78rem; }
+    .stoppage-table th { font-size: .72rem; font-weight: 600; color: #475569; }
+    .stoppage-table .form-control { font-size: .78rem; }
+    .btn-add-row { font-size: .75rem; }
+    .btn-remove-row { font-size: .7rem; padding: .15rem .4rem; }
+</style>
+}
+
+<div class="operator-page tos-page">
+
+    <!-- Header -->
+    <div class="tos-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h5><i class="bi bi-clipboard2-data me-2"></i>TOS Report</h5>
+                <div class="subtitle">@(isEdit ? "Edit TOS data" : "Record new TOS data") for port rotation</div>
+            </div>
+            <div class="d-flex gap-2">
+                @if (isEdit)
+                {
+                    <a asp-action="ExportTos" asp-route-id="@Model.VoyagePortId" class="btn btn-sm btn-outline-light" data-no-loader title="Export TOS report to Excel">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Excel
+                    </a>
+                }
+                <a asp-action="Index" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left me-1"></i>Back to Voyages</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Info -->
+    <div class="tos-context">
+        <div class="ctx-item"><span class="ctx-label">Vessel:</span><span class="ctx-value">@(voyage?.VesselName ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Service:</span><span class="ctx-value">@(voyage?.ServiceCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Port:</span><span class="ctx-value">@(port?.PortCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Terminal:</span><span class="ctx-value">@(port?.TerminalCode ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETA:</span><span class="ctx-value">@(port?.ETA?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETB:</span><span class="ctx-value">@(port?.ETB?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        <div class="ctx-item"><span class="ctx-label">Planned ETD:</span><span class="ctx-value">@(port?.ETD?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+    </div>
+
+    <input type="hidden" id="voyagePortId" value="@Model.VoyagePortId" />
+    <input type="hidden" id="tosId" value="@Model.Id" />
+
+    <!-- Section 1: Operation Stoppage Time -->
+    <div class="tos-section">
+        <div class="tos-section-header"><i class="bi bi-pause-circle"></i> Operation Stoppage Time</div>
+        <div class="tos-section-body">
+            <table class="table table-sm table-bordered stoppage-table mb-2">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px;" class="text-center">#</th>
+                        <th>From (Date + Time)</th>
+                        <th>To (Date + Time)</th>
+                        <th style="width:120px;" class="text-center">Non-Prod Hrs</th>
+                        <th>Reason</th>
+                        <th style="width:60px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="stoppageBody">
+                    <!-- Dynamic rows rendered by JS -->
+                </tbody>
+            </table>
+            <div class="d-flex align-items-center justify-content-between">
+                <button type="button" class="btn btn-outline-success btn-sm btn-add-row" id="btnAddStoppage"><i class="bi bi-plus-circle me-1"></i>Add Row</button>
+                <div style="font-size:.78rem; font-weight:600; color:#065f46;">
+                    Total Non-Productive Time: <span id="totalNonProductiveDisplay">0.00</span> hrs
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Container Moves -->
+    <div class="tos-section">
+        <div class="tos-section-header"><i class="bi bi-boxes"></i> Container Moves</div>
+        <div class="tos-section-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Discharge Moves</label>
+                    <input type="number" min="0" step="1" class="form-control form-control-sm moves-input" id="dischargeMoves" value="@Model.DischargeMoves" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Load Moves</label>
+                    <input type="number" min="0" step="1" class="form-control form-control-sm moves-input" id="loadMoves" value="@Model.LoadMoves" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">No of Restows</label>
+                    <input type="number" min="0" step="1" class="form-control form-control-sm moves-input" id="restows" value="@Model.Restows" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Total Hatch Cover</label>
+                    <input type="number" min="0" step="1" class="form-control form-control-sm moves-input" id="totalHatchCover" value="@Model.TotalHatchCover" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">No of Bin</label>
+                    <input type="number" min="0" step="1" class="form-control form-control-sm moves-input" id="noOfBin" value="@Model.NoOfBin" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Total Moves</label>
+                    <input type="number" class="form-control form-control-sm computed-field" id="totalMoves" value="@Model.TotalMoves" readonly />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Crane Productivity -->
+    @{
+        var commencedCargoOp = ViewBag.CommencedCargoOperation as DateTime?;
+        var completeCargoOp = ViewBag.CompleteCargoOperation as DateTime?;
+        decimal? totalOpsTime = null;
+        if (commencedCargoOp.HasValue && completeCargoOp.HasValue && completeCargoOp > commencedCargoOp)
+        {
+            totalOpsTime = (decimal)(completeCargoOp.Value - commencedCargoOp.Value).TotalHours;
+        }
+    }
+    <div class="tos-section">
+        <div class="tos-section-header"><i class="bi bi-building-gear"></i> Crane Productivity</div>
+        <div class="tos-section-body">
+            <table class="table table-sm table-bordered mb-0" style="max-width:600px; font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60%;">Metric</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">No of Cranes as per SI</td>
+                        <td><input type="number" min="0" step="1" class="form-control form-control-sm crane-input" id="cranesPerSI" value="@(Model.CraneProductivity?.CranesPerSI)" /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Actual Cranes</td>
+                        <td><input type="number" min="0" step="1" class="form-control form-control-sm crane-input" id="actualCranes" value="@(Model.CraneProductivity?.ActualCranes)" /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Total Ops Time (hrs)<br /><small class="text-muted fw-normal">Completed Cargo Ops (Departure) − Commenced Cargo Ops (Arrival)</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="totalOpsTime" value="@(totalOpsTime?.ToString("F2"))" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Non-Productive Time (hrs)<br /><small class="text-muted fw-normal">Sum of stoppage hours</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="nonProductiveTime" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Crane Working Hrs<br /><small class="text-muted fw-normal">Total Ops Time − Non-Productive Time</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="craneWorkingHrs" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Crane Productivity per hr<br /><small class="text-muted fw-normal">Total Moves / Crane Working Hrs</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="craneProductivityPerHr" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Moves / Crane<br /><small class="text-muted fw-normal">Crane Productivity per hr / Actual Cranes</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="movesPerCrane" readonly /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 4: Ship Productivity -->
+    @{
+        var actualETA = ViewBag.ActualETA as DateTime?;
+        var actualETD = ViewBag.ActualETD as DateTime?;
+        decimal? portStayTime = null;
+        if (actualETA.HasValue && actualETD.HasValue && actualETD > actualETA)
+        {
+            portStayTime = (decimal)(actualETD.Value - actualETA.Value).TotalHours;
+        }
+    }
+    <div class="tos-section">
+        <div class="tos-section-header"><i class="bi bi-speedometer2"></i> Ship Productivity</div>
+        <div class="tos-section-body">
+            <table class="table table-sm table-bordered mb-0" style="max-width:600px; font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60%;">Metric</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Port Stay Time (hrs)<br /><small class="text-muted fw-normal">Departure (BOSP) − Actual ETA (End of Passage)</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipPortStayTime" value="@(portStayTime?.ToString("F2") ?? Model.ShipProductivity?.PortStayTime?.ToString("F2"))" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Productivity per hr<br /><small class="text-muted fw-normal">Total Moves / Port Stay Time</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipProductivityPerHr" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Moves / Crane<br /><small class="text-muted fw-normal">Crane Productivity per hr / Actual Cranes</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipMovesPerCrane" readonly /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 5: Summary -->
+    @{
+        var arrPilot = ViewBag.ArrivalPilotOnBoard as DateTime?;
+        decimal? vesselTurnaround = null;
+        if (actualETA.HasValue && actualETD.HasValue && actualETD > actualETA)
+        {
+            vesselTurnaround = (decimal)(actualETD.Value - actualETA.Value).TotalHours;
+        }
+        decimal? berthingDelay = null;
+        if (actualETA.HasValue && arrPilot.HasValue)
+        {
+            var diff = (arrPilot.Value - actualETA.Value).TotalHours;
+            berthingDelay = (decimal)Math.Abs(diff);
+        }
+    }
+    <div class="tos-section">
+        <div class="tos-section-header"><i class="bi bi-journal-text"></i> Summary</div>
+        <div class="tos-section-body">
+            <table class="table table-sm table-bordered mb-0" style="max-width:600px; font-size:.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60%;">Metric</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Vessel Turnaround Time (hrs)<br /><small class="text-muted fw-normal">Departure (BOSP) − Actual ETA (End of Passage)</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="summaryVesselTurnaround" value="@(vesselTurnaround?.ToString("F2") ?? Model.Summary?.VesselTurnaroundTime?.ToString("F2"))" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Berthing Delay (hrs)<br /><small class="text-muted fw-normal">| Pilot On Board (Arrival) − Actual ETA (End of Passage) |</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="summaryBerthingDelay" value="@(berthingDelay?.ToString("F2") ?? Model.Summary?.BerthingDelay?.ToString("F2"))" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Total Moves</td>
+                        <td><input type="number" class="form-control form-control-sm computed-field" id="summaryTotalMoves" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Non-Productive Time (hrs)<br /><small class="text-muted fw-normal">Sum of stoppage hours</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="summaryNonProductiveTime" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Terminal Productivity<br /><small class="text-muted fw-normal">= Crane Productivity per hr</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="summaryTerminalProductivity" readonly /></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold" style="color:#475569;">Ship Productivity<br /><small class="text-muted fw-normal">Total Moves / Port Stay Time</small></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="summaryShipProductivity" readonly /></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="tos-footer">
+        <a asp-action="Index" class="btn btn-light btn-sm">Cancel</a>
+        <button class="btn btn-sm" style="background:#065f46;color:#fff;" id="btnSave" onclick="saveTos()">
+            <span id="btnSaveText"><i class="bi bi-check-lg me-1"></i>Save TOS Report</span>
+            <span id="btnSaveLoader" style="display:none;"><span class="spinner-border spinner-border-sm me-1"></span>Saving...</span>
+        </button>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+    <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── Helpers ──
+    function val(id) { return document.getElementById(id)?.value?.trim() || null; }
+    function numVal(id) { var v = document.getElementById(id)?.value; return v ? parseFloat(v) : null; }
+    function intVal(id) { var v = document.getElementById(id)?.value; return v ? parseInt(v, 10) : null; }
+
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    function dmyToIso(dmy) {
+        if (!dmy) return null;
+        var m = dmy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!m) return null;
+        return m[3] + '-' + m[2] + '-' + m[1];
+    }
+
+    // Combine separate date (DD/MM/YYYY) + time (HH:MM) into ISO string
+    function combineDT(dateId, timeId) {
+        var d = dmyToIso(document.getElementById(dateId)?.value?.trim());
+        var t = document.getElementById(timeId)?.value?.trim();
+        if (!d) return null;
+        return t ? d + 'T' + t : d + 'T00:00';
+    }
+
+    // ── Stoppage Rows ──
+    var maxStoppages = 10;
+    var existingStoppages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Stoppages ?? new List<TosStoppageDto>(),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+
+    function renderStoppageRows() {
+        var body = document.getElementById('stoppageBody');
+        var rows = body.querySelectorAll('tr');
+        if (rows.length === 0 && existingStoppages.length > 0) {
+            // Initial load from server data
+            for (var i = 0; i < existingStoppages.length; i++) {
+                addStoppageRow(existingStoppages[i]);
+            }
+        }
+    }
+
+    function addStoppageRow(data) {
+        var body = document.getElementById('stoppageBody');
+        var currentCount = body.querySelectorAll('tr').length;
+        if (currentCount >= maxStoppages) return;
+
+        var rowNum = currentCount + 1;
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-row', rowNum);
+
+        var fromDate = '';
+        var fromTime = '';
+        var toDate = '';
+        var toTime = '';
+        var reason = '';
+        var nph = '';
+
+        if (data) {
+            if (data.fromDateTime) {
+                var fd = new Date(data.fromDateTime);
+                if (!isNaN(fd.getTime())) {
+                    fromDate = ('0' + fd.getDate()).slice(-2) + '/' + ('0' + (fd.getMonth() + 1)).slice(-2) + '/' + fd.getFullYear();
+                    fromTime = ('0' + fd.getHours()).slice(-2) + ':' + ('0' + fd.getMinutes()).slice(-2);
+                }
+            }
+            if (data.toDateTime) {
+                var td = new Date(data.toDateTime);
+                if (!isNaN(td.getTime())) {
+                    toDate = ('0' + td.getDate()).slice(-2) + '/' + ('0' + (td.getMonth() + 1)).slice(-2) + '/' + td.getFullYear();
+                    toTime = ('0' + td.getHours()).slice(-2) + ':' + ('0' + td.getMinutes()).slice(-2);
+                }
+            }
+            reason = data.reason || '';
+            nph = data.nonProductiveHours != null ? data.nonProductiveHours : '';
+        }
+
+        tr.innerHTML =
+            '<td class="text-center align-middle fw-semibold stoppage-row-num">' + rowNum + '</td>' +
+            '<td>' +
+                '<div class="d-flex gap-1">' +
+                    '<input type="text" class="form-control form-control-sm date-dmy stoppage-from-date" value="' + fromDate + '" placeholder="dd/mm/yyyy" maxlength="10" />' +
+                    '<input type="text" class="form-control form-control-sm time-24 stoppage-from-time" value="' + fromTime + '" placeholder="hh:mm" maxlength="5" style="max-width:70px; text-align:center;" />' +
+                '</div>' +
+            '</td>' +
+            '<td>' +
+                '<div class="d-flex gap-1">' +
+                    '<input type="text" class="form-control form-control-sm date-dmy stoppage-to-date" value="' + toDate + '" placeholder="dd/mm/yyyy" maxlength="10" />' +
+                    '<input type="text" class="form-control form-control-sm time-24 stoppage-to-time" value="' + toTime + '" placeholder="hh:mm" maxlength="5" style="max-width:70px; text-align:center;" />' +
+                '</div>' +
+            '</td>' +
+            '<td><input type="number" class="form-control form-control-sm computed-field stoppage-nph text-center" value="' + nph + '" readonly /></td>' +
+            '<td><input type="text" class="form-control form-control-sm stoppage-reason" value="' + reason.replace(/"/g, '&quot;') + '" maxlength="500" /></td>' +
+            '<td class="text-center align-middle"><button type="button" class="btn btn-outline-danger btn-sm btn-remove-row" onclick="removeStoppageRow(this)"><i class="bi bi-x-lg"></i></button></td>';
+
+        body.appendChild(tr);
+        bindStoppageInputs(tr);
+        bindDateTimeMasks(tr);
+    }
+
+    function removeStoppageRow(btn) {
+        var tr = btn.closest('tr');
+        tr.remove();
+        renumberStoppageRows();
+        calcTotalNonProductiveTime();
+        recalcAll();
+    }
+
+    function renumberStoppageRows() {
+        var rows = document.querySelectorAll('#stoppageBody tr');
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].setAttribute('data-row', i + 1);
+            rows[i].querySelector('.stoppage-row-num').textContent = i + 1;
+        }
+    }
+
+    function bindStoppageInputs(tr) {
+        var inputs = tr.querySelectorAll('.stoppage-from-date, .stoppage-from-time, .stoppage-to-date, .stoppage-to-time');
+        for (var i = 0; i < inputs.length; i++) {
+            inputs[i].addEventListener('blur', function() {
+                calcStoppageRowHours(tr);
+                calcTotalNonProductiveTime();
+                recalcAll();
+            });
+        }
+    }
+
+    function calcStoppageRowHours(tr) {
+        var fromDateVal = tr.querySelector('.stoppage-from-date').value.trim();
+        var fromTimeVal = tr.querySelector('.stoppage-from-time').value.trim();
+        var toDateVal = tr.querySelector('.stoppage-to-date').value.trim();
+        var toTimeVal = tr.querySelector('.stoppage-to-time').value.trim();
+
+        var fromIso = dmyToIso(fromDateVal);
+        var toIso = dmyToIso(toDateVal);
+
+        if (!fromIso || !toIso || !fromTimeVal || !toTimeVal) {
+            tr.querySelector('.stoppage-nph').value = '';
+            return;
+        }
+
+        var fromDt = new Date(fromIso + 'T' + fromTimeVal);
+        var toDt = new Date(toIso + 'T' + toTimeVal);
+
+        if (isNaN(fromDt.getTime()) || isNaN(toDt.getTime()) || toDt <= fromDt) {
+            tr.querySelector('.stoppage-nph').value = '';
+            return;
+        }
+
+        var diffHrs = (toDt - fromDt) / (1000 * 60 * 60);
+        tr.querySelector('.stoppage-nph').value = diffHrs.toFixed(2);
+    }
+
+    function calcTotalNonProductiveTime() {
+        var nphInputs = document.querySelectorAll('.stoppage-nph');
+        var total = 0;
+        for (var i = 0; i < nphInputs.length; i++) {
+            var v = parseFloat(nphInputs[i].value);
+            if (!isNaN(v)) total += v;
+        }
+        document.getElementById('totalNonProductiveDisplay').textContent = total.toFixed(2);
+        var npt = document.getElementById('nonProductiveTime');
+        if (npt) npt.value = total > 0 ? total.toFixed(2) : '';
+        calcCraneProductivity();
+    }
+
+    function calcCraneProductivity() {
+        var totalMoves = parseFloat(document.getElementById('totalMoves').value) || 0;
+        var totalOpsTime = parseFloat(document.getElementById('totalOpsTime').value) || 0;
+        var nonProdTime = parseFloat(document.getElementById('nonProductiveTime').value) || 0;
+        var actualCranes = parseFloat(document.getElementById('actualCranes').value) || 0;
+
+        var craneWorkingHrs = totalOpsTime - nonProdTime;
+        document.getElementById('craneWorkingHrs').value = craneWorkingHrs > 0 ? craneWorkingHrs.toFixed(2) : '';
+
+        var craneProd = (craneWorkingHrs > 0 && totalMoves > 0) ? (totalMoves / craneWorkingHrs) : 0;
+        document.getElementById('craneProductivityPerHr').value = craneProd > 0 ? craneProd.toFixed(2) : '';
+
+        var movesPerCrane = (actualCranes > 0 && craneProd > 0) ? (craneProd / actualCranes) : 0;
+        document.getElementById('movesPerCrane').value = movesPerCrane > 0 ? movesPerCrane.toFixed(2) : '';
+
+        calcShipProductivity();
+    }
+
+    function calcShipProductivity() {
+        var totalMoves = parseFloat(document.getElementById('totalMoves').value) || 0;
+        var portStayTime = parseFloat(document.getElementById('shipPortStayTime').value) || 0;
+        var craneProd = parseFloat(document.getElementById('craneProductivityPerHr').value) || 0;
+        var actualCranes = parseFloat(document.getElementById('actualCranes').value) || 0;
+
+        var shipProd = (portStayTime > 0 && totalMoves > 0) ? (totalMoves / portStayTime) : 0;
+        document.getElementById('shipProductivityPerHr').value = shipProd > 0 ? shipProd.toFixed(2) : '';
+
+        // Moves/Crane = Crane Productivity per hr / Actual Cranes
+        var shipMovesPerCrane = (craneProd > 0 && actualCranes > 0) ? (craneProd / actualCranes) : 0;
+        document.getElementById('shipMovesPerCrane').value = shipMovesPerCrane > 0 ? shipMovesPerCrane.toFixed(2) : '';
+
+        calcSummary();
+    }
+
+    function calcSummary() {
+        var totalMoves = parseFloat(document.getElementById('totalMoves').value) || 0;
+        var nonProd = parseFloat(document.getElementById('nonProductiveTime').value) || 0;
+        var craneProd = parseFloat(document.getElementById('craneProductivityPerHr').value) || 0;
+        var shipProd = parseFloat(document.getElementById('shipProductivityPerHr').value) || 0;
+
+        var elTotal = document.getElementById('summaryTotalMoves');
+        var elNP = document.getElementById('summaryNonProductiveTime');
+        var elTerm = document.getElementById('summaryTerminalProductivity');
+        var elShip = document.getElementById('summaryShipProductivity');
+
+        if (elTotal) elTotal.value = totalMoves > 0 ? totalMoves : '';
+        if (elNP) elNP.value = nonProd > 0 ? nonProd.toFixed(2) : '';
+        if (elTerm) elTerm.value = craneProd > 0 ? craneProd.toFixed(2) : '';
+        if (elShip) elShip.value = shipProd > 0 ? shipProd.toFixed(2) : '';
+    }
+
+    document.getElementById('btnAddStoppage').addEventListener('click', function() {
+        addStoppageRow(null);
+    });
+
+    // ── Auto-calculations ──
+    function recalcAll() {
+        calcTotalMoves();
+        calcCraneProductivity();
+    }
+
+    function calcTotalMoves() {
+        var d = intVal('dischargeMoves') || 0;
+        var l = intVal('loadMoves') || 0;
+        var r = intVal('restows') || 0;
+        var h = intVal('totalHatchCover') || 0;
+        var b = intVal('noOfBin') || 0;
+        var total = d + l + r + h + b;
+        document.getElementById('totalMoves').value = total > 0 ? total : '';
+    }
+
+    // Bind input events for moves and crane fields
+    document.querySelectorAll('.moves-input').forEach(function(el) {
+        el.addEventListener('input', function() { recalcAll(); });
+    });
+    document.querySelectorAll('.crane-input').forEach(function(el) {
+        el.addEventListener('input', function() { calcCraneProductivity(); });
+    });
+
+    // ── Date/Time masks ──
+    function bindDateTimeMasks(container) {
+        container.querySelectorAll('.date-dmy').forEach(function(el) {
+            el.addEventListener('input', function() {
+                var v = el.value.replace(/[^\d]/g, '');
+                if (v.length > 8) v = v.slice(0, 8);
+                if (v.length >= 5) {
+                    v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+                } else if (v.length >= 3) {
+                    v = v.slice(0, 2) + '/' + v.slice(2);
+                }
+                el.value = v;
+            });
+
+            el.addEventListener('blur', function() {
+                var v = el.value.trim();
+                if (!v) return;
+                var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (!m) { el.classList.add('is-invalid'); return; }
+                var dd = parseInt(m[1], 10);
+                var mm = parseInt(m[2], 10);
+                var yyyy = parseInt(m[3], 10);
+                if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 2000 || yyyy > 2099) {
+                    el.classList.add('is-invalid'); return;
+                }
+                var testDate = new Date(yyyy, mm - 1, dd);
+                if (testDate.getDate() !== dd || testDate.getMonth() !== mm - 1) {
+                    el.classList.add('is-invalid'); return;
+                }
+                el.classList.remove('is-invalid');
+            });
+
+            el.addEventListener('focus', function() {
+                el.classList.remove('is-invalid');
+            });
+        });
+
+        container.querySelectorAll('.time-24').forEach(function(el) {
+            el.addEventListener('input', function() {
+                var v = el.value.replace(/[^\d]/g, '');
+                if (v.length > 4) v = v.slice(0, 4);
+                if (v.length >= 3) {
+                    v = v.slice(0, 2) + ':' + v.slice(2);
+                }
+                el.value = v;
+            });
+
+            el.addEventListener('blur', function() {
+                var v = el.value.trim();
+                if (!v) return;
+                var m = v.match(/^(\d{1,2}):(\d{2})$/);
+                if (!m) { el.value = ''; el.classList.add('is-invalid'); return; }
+                var hh = parseInt(m[1], 10);
+                var mm = parseInt(m[2], 10);
+                if (hh > 23 || mm > 59) { el.value = ''; el.classList.add('is-invalid'); return; }
+                el.value = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
+                el.classList.remove('is-invalid');
+            });
+
+            el.addEventListener('focus', function() {
+                el.classList.remove('is-invalid');
+            });
+        });
+    }
+
+    // Bind masks on the page-level (for non-dynamic elements, if any)
+    bindDateTimeMasks(document);
+
+    // ── Collect Stoppages (skip entirely empty rows) ──
+    function collectStoppages() {
+        var rows = document.querySelectorAll('#stoppageBody tr');
+        var result = [];
+        var outNum = 1;
+        for (var i = 0; i < rows.length; i++) {
+            var tr = rows[i];
+            var fromDateVal = tr.querySelector('.stoppage-from-date').value.trim();
+            var fromTimeVal = tr.querySelector('.stoppage-from-time').value.trim();
+            var toDateVal = tr.querySelector('.stoppage-to-date').value.trim();
+            var toTimeVal = tr.querySelector('.stoppage-to-time').value.trim();
+            var nphVal = tr.querySelector('.stoppage-nph').value.trim();
+            var reasonVal = tr.querySelector('.stoppage-reason').value.trim();
+
+            // Skip rows with no data at all
+            if (!fromDateVal && !fromTimeVal && !toDateVal && !toTimeVal && !nphVal && !reasonVal) {
+                continue;
+            }
+
+            var fromIso = dmyToIso(fromDateVal);
+            var toIso = dmyToIso(toDateVal);
+
+            result.push({
+                rowNumber: outNum++,
+                fromDateTime: fromIso ? (fromIso + 'T' + (fromTimeVal || '00:00')) : null,
+                toDateTime: toIso ? (toIso + 'T' + (toTimeVal || '00:00')) : null,
+                nonProductiveHours: parseFloat(nphVal) || null,
+                reason: reasonVal || null
+            });
+        }
+        return result;
+    }
+
+    // ── Save ──
+    function setLoading(on) {
+        var btn = document.getElementById('btnSave');
+        document.getElementById('btnSaveText').style.display = on ? 'none' : '';
+        document.getElementById('btnSaveLoader').style.display = on ? '' : 'none';
+        btn.disabled = on;
+    }
+
+    function showToast(msg, type) {
+        var t = document.getElementById('toast');
+        t.className = 'toast align-items-center text-bg-' + type + ' border-0';
+        document.getElementById('toastMsg').textContent = msg;
+        new bootstrap.Toast(t).show();
+    }
+
+    async function saveTos() {
+        setLoading(true);
+
+        var payload = {
+            voyagePortId: val('voyagePortId'),
+            dischargeMoves: intVal('dischargeMoves'),
+            loadMoves: intVal('loadMoves'),
+            restows: intVal('restows'),
+            totalHatchCover: intVal('totalHatchCover'),
+            noOfBin: intVal('noOfBin'),
+            totalMoves: intVal('totalMoves'),
+            stoppages: collectStoppages(),
+            craneProductivity: {
+                cranesPerSI: intVal('cranesPerSI'),
+                actualCranes: intVal('actualCranes'),
+                totalOpsTime: numVal('totalOpsTime'),
+                nonProductiveTime: numVal('nonProductiveTime'),
+                craneWorkingHrs: numVal('craneWorkingHrs'),
+                craneProductivityPerHr: numVal('craneProductivityPerHr'),
+                movesPerCrane: numVal('movesPerCrane')
+            },
+            shipProductivity: {
+                portStayTime: numVal('shipPortStayTime'),
+                productivityPerHr: numVal('shipProductivityPerHr'),
+                movesPerCrane: numVal('shipMovesPerCrane')
+            },
+            summary: {
+                vesselTurnaroundTime: numVal('summaryVesselTurnaround'),
+                berthingDelay: numVal('summaryBerthingDelay'),
+                totalMoves: intVal('summaryTotalMoves'),
+                nonProductiveTime: numVal('summaryNonProductiveTime'),
+                terminalProductivity: numVal('summaryTerminalProductivity'),
+                shipProductivity: numVal('summaryShipProductivity')
+            }
+        };
+
+        try {
+            var resp = await fetch('@Url.Action("Tos", "Voyages")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            var result = await resp.json();
+            if (result.success) {
+                showToast('TOS report saved', 'success');
+                document.getElementById('tosId').value = result.id;
+            } else {
+                showToast(result.message || 'Error saving', 'danger');
+            }
+        } catch (err) {
+            showToast('Network error', 'danger');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // ── Initialize ──
+    renderStoppageRows();
+    if (existingStoppages.length === 0) {
+        addStoppageRow(null); // Start with one empty row
+    }
+    calcTotalNonProductiveTime();
+    recalcAll();
+</script>
+}

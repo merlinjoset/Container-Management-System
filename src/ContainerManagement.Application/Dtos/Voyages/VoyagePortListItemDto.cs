@@ -20,6 +20,7 @@ public class VoyagePortListItemDto
     public int SortOrder { get; set; }
     public bool HasArrival { get; set; }
     public bool HasDeparture { get; set; }
+    public bool HasTos { get; set; }
 
     // Actual dates from Arrival/Departure reports
     public DateTime? ActualETA { get; set; }

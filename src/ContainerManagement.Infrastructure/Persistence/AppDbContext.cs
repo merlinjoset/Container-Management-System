@@ -31,6 +31,11 @@ public class AppDbContext : DbContext
     public DbSet<BunkerOnArrivalEntity> BunkerOnArrivals => Set<BunkerOnArrivalEntity>();
     public DbSet<BunkerOnDepartureEntity> BunkerOnDepartures => Set<BunkerOnDepartureEntity>();
     public DbSet<BunkerSupplyEntity> BunkerSupplies => Set<BunkerSupplyEntity>();
+    public DbSet<TosEntity> Tos => Set<TosEntity>();
+    public DbSet<TosStoppageEntity> TosStoppages => Set<TosStoppageEntity>();
+    public DbSet<CraneProductivityEntity> CraneProductivities => Set<CraneProductivityEntity>();
+    public DbSet<ShipProductivityEntity> ShipProductivities => Set<ShipProductivityEntity>();
+    public DbSet<TosSummaryEntity> TosSummaries => Set<TosSummaryEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -727,6 +732,145 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             e.HasIndex(x => x.DepartureId).HasDatabaseName("IX_TblBunkerSupply_DepartureId");
+        });
+
+        // ---------------- TblTos ----------------
+        b.Entity<TosEntity>(e =>
+        {
+            e.ToTable("TblTos");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VoyagePortId).IsRequired();
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VoyagePortId)
+                .HasConstraintName("FK_TblTos_TblVoyagePort")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.VoyagePortId)
+                .IsUnique()
+                .HasDatabaseName("IX_TblTos_VoyagePortId");
+        });
+
+        // ---------------- TblTosStoppage ----------------
+        b.Entity<TosStoppageEntity>(e =>
+        {
+            e.ToTable("TblTosStoppage");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.TosId).IsRequired();
+            e.Property(x => x.RowNumber).IsRequired();
+            e.Property(x => x.NonProductiveHours).HasColumnType("decimal(10,2)");
+            e.Property(x => x.Reason).HasMaxLength(500);
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<TosEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.TosId)
+                .HasConstraintName("FK_TblTosStoppage_TblTos")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.TosId).HasDatabaseName("IX_TblTosStoppage_TosId");
+        });
+
+        // ---------------- TblCraneProductivity ----------------
+        b.Entity<CraneProductivityEntity>(e =>
+        {
+            e.ToTable("TblCraneProductivity");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.TosId).IsRequired();
+            e.Property(x => x.TotalOpsTime).HasColumnType("decimal(10,2)");
+            e.Property(x => x.NonProductiveTime).HasColumnType("decimal(10,2)");
+            e.Property(x => x.CraneWorkingHrs).HasColumnType("decimal(10,2)");
+            e.Property(x => x.CraneProductivityPerHr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.MovesPerCrane).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<TosEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.TosId)
+                .HasConstraintName("FK_TblCraneProductivity_TblTos")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.TosId)
+                .IsUnique()
+                .HasDatabaseName("IX_TblCraneProductivity_TosId");
+        });
+
+        // ---------------- TblShipProductivity ----------------
+        b.Entity<ShipProductivityEntity>(e =>
+        {
+            e.ToTable("TblShipProductivity");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.TosId).IsRequired();
+            e.Property(x => x.PortStayTime).HasColumnType("decimal(10,2)");
+            e.Property(x => x.ProductivityPerHr).HasColumnType("decimal(10,2)");
+            e.Property(x => x.MovesPerCrane).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<TosEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.TosId)
+                .HasConstraintName("FK_TblShipProductivity_TblTos")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.TosId)
+                .IsUnique()
+                .HasDatabaseName("IX_TblShipProductivity_TosId");
+        });
+
+        // ---------------- TblTOSSummary ----------------
+        b.Entity<TosSummaryEntity>(e =>
+        {
+            e.ToTable("TblTOSSummary");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.TosId).IsRequired();
+            e.Property(x => x.VesselTurnaroundTime).HasColumnType("decimal(10,2)");
+            e.Property(x => x.BerthingDelay).HasColumnType("decimal(10,2)");
+            e.Property(x => x.NonProductiveTime).HasColumnType("decimal(10,2)");
+            e.Property(x => x.TerminalProductivity).HasColumnType("decimal(10,2)");
+            e.Property(x => x.ShipProductivity).HasColumnType("decimal(10,2)");
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<TosEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.TosId)
+                .HasConstraintName("FK_TblTOSSummary_TblTos")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.TosId)
+                .IsUnique()
+                .HasDatabaseName("IX_TblTOSSummary_TosId");
         });
 
     }

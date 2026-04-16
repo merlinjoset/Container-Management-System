@@ -29,6 +29,11 @@ namespace ContainerManagement.Infrastructure
             services.AddScoped<IBunkerOnArrivalRepository, BunkerOnArrivalRepository>();
             services.AddScoped<IBunkerOnDepartureRepository, BunkerOnDepartureRepository>();
             services.AddScoped<IBunkerSupplyRepository, BunkerSupplyRepository>();
+            services.AddScoped<ITosRepository, TosRepository>();
+            services.AddScoped<ITosStoppageRepository, TosStoppageRepository>();
+            services.AddScoped<ICraneProductivityRepository, CraneProductivityRepository>();
+            services.AddScoped<IShipProductivityRepository, ShipProductivityRepository>();
+            services.AddScoped<ITosSummaryRepository, TosSummaryRepository>();
 
             return services;
         }

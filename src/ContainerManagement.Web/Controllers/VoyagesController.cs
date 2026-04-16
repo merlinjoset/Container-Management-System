@@ -227,6 +227,199 @@ namespace ContainerManagement.Web.Controllers
             }
         }
 
+        // ── TOS (Terminal Operating System) ──
+
+        [HttpGet]
+        public async Task<IActionResult> Tos(Guid id, CancellationToken ct)
+        {
+            var allVoyages = await _voyageService.GetAllAsync(ct);
+            VoyagePortListItemDto? portItem = null;
+            VoyageListItemDto? parentVoyage = null;
+
+            foreach (var v in allVoyages)
+            {
+                var ports = await _voyageService.GetPortsByVoyageIdAsync(v.Id, ct);
+                portItem = ports.FirstOrDefault(p => p.Id == id);
+                if (portItem != null) { parentVoyage = v; break; }
+            }
+
+            if (portItem == null) return NotFound();
+
+            var tos = await _voyageService.GetTosByVoyagePortIdAsync(id, ct);
+
+            // Load arrival/departure for Total Ops Time calculation
+            var arrival = await _voyageService.GetArrivalByVoyagePortIdAsync(id, ct);
+            var departure = await _voyageService.GetDepartureByVoyagePortIdAsync(id, ct);
+
+            ViewBag.VoyagePort = portItem;
+            ViewBag.ParentVoyage = parentVoyage;
+            ViewBag.CommencedCargoOperation = arrival?.CommencedCargoOperation;
+            ViewBag.CompleteCargoOperation = departure?.CompleteCargoOperation;
+            ViewBag.ActualETA = arrival?.ActualETA;
+            ViewBag.ActualETD = departure?.ActualETD;
+            ViewBag.ArrivalPilotOnBoard = arrival?.PilotOnBoard;
+
+            return View(tos ?? new TosDto { VoyagePortId = id });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Tos([FromBody] TosDto dto, CancellationToken ct)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return Unauthorized(Json(new { success = false, message = "Invalid session." }));
+
+                dto.CreatedBy = userId;
+                dto.ModifiedBy = userId;
+
+                var tosId = await _voyageService.SaveTosAsync(dto, ct);
+                return Json(new { success = true, id = tosId });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportTos(Guid id, CancellationToken ct)
+        {
+            // id = VoyagePortId
+            var tos = await _voyageService.GetTosByVoyagePortIdAsync(id, ct);
+
+            // Fetch context for header (vessel/service/port)
+            var allVoyages = await _voyageService.GetAllAsync(ct);
+            VoyagePortListItemDto? portItem = null;
+            VoyageListItemDto? parentVoyage = null;
+            foreach (var v in allVoyages)
+            {
+                var ports = await _voyageService.GetPortsByVoyageIdAsync(v.Id, ct);
+                portItem = ports.FirstOrDefault(p => p.Id == id);
+                if (portItem != null) { parentVoyage = v; break; }
+            }
+
+            using var wb = new XLWorkbook();
+            var ws = wb.AddWorksheet("TOS Report");
+
+            // Column widths
+            ws.Column(1).Width = 32;
+            ws.Column(2).Width = 22;
+            ws.Column(3).Width = 22;
+            ws.Column(4).Width = 22;
+            ws.Column(5).Width = 30;
+
+            int row = 1;
+
+            // Title
+            ws.Cell(row, 1).Value = "Terminal Operating System (TOS)";
+            ws.Range(row, 1, row, 5).Merge();
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Font.FontSize = 14;
+            ws.Cell(row, 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
+            ws.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            row += 2;
+
+            // Context
+            ws.Cell(row, 1).Value = "Vessel:"; ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = parentVoyage?.VesselName ?? "—";
+            row++;
+            ws.Cell(row, 1).Value = "Service:"; ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = parentVoyage?.ServiceCode ?? "—";
+            row++;
+            ws.Cell(row, 1).Value = "Port:"; ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = portItem?.PortCode ?? "—";
+            row++;
+            ws.Cell(row, 1).Value = "Terminal:"; ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Value = portItem?.TerminalCode ?? "—";
+            row += 2;
+
+            // Section 1: Stoppages
+            ws.Cell(row, 1).Value = "Add Operation stoppage time";
+            ws.Cell(row, 2).Value = "from dd/hrs";
+            ws.Cell(row, 3).Value = "to dd/hrs";
+            ws.Cell(row, 4).Value = "Non-Productive Time(hrs)";
+            ws.Cell(row, 5).Value = "Reason";
+            ws.Range(row, 1, row, 5).Style.Font.Bold = true;
+            ws.Range(row, 1, row, 5).Style.Fill.BackgroundColor = XLColor.LightGray;
+            row++;
+
+            var stoppages = tos?.Stoppages ?? new List<TosStoppageDto>();
+            for (int i = 0; i < stoppages.Count; i++)
+            {
+                var s = stoppages[i];
+                ws.Cell(row, 1).Value = i + 1;
+                if (s.FromDateTime.HasValue) { ws.Cell(row, 2).Value = s.FromDateTime.Value; ws.Cell(row, 2).Style.DateFormat.Format = "dd/MM/yyyy HH:mm"; }
+                if (s.ToDateTime.HasValue) { ws.Cell(row, 3).Value = s.ToDateTime.Value; ws.Cell(row, 3).Style.DateFormat.Format = "dd/MM/yyyy HH:mm"; }
+                if (s.NonProductiveHours.HasValue) { ws.Cell(row, 4).Value = s.NonProductiveHours.Value; ws.Cell(row, 4).Style.NumberFormat.Format = "0.00"; }
+                ws.Cell(row, 5).Value = s.Reason ?? "";
+                row++;
+            }
+            row++;
+
+            // Section 2: Container Moves
+            ws.Cell(row, 2).Value = "No of Units";
+            ws.Cell(row, 2).Style.Font.Bold = true;
+            row++;
+            ws.Cell(row, 1).Value = "Discharge moves"; ws.Cell(row, 2).Value = tos?.DischargeMoves; row++;
+            ws.Cell(row, 1).Value = "Load Moves"; ws.Cell(row, 2).Value = tos?.LoadMoves; row++;
+            ws.Cell(row, 1).Value = "No of restows"; ws.Cell(row, 2).Value = tos?.Restows; row++;
+            ws.Cell(row, 1).Value = "Total Hatch Cover"; ws.Cell(row, 2).Value = tos?.TotalHatchCover; row++;
+            ws.Cell(row, 1).Value = "no of bin"; ws.Cell(row, 2).Value = tos?.NoOfBin; row++;
+            ws.Cell(row, 1).Value = "Total Moves"; ws.Cell(row, 2).Value = tos?.TotalMoves;
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Style.Font.Bold = true;
+            row += 2;
+
+            // Section 3: Crane Productivity
+            ws.Cell(row, 1).Value = "Crane Productivity";
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
+            row += 2;
+            var cp = tos?.CraneProductivity;
+            ws.Cell(row, 1).Value = "No of Cranes as per SI"; ws.Cell(row, 2).Value = cp?.CranesPerSI; row++;
+            ws.Cell(row, 1).Value = "Actual Cranes"; ws.Cell(row, 2).Value = cp?.ActualCranes; row++;
+            ws.Cell(row, 1).Value = "Total Ops time(hrs)"; if (cp?.TotalOpsTime.HasValue == true) { ws.Cell(row, 2).Value = cp.TotalOpsTime.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Non-Productive Time"; if (cp?.NonProductiveTime.HasValue == true) { ws.Cell(row, 2).Value = cp.NonProductiveTime.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Crane working hrs"; if (cp?.CraneWorkingHrs.HasValue == true) { ws.Cell(row, 2).Value = cp.CraneWorkingHrs.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Crane Productivity per hr"; if (cp?.CraneProductivityPerHr.HasValue == true) { ws.Cell(row, 2).Value = cp.CraneProductivityPerHr.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Moves /Crane"; if (cp?.MovesPerCrane.HasValue == true) { ws.Cell(row, 2).Value = cp.MovesPerCrane.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            row++;
+
+            // Section 4: Ship Productivity
+            ws.Cell(row, 1).Value = "Ship Productivity";
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
+            row++;
+            var sp = tos?.ShipProductivity;
+            ws.Cell(row, 1).Value = "Port stay Time"; if (sp?.PortStayTime.HasValue == true) { ws.Cell(row, 2).Value = sp.PortStayTime.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Productivity per hr"; if (sp?.ProductivityPerHr.HasValue == true) { ws.Cell(row, 2).Value = sp.ProductivityPerHr.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Moves /Crane"; if (sp?.MovesPerCrane.HasValue == true) { ws.Cell(row, 2).Value = sp.MovesPerCrane.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            row++;
+
+            // Section 5: Summary
+            ws.Cell(row, 1).Value = "Summary";
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
+            row++;
+            ws.Cell(row, 2).Value = "Hrs";
+            ws.Cell(row, 2).Style.Font.Bold = true;
+            row++;
+            var sm = tos?.Summary;
+            ws.Cell(row, 1).Value = "Vessel Turnaround Time:"; if (sm?.VesselTurnaroundTime.HasValue == true) { ws.Cell(row, 2).Value = sm.VesselTurnaroundTime.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Berthing Delay"; if (sm?.BerthingDelay.HasValue == true) { ws.Cell(row, 2).Value = sm.BerthingDelay.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Total Moves"; ws.Cell(row, 2).Value = sm?.TotalMoves ?? tos?.TotalMoves; row++;
+            ws.Cell(row, 1).Value = "Non-Productive Time"; if (sm?.NonProductiveTime.HasValue == true) { ws.Cell(row, 2).Value = sm.NonProductiveTime.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Terminal Productivity"; if (sm?.TerminalProductivity.HasValue == true) { ws.Cell(row, 2).Value = sm.TerminalProductivity.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+            ws.Cell(row, 1).Value = "Ship Productivity"; if (sm?.ShipProductivity.HasValue == true) { ws.Cell(row, 2).Value = sm.ShipProductivity.Value; ws.Cell(row, 2).Style.NumberFormat.Format = "0.00"; } row++;
+
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            var fileName = $"TOS_{portItem?.PortCode}_{parentVoyage?.VesselName}_{DateTime.Now:yyyyMMdd}.xlsx".Replace(" ", "_");
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         [HttpGet]
         public async Task<IActionResult> ExportPorts(Guid id, CancellationToken ct)
         {

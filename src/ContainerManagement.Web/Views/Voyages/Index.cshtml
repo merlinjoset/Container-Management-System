@@ -64,6 +64,9 @@
         .btn-dep { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
         .btn-dep:hover { background: #fef3c7; color: #78350f; }
         .btn-dep.filled { background: #dcfce7; color: #15803d; border-color: #86efac; }
+        .btn-tos { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .btn-tos:hover { background: #d1fae5; color: #064e3b; }
+        .btn-tos.filled { background: #dcfce7; color: #15803d; border-color: #86efac; }
         .btn-xls { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; font-size: .58rem !important; padding: .1rem .3rem !important; }
         .btn-xls:hover { background: #d1fae5; color: #064e3b; }
 
@@ -410,6 +413,11 @@
                             var depIcon = p.hasDeparture ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-box-arrow-right"></i>';
                             var depLabel = p.hasDeparture ? 'Departure' : 'Departure';
 
+                            // TOS button style
+                            var tosBtnCls = p.hasTos ? 'btn btn-tos filled' : 'btn btn-tos';
+                            var tosIcon = p.hasTos ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-clipboard2-data"></i>';
+                            var tosLabel = 'TOS';
+
                             tr.innerHTML =
                                 '<td style="font-weight:700;color:#1e3a8a;">' + (i + 1) + '</td>' +
                                 '<td>' + (p.voyNo || '') + '</td>' +
@@ -432,6 +440,8 @@
                                         (p.hasArrival ? '<a href="/voyages/exportarrival/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export Arrival"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
                                         '<a href="/voyages/departure/' + p.id + '" class="' + depBtnCls + '" onclick="event.stopPropagation();">' + depIcon + depLabel + '</a>' +
                                         (p.hasDeparture ? '<a href="/voyages/exportdeparture/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export Departure"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
+                                        '<a href="/voyages/tos/' + p.id + '" class="' + tosBtnCls + '" onclick="event.stopPropagation();" title="Terminal Operating System Report">' + tosIcon + tosLabel + '</a>' +
+                                        (p.hasTos ? '<a href="/voyages/exporttos/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export TOS"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
                                     '</div>' +
                                 '</td>';
                             portBody.appendChild(tr);
