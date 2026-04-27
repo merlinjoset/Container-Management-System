@@ -582,69 +582,19 @@
         }
     }
 
-    // DD/MM/YYYY date mask — auto-insert slashes, digits only, validate range
-    document.querySelectorAll('.date-dmy').forEach(function(el) {
-        el.addEventListener('input', function() {
-            var v = el.value.replace(/[^\d]/g, '');
-            if (v.length > 8) v = v.slice(0, 8);
-            if (v.length >= 5) {
-                v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
-            } else if (v.length >= 3) {
-                v = v.slice(0, 2) + '/' + v.slice(2);
-            }
-            el.value = v;
-        });
-
-        el.addEventListener('blur', function() {
-            var v = el.value.trim();
-            if (!v) return;
-            var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-            if (!m) { el.classList.add('is-invalid'); return; }
-            var dd = parseInt(m[1], 10);
-            var mm = parseInt(m[2], 10);
-            var yyyy = parseInt(m[3], 10);
-            if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 2000 || yyyy > 2099) {
-                el.classList.add('is-invalid'); return;
-            }
-            // Check valid day for month
-            var testDate = new Date(yyyy, mm - 1, dd);
-            if (testDate.getDate() !== dd || testDate.getMonth() !== mm - 1) {
-                el.classList.add('is-invalid'); return;
-            }
-            el.classList.remove('is-invalid');
-        });
-
-        el.addEventListener('focus', function() {
-            el.classList.remove('is-invalid');
-        });
-    });
-
-    // 24-hour time mask (HH:MM) — auto-insert colon, digits only, validate range
+    // .date-dmy mask + validation handled globally in _Layout.cshtml.
+    // Per-view: just hook blur on time-24 to re-run validateDates().
     document.querySelectorAll('.time-24').forEach(function(el) {
-        el.addEventListener('input', function(e) {
-            var v = el.value.replace(/[^\d]/g, '');
-            if (v.length > 4) v = v.slice(0, 4);
-            if (v.length >= 3) {
-                v = v.slice(0, 2) + ':' + v.slice(2);
-            }
-            el.value = v;
-        });
-
         el.addEventListener('blur', function() {
             var v = el.value.trim();
             if (!v) return;
             var m = v.match(/^(\d{1,2}):(\d{2})$/);
-            if (!m) { el.value = ''; el.classList.add('is-invalid'); return; }
-            var hh = parseInt(m[1], 10);
-            var mm = parseInt(m[2], 10);
-            if (hh > 23 || mm > 59) { el.value = ''; el.classList.add('is-invalid'); return; }
-            el.value = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
-            el.classList.remove('is-invalid');
+            if (!m) return;
+            var hh = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+            if (hh <= 23 && mm <= 59) {
+                el.value = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
+            }
             validateDates();
-        });
-
-        el.addEventListener('focus', function() {
-            el.classList.remove('is-invalid');
         });
     });
 </script>

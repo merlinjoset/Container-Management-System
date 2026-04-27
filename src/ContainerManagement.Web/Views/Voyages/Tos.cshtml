@@ -146,51 +146,6 @@
             totalOpsTime = (decimal)(completeCargoOp.Value - commencedCargoOp.Value).TotalHours;
         }
     }
-    <div class="tos-section">
-        <div class="tos-section-header"><i class="bi bi-building-gear"></i> Crane Productivity</div>
-        <div class="tos-section-body">
-            <table class="table table-sm table-bordered mb-0" style="max-width:600px; font-size:.8rem;">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:60%;">Metric</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">No of Cranes as per SI</td>
-                        <td><input type="number" min="0" step="1" class="form-control form-control-sm crane-input" id="cranesPerSI" value="@(Model.CraneProductivity?.CranesPerSI)" /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Actual Cranes</td>
-                        <td><input type="number" min="0" step="1" class="form-control form-control-sm crane-input" id="actualCranes" value="@(Model.CraneProductivity?.ActualCranes)" /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Total Ops Time (hrs)<br /><small class="text-muted fw-normal">Completed Cargo Ops (Departure) − Commenced Cargo Ops (Arrival)</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="totalOpsTime" value="@(totalOpsTime?.ToString("F2"))" readonly /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Non-Productive Time (hrs)<br /><small class="text-muted fw-normal">Sum of stoppage hours</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="nonProductiveTime" readonly /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Crane Working Hrs<br /><small class="text-muted fw-normal">Total Ops Time − Non-Productive Time</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="craneWorkingHrs" readonly /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Crane Productivity per hr<br /><small class="text-muted fw-normal">Total Moves / Crane Working Hrs</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="craneProductivityPerHr" readonly /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Moves / Crane<br /><small class="text-muted fw-normal">Crane Productivity per hr / Actual Cranes</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="movesPerCrane" readonly /></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Section 4: Ship Productivity -->
     @{
         var actualETA = ViewBag.ActualETA as DateTime?;
         var actualETD = ViewBag.ActualETD as DateTime?;
@@ -200,31 +155,82 @@
             portStayTime = (decimal)(actualETD.Value - actualETA.Value).TotalHours;
         }
     }
-    <div class="tos-section">
-        <div class="tos-section-header"><i class="bi bi-speedometer2"></i> Ship Productivity</div>
-        <div class="tos-section-body">
-            <table class="table table-sm table-bordered mb-0" style="max-width:600px; font-size:.8rem;">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:60%;">Metric</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Port Stay Time (hrs)<br /><small class="text-muted fw-normal">Departure (BOSP) − Actual ETA (End of Passage)</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipPortStayTime" value="@(portStayTime?.ToString("F2") ?? Model.ShipProductivity?.PortStayTime?.ToString("F2"))" readonly /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Productivity per hr<br /><small class="text-muted fw-normal">Total Moves / Port Stay Time</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipProductivityPerHr" readonly /></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-semibold" style="color:#475569;">Moves / Crane<br /><small class="text-muted fw-normal">Crane Productivity per hr / Actual Cranes</small></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipMovesPerCrane" readonly /></td>
-                    </tr>
-                </tbody>
-            </table>
+
+    <!-- Crane + Ship Productivity (2 columns side-by-side) -->
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="tos-section h-100">
+                <div class="tos-section-header"><i class="bi bi-building-gear"></i> Crane Productivity</div>
+                <div class="tos-section-body">
+                    <table class="table table-sm table-bordered mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60%;">Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">No of Cranes as per SI</td>
+                                <td><input type="number" min="0" step="1" class="form-control form-control-sm crane-input" id="cranesPerSI" value="@(Model.CraneProductivity?.CranesPerSI)" /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Actual Cranes</td>
+                                <td><input type="number" min="0" step="1" class="form-control form-control-sm crane-input" id="actualCranes" value="@(Model.CraneProductivity?.ActualCranes)" /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Total Ops Time (hrs)<br /><small class="text-muted fw-normal">Completed Cargo Ops (Departure) − Commenced Cargo Ops (Arrival)</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="totalOpsTime" value="@(totalOpsTime?.ToString("F2"))" readonly /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Non-Productive Time (hrs)<br /><small class="text-muted fw-normal">Sum of stoppage hours</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="nonProductiveTime" readonly /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Crane Working Hrs<br /><small class="text-muted fw-normal">Total Ops Time − Non-Productive Time</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="craneWorkingHrs" readonly /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Crane Productivity per hr<br /><small class="text-muted fw-normal">Total Moves / Crane Working Hrs</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="craneProductivityPerHr" readonly /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Moves / Crane<br /><small class="text-muted fw-normal">Crane Productivity per hr / Actual Cranes</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="movesPerCrane" readonly /></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="tos-section h-100">
+                <div class="tos-section-header"><i class="bi bi-speedometer2"></i> Ship Productivity</div>
+                <div class="tos-section-body">
+                    <table class="table table-sm table-bordered mb-0" style="font-size:.8rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60%;">Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Port Stay Time (hrs)<br /><small class="text-muted fw-normal">Departure (BOSP) − Actual ETA (End of Passage)</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipPortStayTime" value="@(portStayTime?.ToString("F2") ?? Model.ShipProductivity?.PortStayTime?.ToString("F2"))" readonly /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Productivity per hr<br /><small class="text-muted fw-normal">Total Moves / Port Stay Time</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipProductivityPerHr" readonly /></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-semibold" style="color:#475569;">Moves / Crane<br /><small class="text-muted fw-normal">Crane Productivity per hr / Actual Cranes</small></td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm computed-field" id="shipMovesPerCrane" readonly /></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -243,7 +249,7 @@
             berthingDelay = (decimal)Math.Abs(diff);
         }
     }
-    <div class="tos-section">
+    <div class="tos-section mt-3">
         <div class="tos-section-header"><i class="bi bi-journal-text"></i> Summary</div>
         <div class="tos-section-body">
             <table class="table table-sm table-bordered mb-0" style="max-width:600px; font-size:.8rem;">
@@ -546,73 +552,9 @@
         el.addEventListener('input', function() { calcCraneProductivity(); });
     });
 
-    // ── Date/Time masks ──
-    function bindDateTimeMasks(container) {
-        container.querySelectorAll('.date-dmy').forEach(function(el) {
-            el.addEventListener('input', function() {
-                var v = el.value.replace(/[^\d]/g, '');
-                if (v.length > 8) v = v.slice(0, 8);
-                if (v.length >= 5) {
-                    v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
-                } else if (v.length >= 3) {
-                    v = v.slice(0, 2) + '/' + v.slice(2);
-                }
-                el.value = v;
-            });
-
-            el.addEventListener('blur', function() {
-                var v = el.value.trim();
-                if (!v) return;
-                var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                if (!m) { el.classList.add('is-invalid'); return; }
-                var dd = parseInt(m[1], 10);
-                var mm = parseInt(m[2], 10);
-                var yyyy = parseInt(m[3], 10);
-                if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 2000 || yyyy > 2099) {
-                    el.classList.add('is-invalid'); return;
-                }
-                var testDate = new Date(yyyy, mm - 1, dd);
-                if (testDate.getDate() !== dd || testDate.getMonth() !== mm - 1) {
-                    el.classList.add('is-invalid'); return;
-                }
-                el.classList.remove('is-invalid');
-            });
-
-            el.addEventListener('focus', function() {
-                el.classList.remove('is-invalid');
-            });
-        });
-
-        container.querySelectorAll('.time-24').forEach(function(el) {
-            el.addEventListener('input', function() {
-                var v = el.value.replace(/[^\d]/g, '');
-                if (v.length > 4) v = v.slice(0, 4);
-                if (v.length >= 3) {
-                    v = v.slice(0, 2) + ':' + v.slice(2);
-                }
-                el.value = v;
-            });
-
-            el.addEventListener('blur', function() {
-                var v = el.value.trim();
-                if (!v) return;
-                var m = v.match(/^(\d{1,2}):(\d{2})$/);
-                if (!m) { el.value = ''; el.classList.add('is-invalid'); return; }
-                var hh = parseInt(m[1], 10);
-                var mm = parseInt(m[2], 10);
-                if (hh > 23 || mm > 59) { el.value = ''; el.classList.add('is-invalid'); return; }
-                el.value = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
-                el.classList.remove('is-invalid');
-            });
-
-            el.addEventListener('focus', function() {
-                el.classList.remove('is-invalid');
-            });
-        });
-    }
-
-    // Bind masks on the page-level (for non-dynamic elements, if any)
-    bindDateTimeMasks(document);
+    // .date-dmy and .time-24 masking + validation are handled globally in _Layout.cshtml.
+    // Kept as a no-op stub since addStoppageRow() still calls it for dynamic rows.
+    function bindDateTimeMasks(container) { /* handled globally */ }
 
     // ── Collect Stoppages (skip entirely empty rows) ──
     function collectStoppages() {

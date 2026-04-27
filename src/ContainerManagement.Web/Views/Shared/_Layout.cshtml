@@ -8,6 +8,7 @@
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ContainerManagement.Web.styles.css" asp-append-version="true" />
 
@@ -429,6 +430,157 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // ─── Global .date-dmy mask, validation, and editing handlers ───
+        // Applies dd/mm/yyyy formatting + range clamps (dd ≤ 31, mm ≤ 12) to any
+        // <input class="date-dmy"> across the entire app, including dynamically
+        // added rows. Single source of truth — per-view duplication not needed.
+        (function () {
+            function clampDay(d)   { return (d.length === 2 && parseInt(d, 10) > 31) ? d[0] : d; }
+            function clampMonth(m) { return (m.length === 2 && parseInt(m, 10) > 12) ? m[0] : m; }
+
+            window.maskDateDmy = function (v) {
+                if (v.indexOf('/') !== -1) {
+                    var parts = v.split('/');
+                    var d = clampDay((parts[0] || '').replace(/[^\d]/g, '').slice(0, 2));
+                    var m = clampMonth((parts[1] || '').replace(/[^\d]/g, '').slice(0, 2));
+                    var y = (parts.slice(2).join('') || '').replace(/[^\d]/g, '').slice(0, 4);
+                    var out = d;
+                    if (parts.length >= 2) {
+                        out += '/' + m;
+                        // No "//" — only show year segment when month has content
+                        if (parts.length >= 3 && m !== '') out += '/' + y;
+                    }
+                    return out;
+                }
+                var digits = v.replace(/[^\d]/g, '');
+                if (digits.length > 8) digits = digits.slice(0, 8);
+                if (digits.length >= 2 && parseInt(digits.slice(0, 2), 10) > 31) digits = digits[0];
+                if (digits.length >= 4 && parseInt(digits.slice(2, 4), 10) > 12) digits = digits.slice(0, 3);
+                if (digits.length >= 5) return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+                if (digits.length >= 3) return digits.slice(0, 2) + '/' + digits.slice(2);
+                return digits;
+            };
+
+            // Input handler — masks value, preserves cursor, on delete keeps cursor in place
+            document.addEventListener('input', function (ev) {
+                var el = ev.target;
+                if (!el || !el.classList || !el.classList.contains('date-dmy')) return;
+
+                var oldVal = el.value, oldCursor = el.selectionStart || 0;
+                var digitsBefore = 0;
+                for (var i = 0; i < oldCursor; i++) {
+                    if (/\d/.test(oldVal[i])) digitsBefore++;
+                }
+                var v = window.maskDateDmy(oldVal);
+                if (v === oldVal) return; // no change, no need to touch cursor
+                el.value = v;
+                var newCursor = 0, digitCount = 0;
+                while (newCursor < v.length && digitCount < digitsBefore) {
+                    if (/\d/.test(v[newCursor])) digitCount++;
+                    newCursor++;
+                }
+                var isDelete = ev && ev.inputType && ev.inputType.indexOf('delete') !== -1;
+                if (!isDelete && v[newCursor] === '/') newCursor++;
+                try { el.setSelectionRange(newCursor, newCursor); } catch (e) { }
+            }, true);
+
+            // Blur — validate dd/mm/yyyy in 2000-2099 range, mark invalid if not
+            document.addEventListener('blur', function (ev) {
+                var el = ev.target;
+                if (!el || !el.classList || !el.classList.contains('date-dmy')) return;
+                var v = (el.value || '').trim();
+                if (!v) { el.classList.remove('is-invalid'); return; }
+                var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (!m) { el.classList.add('is-invalid'); return; }
+                var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yyyy = parseInt(m[3], 10);
+                if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 2000 || yyyy > 2099) {
+                    el.classList.add('is-invalid'); return;
+                }
+                var test = new Date(yyyy, mm - 1, dd);
+                if (test.getDate() !== dd || test.getMonth() !== mm - 1) {
+                    el.classList.add('is-invalid'); return;
+                }
+                el.classList.remove('is-invalid');
+            }, true);
+
+            document.addEventListener('focus', function (ev) {
+                var el = ev.target;
+                if (el && el.classList && el.classList.contains('date-dmy')) {
+                    el.classList.remove('is-invalid');
+                }
+            }, true);
+
+            // Keydown — when field is full, digit keypress REPLACES instead of inserts
+            // so editing month/day doesn't shift the year. Also enforces dd ≤ 31, mm ≤ 12.
+            document.addEventListener('keydown', function (e) {
+                var el = e.target;
+                if (!el || !el.classList || !el.classList.contains('date-dmy')) return;
+                if (!/^[0-9]$/.test(e.key) || e.ctrlKey || e.altKey || e.metaKey) return;
+
+                var val = el.value || '';
+                var start = el.selectionStart || 0;
+                var end = el.selectionEnd || 0;
+                if (start !== end) return; // selection — let default replace run
+
+                var totalDigits = (val.match(/\d/g) || []).length;
+                if (totalDigits < 8) return; // not full — allow insert
+
+                e.preventDefault();
+                var pos = start;
+                while (pos < val.length && !/\d/.test(val[pos])) pos++;
+                if (pos >= val.length) return;
+
+                var newVal = val.substring(0, pos) + e.key + val.substring(pos + 1);
+
+                // Reject keystrokes that would create dd > 31 or mm > 12
+                var ddPart = newVal.substring(0, 2);
+                var mmPart = newVal.substring(3, 5);
+                if (ddPart.length === 2 && /^\d{2}$/.test(ddPart) && parseInt(ddPart, 10) > 31) return;
+                if (mmPart.length === 2 && /^\d{2}$/.test(mmPart) && parseInt(mmPart, 10) > 12) return;
+
+                el.value = newVal;
+                var newPos = pos + 1;
+                if (newVal[newPos] === '/') newPos++;
+                try { el.setSelectionRange(newPos, newPos); } catch (ex) { }
+            }, true);
+        })();
+
+        // ─── Global .time-24 mask (HH:MM, 0-23 / 0-59) ───
+        (function () {
+            window.maskTime24 = function (v) {
+                var digits = v.replace(/[^\d]/g, '').slice(0, 4);
+                // Clamp first 2 (hours) ≤ 23
+                if (digits.length >= 2 && parseInt(digits.slice(0, 2), 10) > 23) digits = digits[0];
+                // Clamp 3rd-4th (minutes) ≤ 59
+                if (digits.length >= 4 && parseInt(digits.slice(2, 4), 10) > 59) digits = digits.slice(0, 3);
+                if (digits.length >= 3) return digits.slice(0, 2) + ':' + digits.slice(2);
+                return digits;
+            };
+
+            document.addEventListener('input', function (ev) {
+                var el = ev.target;
+                if (!el || !el.classList || !el.classList.contains('time-24')) return;
+                var oldVal = el.value, oldCursor = el.selectionStart || 0;
+                var digitsBefore = 0;
+                for (var i = 0; i < oldCursor; i++) {
+                    if (/\d/.test(oldVal[i])) digitsBefore++;
+                }
+                var v = window.maskTime24(oldVal);
+                if (v === oldVal) return;
+                el.value = v;
+                var newCursor = 0, digitCount = 0;
+                while (newCursor < v.length && digitCount < digitsBefore) {
+                    if (/\d/.test(v[newCursor])) digitCount++;
+                    newCursor++;
+                }
+                var isDelete = ev && ev.inputType && ev.inputType.indexOf('delete') !== -1;
+                if (!isDelete && v[newCursor] === ':') newCursor++;
+                try { el.setSelectionRange(newCursor, newCursor); } catch (e) { }
+            }, true);
+        })();
+    </script>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
 
@@ -462,10 +614,10 @@
         };
 
         function getTabs() {
-            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+            try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || []; }
             catch { return []; }
         }
-        function saveTabs(tabs) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); }
+        function saveTabs(tabs) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); }
 
         function getBaseRoute(href) {
             const p = href.toLowerCase().replace(/\/+$/, '');
