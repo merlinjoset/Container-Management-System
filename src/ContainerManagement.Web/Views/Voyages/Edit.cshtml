@@ -217,6 +217,42 @@
                 document.getElementById('voy-service-name').value = sn;
             });
 
+            // Distance lookup from Distance Master (FromPortId|ToPortId → distance)
+            var distanceMap = {};
+            @if (ViewBag.Distances is System.Collections.IEnumerable distItems) {
+                foreach (var d in distItems)
+                {
+                    var dt = d.GetType();
+                    var fromId = dt.GetProperty("FromPortId")?.GetValue(d)?.ToString() ?? "";
+                    var toId = dt.GetProperty("ToPortId")?.GetValue(d)?.ToString() ?? "";
+                    var dist = dt.GetProperty("Distance")?.GetValue(d)?.ToString() ?? "0";
+                    <text>distanceMap['@fromId|@toId'] = @dist;</text>
+                }
+            }
+            // Lookup helper — undirected (try both orders)
+            function lookupDistance(fromPortId, toPortId) {
+                if (!fromPortId || !toPortId) return null;
+                var key = fromPortId + '|' + toPortId;
+                if (distanceMap[key] != null) return distanceMap[key];
+                var rev = toPortId + '|' + fromPortId;
+                if (distanceMap[rev] != null) return distanceMap[rev];
+                return null;
+            }
+            // Auto-fill the Distance input on a row from previous row's port → this row's port
+            function autoFillDistance(tr) {
+                var allRows = Array.from(document.querySelectorAll('#port-body tr.port-row'));
+                var idx = allRows.indexOf(tr);
+                if (idx <= 0) return; // first row has no "from" port
+                var prevPortId = allRows[idx - 1].querySelector('.voy-port')?.value;
+                var thisPortId = tr.querySelector('.voy-port')?.value;
+                var dist = lookupDistance(prevPortId, thisPortId);
+                if (dist != null) {
+                    var distInput = tr.querySelector('.voy-distance');
+                    distInput.value = dist;
+                    distInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+
             // ── Helpers for date ↔ display string (dd/MM/yyyy HH:mm) ──
             function toLocal(dt) {
                 if (!dt) return '';
@@ -340,6 +376,14 @@
                     if (el) {
                         el.addEventListener('change', function() { calcRow(tr); });
                     }
+                }
+
+                // Auto-fill Distance from Distance Master when this row's Port changes
+                var portSel = tr.querySelector('.voy-port');
+                if (portSel) {
+                    portSel.addEventListener('change', function() {
+                        autoFillDistance(tr);
+                    });
                 }
                 // Paste support for ETA (only editable on first row, mask wired below)
                 wirePaste(tr.querySelector('.voy-eta'), tr);

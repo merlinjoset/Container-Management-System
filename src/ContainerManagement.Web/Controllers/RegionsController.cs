@@ -135,42 +135,93 @@ namespace ContainerManagement.Web.Controllers
                 return RedirectToAction(nameof(Import));
             }
 
-            var previewRows = new List<RegionImportRowDto>();
+            // Read entire sheet into a 2D string grid
+            var grid = new List<string?[]>();
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
-                var rowIndex = 0;
-                var rowNum = 1;
                 while (reader.Read())
                 {
-                    if (rowIndex == 0)
+                    var fc = reader.FieldCount;
+                    var row = new string?[fc];
+                    for (int c = 0; c < fc; c++)
                     {
-                        var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
-                        if (c0?.Contains("region") == true || c0?.Contains("name") == true)
-                        { rowIndex++; continue; }
+                        row[c] = reader.GetValue(c)?.ToString()?.Trim();
                     }
-                    var name = reader.FieldCount > 0 ? reader.GetValue(0)?.ToString()?.Trim() : null;
-                    var code = reader.FieldCount > 1 ? reader.GetValue(1)?.ToString()?.Trim() : null;
-
-                    if (!string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(code))
-                    {
-                        var row = new RegionImportRowDto
-                        {
-                            RowNumber = rowNum++,
-                            RegionName = name,
-                            RegionCode = code
-                        };
-                        if (string.IsNullOrWhiteSpace(name)) row.Errors.Add("Region Name is required.");
-                        if (string.IsNullOrWhiteSpace(code)) row.Errors.Add("Region Code is required.");
-                        previewRows.Add(row);
-                    }
-                    rowIndex++;
+                    grid.Add(row);
                 }
             }
 
-            var errorCount = previewRows.Count(r => r.HasErrors);
-            if (errorCount > 0)
-                ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors.";
+            // Reject the file if any row has data in more than 2 columns
+            // (Region template has exactly 2 columns: Region Name, Region Code)
+            int maxNonEmptyCol = -1;
+            foreach (var row in grid)
+            {
+                for (int c = 0; c < row.Length; c++)
+                {
+                    if (!string.IsNullOrWhiteSpace(row[c]) && c > maxNonEmptyCol)
+                        maxNonEmptyCol = c;
+                }
+            }
+            if (maxNonEmptyCol > 1)
+            {
+                TempData["Error"] = $"The file has {maxNonEmptyCol + 1} columns with data. Region import accepts exactly 2 columns: Region Name (A) and Region Code (B). Please remove extra columns and try again.";
+                return RedirectToAction(nameof(Import));
+            }
+
+            // Detect header row + column positions for Name and Code (auto-detect by keyword)
+            int nameCol = 0, codeCol = 1, dataStart = 0;
+            if (grid.Count > 0)
+            {
+                var h = grid[0];
+                bool looksLikeHeader = false;
+                int? detectedNameCol = null, detectedCodeCol = null;
+                for (int c = 0; c < h.Length; c++)
+                {
+                    var v = (h[c] ?? string.Empty).ToLowerInvariant();
+                    if (v.Contains("name")) { detectedNameCol = c; looksLikeHeader = true; }
+                    if (v.Contains("code")) { detectedCodeCol = c; looksLikeHeader = true; }
+                    if (v.Contains("region") && !v.Contains("code")) { detectedNameCol = c; looksLikeHeader = true; }
+                }
+                if (looksLikeHeader)
+                {
+                    nameCol = detectedNameCol ?? 0;
+                    codeCol = detectedCodeCol ?? 1;
+                    if (nameCol == codeCol) codeCol = (nameCol == 0) ? 1 : 0;
+                    dataStart = 1;
+                }
+            }
+
+            var previewRows = new List<RegionImportRowDto>();
+            var rowNum = 1;
+            for (int r = dataStart; r < grid.Count; r++)
+            {
+                var row = grid[r];
+                var name = (nameCol < row.Length ? row[nameCol] : null);
+                var code = (codeCol < row.Length ? row[codeCol] : null);
+                if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(code)) continue;
+
+                var item = new RegionImportRowDto
+                {
+                    RowNumber = rowNum++,
+                    RegionName = name,
+                    RegionCode = code
+                };
+                if (string.IsNullOrWhiteSpace(name)) item.Errors.Add("Region Name is required.");
+                if (string.IsNullOrWhiteSpace(code)) item.Errors.Add("Region Code is required.");
+                previewRows.Add(item);
+            }
+
+            if (previewRows.Count == 0)
+            {
+                ViewBag.ErrorSummary = "No data rows found. Please ensure your file has 'Region Name' and 'Region Code' columns with at least one data row below the header.";
+            }
+            else
+            {
+                var errorCount = previewRows.Count(r => r.HasErrors);
+                if (errorCount > 0)
+                    ViewBag.ErrorSummary = $"{errorCount} row(s) have validation errors.";
+            }
 
             ViewBag.ShowPreview = true;
             return View(previewRows);
@@ -197,13 +248,22 @@ namespace ContainerManagement.Web.Controllers
         {
             using var wb = new XLWorkbook();
             var ws = wb.AddWorksheet("Regions");
-            // Headers
+
+            // Headers (row 1) — bold + gray fill
             ws.Cell(1, 1).Value = "Region Name";
             ws.Cell(1, 2).Value = "Region Code";
             ws.Range(1, 1, 1, 2).Style.Font.Bold = true;
             ws.Range(1, 1, 1, 2).Style.Fill.BackgroundColor = XLColor.LightGray;
 
-            ws.Columns(1, 2).AdjustToContents();
+            // Sample rows (in italic gray) so users see the expected format — delete and replace with real data
+            ws.Cell(2, 1).Value = "Asia"; ws.Cell(2, 2).Value = "AS";
+            ws.Cell(3, 1).Value = "Europe"; ws.Cell(3, 2).Value = "EU";
+            ws.Cell(4, 1).Value = "North America"; ws.Cell(4, 2).Value = "NA";
+            ws.Range(2, 1, 4, 2).Style.Font.Italic = true;
+            ws.Range(2, 1, 4, 2).Style.Font.FontColor = XLColor.DarkGray;
+
+            ws.Column(1).Width = 30;
+            ws.Column(2).Width = 18;
 
             using var ms = new MemoryStream();
             wb.SaveAs(ms);

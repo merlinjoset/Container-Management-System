@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using ContainerManagement.Application.Abstractions;
 using ContainerManagement.Infrastructure.Persistence.Repositories;
+using ContainerManagement.Infrastructure.Email;
 
 namespace ContainerManagement.Infrastructure
 {
@@ -34,6 +35,8 @@ namespace ContainerManagement.Infrastructure
             services.AddScoped<ICraneProductivityRepository, CraneProductivityRepository>();
             services.AddScoped<IShipProductivityRepository, ShipProductivityRepository>();
             services.AddScoped<ITosSummaryRepository, TosSummaryRepository>();
+            services.AddScoped<IEditRequestRepository, EditRequestRepository>();
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
 
             return services;
         }

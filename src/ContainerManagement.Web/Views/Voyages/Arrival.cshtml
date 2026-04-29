@@ -517,6 +517,12 @@
     });
 
     async function saveArrival() {
+        // Pre-flight: any field with date-format/range error?
+        document.querySelectorAll('.date-dmy, .time-24').forEach(function (el) { el.dispatchEvent(new Event('blur', { bubbles: true })); });
+        if (window.focusFirstInvalid && window.focusFirstInvalid()) {
+            showToast('Please fix the highlighted date/time field before saving.', 'danger');
+            return;
+        }
         if (!validateDates()) return;
         if (!validateBunkersOnArrival()) return;
 

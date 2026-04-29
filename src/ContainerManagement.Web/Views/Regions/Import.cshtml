@@ -113,11 +113,11 @@
                                     <td class="row-num">@row.RowNumber</td>
                                     <td>
                                         <input type="hidden" name="rows[@i].RowNumber" value="@row.RowNumber" />
-                                        <input type="hidden" name="rows[@i].RegionName" value="@row.RegionName" />
-                                        <input type="hidden" name="rows[@i].RegionCode" value="@row.RegionCode" />
-                                        @row.RegionName
+                                        <input type="text" class="form-control form-control-sm" name="rows[@i].RegionName" value="@row.RegionName" placeholder="Region Name" />
                                     </td>
-                                    <td><span class="fw-medium">@row.RegionCode</span></td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm" name="rows[@i].RegionCode" value="@row.RegionCode" placeholder="Region Code" maxlength="20" />
+                                    </td>
                                     <td>
                                         @if (row.HasErrors)
                                         {

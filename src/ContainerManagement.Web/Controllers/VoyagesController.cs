@@ -1,8 +1,10 @@
+using ContainerManagement.Application.Abstractions;
 using ContainerManagement.Application.Dtos.Voyages;
 using ContainerManagement.Application.Services;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 
 namespace ContainerManagement.Web.Controllers
@@ -15,6 +17,9 @@ namespace ContainerManagement.Web.Controllers
         private readonly OperatorService _operatorService;
         private readonly PortService _portService;
         private readonly TerminalService _terminalService;
+        private readonly DistanceMasterService _distanceMasterService;
+        private readonly IEmailSender _emailSender;
+        private readonly IConfiguration _config;
 
         public VoyagesController(
             VoyageService voyageService,
@@ -22,7 +27,10 @@ namespace ContainerManagement.Web.Controllers
             ServiceMasterService serviceMasterService,
             OperatorService operatorService,
             PortService portService,
-            TerminalService terminalService)
+            TerminalService terminalService,
+            DistanceMasterService distanceMasterService,
+            IEmailSender emailSender,
+            IConfiguration config)
         {
             _voyageService = voyageService;
             _vesselService = vesselService;
@@ -30,6 +38,9 @@ namespace ContainerManagement.Web.Controllers
             _operatorService = operatorService;
             _portService = portService;
             _terminalService = terminalService;
+            _distanceMasterService = distanceMasterService;
+            _emailSender = emailSender;
+            _config = config;
         }
 
         [HttpGet]
@@ -256,6 +267,7 @@ namespace ContainerManagement.Web.Controllers
             ViewBag.CommencedCargoOperation = arrival?.CommencedCargoOperation;
             ViewBag.CompleteCargoOperation = departure?.CompleteCargoOperation;
             ViewBag.ActualETA = arrival?.ActualETA;
+            ViewBag.ActualETB = arrival?.ActualETB;
             ViewBag.ActualETD = departure?.ActualETD;
             ViewBag.ArrivalPilotOnBoard = arrival?.PilotOnBoard;
 
@@ -283,6 +295,81 @@ namespace ContainerManagement.Web.Controllers
             }
         }
 
+        // ── Edit Request Workflow ──
+        // When TOS is saved, the entire row (Arrival, Departure, TOS) is locked in the UI.
+        // Users can submit an edit request that an admin must approve. Email send is a stub
+        // (logged to console) — wire to SMTP/SendGrid later.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RequestEditApproval([FromBody] EditRequestDto dto, CancellationToken ct)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!Guid.TryParse(userIdStr, out var userId))
+                    return Unauthorized(new { success = false, message = "Invalid session." });
+
+                var requestId = await _voyageService.SubmitEditRequestAsync(dto, userId, ct);
+
+                // Resolve port context for the email body
+                string portCode = "—", vesselName = "—", serviceCode = "—";
+                try
+                {
+                    var allVoyages = await _voyageService.GetAllAsync(ct);
+                    foreach (var v in allVoyages)
+                    {
+                        var ports = await _voyageService.GetPortsByVoyageIdAsync(v.Id, ct);
+                        var portItem = ports.FirstOrDefault(p => p.Id == dto.VoyagePortId);
+                        if (portItem != null)
+                        {
+                            portCode = portItem.PortCode ?? "—";
+                            vesselName = v.VesselName ?? "—";
+                            serviceCode = v.ServiceCode ?? "—";
+                            break;
+                        }
+                    }
+                }
+                catch { /* non-fatal — email body falls back to ids */ }
+
+                var requesterEmail = User.FindFirstValue(ClaimTypes.Email) ?? "Unknown";
+                var requesterName = User.Identity?.Name ?? requesterEmail;
+                var adminAddr = _config["Email:AdminAddress"] ?? string.Empty;
+
+                var subject = $"[Edit Request] {dto.ReportType} — {vesselName} / {portCode} (Request #{requestId.ToString().Substring(0, 8)})";
+                var body = $@"
+                    <h3 style='font-family:sans-serif;color:#0f172a;'>Edit Approval Request</h3>
+                    <p style='font-family:sans-serif;font-size:14px;color:#334155;'>
+                        A user has requested permission to edit a locked report. Please review and approve or reject.
+                    </p>
+                    <table style='font-family:sans-serif;font-size:13px;border-collapse:collapse;'>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Requester:</td><td style='padding:4px 12px;'><strong>{System.Net.WebUtility.HtmlEncode(requesterName)}</strong> ({System.Net.WebUtility.HtmlEncode(requesterEmail)})</td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Vessel:</td><td style='padding:4px 12px;'>{System.Net.WebUtility.HtmlEncode(vesselName)}</td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Service:</td><td style='padding:4px 12px;'>{System.Net.WebUtility.HtmlEncode(serviceCode)}</td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Port:</td><td style='padding:4px 12px;'>{System.Net.WebUtility.HtmlEncode(portCode)}</td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Report:</td><td style='padding:4px 12px;'><strong>{System.Net.WebUtility.HtmlEncode(dto.ReportType)}</strong></td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;vertical-align:top;'>Reason:</td><td style='padding:4px 12px;'>{System.Net.WebUtility.HtmlEncode(dto.Reason)}</td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Request ID:</td><td style='padding:4px 12px;font-family:monospace;'>{requestId}</td></tr>
+                        <tr><td style='padding:4px 12px;color:#64748b;'>Submitted:</td><td style='padding:4px 12px;'>{DateTime.UtcNow:dd MMM yyyy HH:mm} UTC</td></tr>
+                    </table>";
+
+                bool emailSent = false;
+                if (!string.IsNullOrWhiteSpace(adminAddr))
+                {
+                    emailSent = await _emailSender.SendAsync(adminAddr, subject, body, ct);
+                }
+
+                var msg = emailSent
+                    ? "Edit request submitted and email sent to admin."
+                    : "Edit request recorded. (Email could not be sent — admin will see it in the dashboard.)";
+
+                return Ok(new { success = true, id = requestId, emailSent, message = msg });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpGet]
         public async Task<IActionResult> ExportTos(Guid id, CancellationToken ct)
         {
@@ -299,6 +386,9 @@ namespace ContainerManagement.Web.Controllers
                 portItem = ports.FirstOrDefault(p => p.Id == id);
                 if (portItem != null) { parentVoyage = v; break; }
             }
+
+            // Pull arrival for Actual ETA/ETB
+            var exportArrival = await _voyageService.GetArrivalByVoyagePortIdAsync(id, ct);
 
             using var wb = new XLWorkbook();
             var ws = wb.AddWorksheet("TOS Report");
@@ -333,6 +423,20 @@ namespace ContainerManagement.Web.Controllers
             row++;
             ws.Cell(row, 1).Value = "Terminal:"; ws.Cell(row, 1).Style.Font.Bold = true;
             ws.Cell(row, 2).Value = portItem?.TerminalCode ?? "—";
+            row++;
+            ws.Cell(row, 1).Value = "Actual ETA:"; ws.Cell(row, 1).Style.Font.Bold = true;
+            if (exportArrival?.ActualETA.HasValue == true)
+            {
+                ws.Cell(row, 2).Value = exportArrival.ActualETA.Value;
+                ws.Cell(row, 2).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+            }
+            row++;
+            ws.Cell(row, 1).Value = "Actual ETB:"; ws.Cell(row, 1).Style.Font.Bold = true;
+            if (exportArrival?.ActualETB.HasValue == true)
+            {
+                ws.Cell(row, 2).Value = exportArrival.ActualETB.Value;
+                ws.Cell(row, 2).Style.DateFormat.Format = "dd/MM/yyyy HH:mm";
+            }
             row += 2;
 
             // Section 1: Stoppages
@@ -852,6 +956,15 @@ namespace ContainerManagement.Web.Controllers
             {
                 Value = t.Id.ToString(),
                 Text = string.IsNullOrWhiteSpace(t.TerminalCode) ? t.TerminalName : $"({t.TerminalCode}) {t.TerminalName}"
+            }).ToList();
+
+            // Distance lookup — used to auto-fill voyage port distance from Distance Master
+            var distances = await _distanceMasterService.GetAllAsync(ct);
+            ViewBag.Distances = distances.Select(d => new
+            {
+                FromPortId = d.FromPortId.ToString(),
+                ToPortId = d.ToPortId.ToString(),
+                Distance = d.Distance
             }).ToList();
         }
     }

@@ -486,29 +486,52 @@
                 try { el.setSelectionRange(newCursor, newCursor); } catch (e) { }
             }, true);
 
-            // Blur — validate dd/mm/yyyy in 2000-2099 range, mark invalid if not
+            function setDateError(el, msg) {
+                el.classList.add('is-invalid');
+                // Show only on hover via native browser tooltip
+                el.setAttribute('title', msg);
+                el.setAttribute('data-date-error', msg);
+            }
+            function clearDateError(el) {
+                el.classList.remove('is-invalid');
+                el.removeAttribute('title');
+                el.removeAttribute('data-date-error');
+            }
+
+            // Blur — validate dd/mm/yyyy and set a descriptive error message if invalid
             document.addEventListener('blur', function (ev) {
                 var el = ev.target;
                 if (!el || !el.classList || !el.classList.contains('date-dmy')) return;
                 var v = (el.value || '').trim();
-                if (!v) { el.classList.remove('is-invalid'); return; }
+                if (!v) { clearDateError(el); return; }
                 var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-                if (!m) { el.classList.add('is-invalid'); return; }
+                if (!m) {
+                    setDateError(el, 'Invalid format — please enter date as dd/mm/yyyy');
+                    return;
+                }
                 var dd = parseInt(m[1], 10), mm = parseInt(m[2], 10), yyyy = parseInt(m[3], 10);
-                if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 2000 || yyyy > 2099) {
-                    el.classList.add('is-invalid'); return;
+                if (dd < 1 || dd > 31) {
+                    setDateError(el, 'Day must be between 1 and 31'); return;
+                }
+                if (mm < 1 || mm > 12) {
+                    setDateError(el, 'Month must be between 1 and 12'); return;
+                }
+                if (yyyy < 2000 || yyyy > 2099) {
+                    setDateError(el, 'Year must be between 2000 and 2099'); return;
                 }
                 var test = new Date(yyyy, mm - 1, dd);
                 if (test.getDate() !== dd || test.getMonth() !== mm - 1) {
-                    el.classList.add('is-invalid'); return;
+                    var monthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][mm - 1];
+                    setDateError(el, 'Invalid date — ' + monthName + ' ' + yyyy + ' does not have day ' + dd);
+                    return;
                 }
-                el.classList.remove('is-invalid');
+                clearDateError(el);
             }, true);
 
             document.addEventListener('focus', function (ev) {
                 var el = ev.target;
                 if (el && el.classList && el.classList.contains('date-dmy')) {
-                    el.classList.remove('is-invalid');
+                    clearDateError(el);
                 }
             }, true);
 
@@ -579,7 +602,54 @@
                 if (!isDelete && v[newCursor] === ':') newCursor++;
                 try { el.setSelectionRange(newCursor, newCursor); } catch (e) { }
             }, true);
+
+            function setTimeError(el, msg) {
+                el.classList.add('is-invalid');
+                // Show only on hover via native browser tooltip
+                el.setAttribute('title', msg);
+            }
+            function clearTimeError(el) {
+                el.classList.remove('is-invalid');
+                el.removeAttribute('title');
+            }
+
+            document.addEventListener('blur', function (ev) {
+                var el = ev.target;
+                if (!el || !el.classList || !el.classList.contains('time-24')) return;
+                var v = (el.value || '').trim();
+                if (!v) { clearTimeError(el); return; }
+                var m = v.match(/^(\d{1,2}):(\d{2})$/);
+                if (!m) {
+                    setTimeError(el, 'Invalid format — please enter time as hh:mm (24-hour)');
+                    return;
+                }
+                var hh = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+                if (hh > 23) { setTimeError(el, 'Hours must be between 00 and 23'); return; }
+                if (mm > 59) { setTimeError(el, 'Minutes must be between 00 and 59'); return; }
+                clearTimeError(el);
+            }, true);
+
+            document.addEventListener('focus', function (ev) {
+                var el = ev.target;
+                if (el && el.classList && el.classList.contains('time-24')) {
+                    clearTimeError(el);
+                }
+            }, true);
         })();
+
+        // ─── focusFirstInvalid: scroll & focus first .is-invalid input ───
+        // Call this from save handlers (Arrival/Departure/TOS) before submitting
+        // so users are taken straight to the field that needs fixing.
+        window.focusFirstInvalid = function (root) {
+            var scope = root || document;
+            var first = scope.querySelector('.is-invalid');
+            if (!first) return false;
+            try {
+                first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(function () { try { first.focus(); } catch (e) { } }, 150);
+            } catch (e) { try { first.focus(); } catch (e2) { } }
+            return true;
+        };
     </script>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
@@ -614,10 +684,10 @@
         };
 
         function getTabs() {
-            try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || []; }
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
             catch { return []; }
         }
-        function saveTabs(tabs) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); }
+        function saveTabs(tabs) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); }
 
         function getBaseRoute(href) {
             const p = href.toLowerCase().replace(/\/+$/, '');

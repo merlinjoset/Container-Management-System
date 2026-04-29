@@ -143,12 +143,21 @@ namespace ContainerManagement.Web.Controllers
             }
 
             var previewRows = new List<VesselImportRowDto>();
+            int maxNonEmptyCol = -1;
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
                 var rowIndex = 0;
                 while (reader.Read())
                 {
+                    // Track max non-empty column across all rows (header + data)
+                    for (int c = 0; c < reader.FieldCount; c++)
+                    {
+                        var v = reader.GetValue(c)?.ToString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(v) && c > maxNonEmptyCol)
+                            maxNonEmptyCol = c;
+                    }
+
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
@@ -223,6 +232,13 @@ namespace ContainerManagement.Web.Controllers
 
                     previewRows.Add(row);
                 }
+            }
+
+            // Reject the file if any row has data in more than 9 columns
+            if (maxNonEmptyCol > 8)
+            {
+                TempData["Error"] = $"The file has {maxNonEmptyCol + 1} columns with data. Vessel import accepts exactly 9 columns: VesselName (A), VesselCode (B), ImoCode (C), Teus (D), NRT (E), GRT (F), Flag (G), Speed (H), BuildYear (I). Please remove extra columns and try again.";
+                return RedirectToAction(nameof(Import));
             }
 
             ViewBag.ShowPreview = true;

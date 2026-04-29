@@ -612,6 +612,11 @@
     });
 
     async function saveDeparture() {
+        document.querySelectorAll('.date-dmy, .time-24').forEach(function (el) { el.dispatchEvent(new Event('blur', { bubbles: true })); });
+        if (window.focusFirstInvalid && window.focusFirstInvalid()) {
+            showToast('Please fix the highlighted date/time field before saving.', 'danger');
+            return;
+        }
         if (!validateDates()) return;
         if (!validateBunkersOnDeparture()) return;
         setLoading(true);

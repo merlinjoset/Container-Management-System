@@ -25,6 +25,7 @@ public class VoyageService
     private readonly ICraneProductivityRepository _craneProductivityRepo;
     private readonly IShipProductivityRepository _shipProductivityRepo;
     private readonly ITosSummaryRepository _tosSummaryRepo;
+    private readonly IEditRequestRepository _editRequestRepo;
 
     public VoyageService(
         IVoyagesRepository voyagesRepo,
@@ -44,7 +45,8 @@ public class VoyageService
         ITosStoppageRepository tosStoppageRepo,
         ICraneProductivityRepository craneProductivityRepo,
         IShipProductivityRepository shipProductivityRepo,
-        ITosSummaryRepository tosSummaryRepo)
+        ITosSummaryRepository tosSummaryRepo,
+        IEditRequestRepository editRequestRepo)
     {
         _voyagesRepo = voyagesRepo;
         _portsRepo = portsRepo;
@@ -64,6 +66,7 @@ public class VoyageService
         _craneProductivityRepo = craneProductivityRepo;
         _shipProductivityRepo = shipProductivityRepo;
         _tosSummaryRepo = tosSummaryRepo;
+        _editRequestRepo = editRequestRepo;
     }
 
     public async Task<List<VoyageListItemDto>> GetAllAsync(CancellationToken ct = default)
@@ -957,5 +960,24 @@ public class VoyageService
         }
 
         return tosId;
+    }
+
+    // ── Edit Request workflow ──
+    public async Task<Guid> SubmitEditRequestAsync(EditRequestDto dto, Guid userId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(dto.ReportType)) throw new ArgumentException("Report type is required.");
+        if (string.IsNullOrWhiteSpace(dto.Reason)) throw new ArgumentException("Reason is required.");
+        if (dto.VoyagePortId == Guid.Empty) throw new ArgumentException("VoyagePortId is required.");
+
+        var entity = new EditRequest
+        {
+            VoyagePortId = dto.VoyagePortId,
+            ReportType = dto.ReportType.Trim(),
+            Reason = dto.Reason.Trim(),
+            Status = "Pending",
+            CreatedBy = userId,
+            ModifiedBy = userId
+        };
+        return await _editRequestRepo.AddAsync(entity, ct);
     }
 }

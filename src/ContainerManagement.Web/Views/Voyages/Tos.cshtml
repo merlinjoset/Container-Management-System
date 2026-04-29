@@ -61,15 +61,29 @@
         </div>
     </div>
 
+    @{
+        var hdrActualETA = ViewBag.ActualETA as DateTime?;
+        var hdrActualETB = ViewBag.ActualETB as DateTime?;
+    }
     <!-- Context Info -->
     <div class="tos-context">
         <div class="ctx-item"><span class="ctx-label">Vessel:</span><span class="ctx-value">@(voyage?.VesselName ?? "—")</span></div>
         <div class="ctx-item"><span class="ctx-label">Service:</span><span class="ctx-value">@(voyage?.ServiceCode ?? "—")</span></div>
         <div class="ctx-item"><span class="ctx-label">Port:</span><span class="ctx-value">@(port?.PortCode ?? "—")</span></div>
         <div class="ctx-item"><span class="ctx-label">Terminal:</span><span class="ctx-value">@(port?.TerminalCode ?? "—")</span></div>
-        <div class="ctx-item"><span class="ctx-label">Planned ETA:</span><span class="ctx-value">@(port?.ETA?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
-        <div class="ctx-item"><span class="ctx-label">Planned ETB:</span><span class="ctx-value">@(port?.ETB?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
         <div class="ctx-item"><span class="ctx-label">Planned ETD:</span><span class="ctx-value">@(port?.ETD?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        @if (hdrActualETA.HasValue)
+        {
+            <div class="ctx-item"><span class="ctx-label">Actual ETA:</span><span class="ctx-value">@hdrActualETA.Value.ToString("dd/MM/yyyy HH:mm")</span></div>
+        }
+        else
+        {
+            <div class="ctx-item" title="Arrival report not yet entered — using Planned ETA for calculations"><span class="ctx-label">Planned ETA:</span><span class="ctx-value">@(port?.ETA?.ToString("dd/MM/yyyy HH:mm") ?? "—")</span></div>
+        }
+        @if (hdrActualETB.HasValue)
+        {
+            <div class="ctx-item"><span class="ctx-label">Actual ETB:</span><span class="ctx-value">@hdrActualETB.Value.ToString("dd/MM/yyyy HH:mm")</span></div>
+        }
     </div>
 
     <input type="hidden" id="voyagePortId" value="@Model.VoyagePortId" />
@@ -149,10 +163,12 @@
     @{
         var actualETA = ViewBag.ActualETA as DateTime?;
         var actualETD = ViewBag.ActualETD as DateTime?;
+        // Fallback: if Arrival report not entered (no ActualETA), use the planned ETA from VoyagePort
+        var etaForCalc = actualETA ?? port?.ETA;
         decimal? portStayTime = null;
-        if (actualETA.HasValue && actualETD.HasValue && actualETD > actualETA)
+        if (etaForCalc.HasValue && actualETD.HasValue && actualETD > etaForCalc)
         {
-            portStayTime = (decimal)(actualETD.Value - actualETA.Value).TotalHours;
+            portStayTime = (decimal)(actualETD.Value - etaForCalc.Value).TotalHours;
         }
     }
 
@@ -237,15 +253,16 @@
     <!-- Section 5: Summary -->
     @{
         var arrPilot = ViewBag.ArrivalPilotOnBoard as DateTime?;
+        // etaForCalc already falls back to planned ETA when Arrival report is missing
         decimal? vesselTurnaround = null;
-        if (actualETA.HasValue && actualETD.HasValue && actualETD > actualETA)
+        if (etaForCalc.HasValue && actualETD.HasValue && actualETD > etaForCalc)
         {
-            vesselTurnaround = (decimal)(actualETD.Value - actualETA.Value).TotalHours;
+            vesselTurnaround = (decimal)(actualETD.Value - etaForCalc.Value).TotalHours;
         }
         decimal? berthingDelay = null;
-        if (actualETA.HasValue && arrPilot.HasValue)
+        if (etaForCalc.HasValue && arrPilot.HasValue)
         {
-            var diff = (arrPilot.Value - actualETA.Value).TotalHours;
+            var diff = (arrPilot.Value - etaForCalc.Value).TotalHours;
             berthingDelay = (decimal)Math.Abs(diff);
         }
     }
@@ -605,6 +622,11 @@
     }
 
     async function saveTos() {
+        document.querySelectorAll('.date-dmy, .time-24').forEach(function (el) { el.dispatchEvent(new Event('blur', { bubbles: true })); });
+        if (window.focusFirstInvalid && window.focusFirstInvalid()) {
+            showToast('Please fix the highlighted date/time field before saving.', 'danger');
+            return;
+        }
         setLoading(true);
 
         var payload = {

@@ -173,6 +173,7 @@ namespace ContainerManagement.Web.Controllers
             }
 
             var previewRows = new List<OperatorImportRowDto>();
+            int maxNonEmptyCol = -1;
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
@@ -180,6 +181,14 @@ namespace ContainerManagement.Web.Controllers
                 var rowNum = 1;
                 while (reader.Read())
                 {
+                    // Track max non-empty column across all rows (header + data)
+                    for (int c = 0; c < reader.FieldCount; c++)
+                    {
+                        var v = reader.GetValue(c)?.ToString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(v) && c > maxNonEmptyCol)
+                            maxNonEmptyCol = c;
+                    }
+
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
@@ -204,6 +213,13 @@ namespace ContainerManagement.Web.Controllers
                     }
                     rowIndex++;
                 }
+            }
+
+            // Reject the file if any row has data in more than 3 columns
+            if (maxNonEmptyCol > 2)
+            {
+                TempData["Error"] = $"The file has {maxNonEmptyCol + 1} columns with data. Operator import accepts exactly 3 columns: Operator Name (A), Vendor Code (B), Competitor (C). Please remove extra columns and try again.";
+                return RedirectToAction(nameof(Import));
             }
 
             var vendors = await _vendorService.GetAllAsync(ct);

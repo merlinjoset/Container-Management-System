@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
     public DbSet<CraneProductivityEntity> CraneProductivities => Set<CraneProductivityEntity>();
     public DbSet<ShipProductivityEntity> ShipProductivities => Set<ShipProductivityEntity>();
     public DbSet<TosSummaryEntity> TosSummaries => Set<TosSummaryEntity>();
+    public DbSet<EditRequestEntity> EditRequests => Set<EditRequestEntity>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -871,6 +872,33 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.TosId)
                 .IsUnique()
                 .HasDatabaseName("IX_TblTOSSummary_TosId");
+        });
+
+        // ---------------- TblEditRequest ----------------
+        b.Entity<EditRequestEntity>(e =>
+        {
+            e.ToTable("TblEditRequest");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.VoyagePortId).IsRequired();
+            e.Property(x => x.ReportType).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+
+            e.Property(x => x.IsDeleted).HasDefaultValue(false).IsRequired();
+            e.Property(x => x.CreatedOn).IsRequired();
+            e.Property(x => x.ModifiedOn).IsRequired();
+            e.Property(x => x.CreatedBy).IsRequired();
+            e.Property(x => x.ModifiedBy).IsRequired();
+
+            e.HasOne<VoyagePortEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.VoyagePortId)
+                .HasConstraintName("FK_TblEditRequest_TblVoyagePort")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => new { x.VoyagePortId, x.Status })
+                .HasDatabaseName("IX_TblEditRequest_VoyagePortId_Status");
         });
 
     }

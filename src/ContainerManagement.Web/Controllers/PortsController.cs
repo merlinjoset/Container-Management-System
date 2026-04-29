@@ -183,6 +183,7 @@ namespace ContainerManagement.Web.Controllers
 
             // Parse Excel rows
             var previewRows = new List<PortImportRowDto>();
+            int maxNonEmptyCol = -1;
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
@@ -190,6 +191,14 @@ namespace ContainerManagement.Web.Controllers
                 var rowNum = 1;
                 while (reader.Read())
                 {
+                    // Track max non-empty column across all rows (header + data)
+                    for (int c = 0; c < reader.FieldCount; c++)
+                    {
+                        var v = reader.GetValue(c)?.ToString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(v) && c > maxNonEmptyCol)
+                            maxNonEmptyCol = c;
+                    }
+
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
@@ -214,6 +223,13 @@ namespace ContainerManagement.Web.Controllers
                     }
                     rowIndex++;
                 }
+            }
+
+            // Reject the file if any row has data in more than 4 columns
+            if (maxNonEmptyCol > 3)
+            {
+                TempData["Error"] = $"The file has {maxNonEmptyCol + 1} columns with data. Port import accepts exactly 4 columns: Port Code (A), Full Name (B), Country Code (C), Region Code (D). Please remove extra columns and try again.";
+                return RedirectToAction(nameof(Import));
             }
 
             // Match country/region codes to IDs from DB

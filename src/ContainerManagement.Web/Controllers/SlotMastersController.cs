@@ -120,6 +120,7 @@ namespace ContainerManagement.Web.Controllers
             }
 
             var previewRows = new List<SlotMasterImportRowDto>();
+            int maxNonEmptyCol = -1;
             using (var stream = file.OpenReadStream())
             using (var reader = ext == ".xls" ? ExcelReaderFactory.CreateBinaryReader(stream) : ExcelReaderFactory.CreateOpenXmlReader(stream))
             {
@@ -127,6 +128,15 @@ namespace ContainerManagement.Web.Controllers
                 var rowNum = 1;
                 while (reader.Read())
                 {
+                    // Track max non-empty column index across the entire file
+                    var fc = reader.FieldCount;
+                    for (int c = 0; c < fc; c++)
+                    {
+                        var cellVal = reader.GetValue(c)?.ToString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(cellVal) && c > maxNonEmptyCol)
+                            maxNonEmptyCol = c;
+                    }
+
                     if (rowIndex == 0)
                     {
                         var c0 = reader.GetValue(0)?.ToString()?.Trim().ToLowerInvariant();
@@ -146,6 +156,14 @@ namespace ContainerManagement.Web.Controllers
                     }
                     rowIndex++;
                 }
+            }
+
+            // Reject the file if any row has data in more than 1 column
+            // (Slot template has exactly 1 column: Slot Name)
+            if (maxNonEmptyCol > 0)
+            {
+                TempData["Error"] = $"The file has {maxNonEmptyCol + 1} columns with data. Slot import accepts exactly 1 column: Slot Name (A). Please remove extra columns and try again.";
+                return RedirectToAction(nameof(Import));
             }
 
             var errorCount = previewRows.Count(r => r.HasErrors);

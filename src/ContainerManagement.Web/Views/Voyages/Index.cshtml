@@ -70,6 +70,28 @@
         .btn-xls { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; font-size: .58rem !important; padding: .1rem .3rem !important; }
         .btn-xls:hover { background: #d1fae5; color: #064e3b; }
 
+        /* Lock state — applied to the whole port-report-btns container when TOS is updated */
+        .port-report-btns.locked .btn-arr,
+        .port-report-btns.locked .btn-dep,
+        .port-report-btns.locked .btn-tos {
+            pointer-events: none;
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+        .port-lock-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px;
+            background: #fef3c7; color: #92400e;
+            border: 1px solid #fde68a; border-radius: .25rem;
+            font-size: .7rem;
+        }
+        .btn-req-edit {
+            background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+            font-size: .62rem !important; padding: .12rem .35rem !important;
+            border-radius: .25rem;
+        }
+        .btn-req-edit:hover { background: #fde68a; color: #78350f; }
+
         /* Export button */
         .btn-export { font-size: .72rem; padding: .25rem .6rem; background: #065f46; color: #fff; border: none; border-radius: .3rem; }
         .btn-export:hover { background: #047857; color: #fff; }
@@ -233,6 +255,46 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<!-- Request Edit Approval Modal -->
+<div class="modal fade" id="reqEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#fef3c7;color:#78350f;">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Request Edit Approval</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reqEditVoyagePortId" />
+                <div class="alert alert-warning py-2 mb-3" style="font-size:.8rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Reports for port <strong id="reqEditPortLabel">—</strong> are locked because the TOS report has been submitted.
+                    To edit, send an approval request to admin.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="font-size:.8rem;">Report to edit</label>
+                    <select class="form-select form-select-sm" id="reqEditReportType">
+                        <option value="TOS" selected>TOS</option>
+                        <option value="Departure">Departure</option>
+                        <option value="Arrival">Arrival</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="font-size:.8rem;">Reason for edit <span class="text-danger">*</span></label>
+                    <textarea class="form-control form-control-sm" id="reqEditReason" rows="3" maxlength="1000" placeholder="Explain why this report needs to be edited..."></textarea>
+                    <small class="text-muted" style="font-size:.7rem;">This message will be emailed to the admin.</small>
+                </div>
+                <div id="reqEditError" class="alert alert-danger py-2 d-none" style="font-size:.78rem;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning btn-sm" id="reqEditSubmitBtn" onclick="submitEditRequest();">
+                    <i class="bi bi-send me-1"></i>Send Request
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -418,6 +480,15 @@
                             var tosIcon = p.hasTos ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-clipboard2-data"></i>';
                             var tosLabel = 'TOS';
 
+                            // Lock state — when TOS is updated, all reports for this row are locked
+                            var locked = !!p.hasTos;
+                            var lockHtml = '';
+                            if (locked) {
+                                lockHtml = '<span class="port-lock-badge" title="Locked — TOS report submitted. Click Request Edit to ask admin for approval."><i class="bi bi-lock-fill"></i></span>'
+                                         + '<button type="button" class="btn btn-req-edit" onclick="event.stopPropagation(); requestEditApproval(\'' + p.id + '\', \'' + (p.portCode || '') + '\');" title="Request Edit Approval">'
+                                         + '<i class="bi bi-pencil-square me-1"></i>Request Edit</button>';
+                            }
+
                             tr.innerHTML =
                                 '<td style="font-weight:700;color:#1e3a8a;">' + (i + 1) + '</td>' +
                                 '<td>' + (p.voyNo || '') + '</td>' +
@@ -435,13 +506,14 @@
                                 '<td>' + (p.distance != null ? parseFloat(p.distance).toFixed(0) : '') + '</td>' +
                                 '<td>' + (p.seaDay != null ? parseFloat(p.seaDay).toFixed(2) : '') + '</td>' +
                                 '<td>' +
-                                    '<div class="port-report-btns">' +
+                                    '<div class="port-report-btns' + (locked ? ' locked' : '') + '">' +
                                         '<a href="/voyages/arrival/' + p.id + '" class="' + arrBtnCls + '" onclick="event.stopPropagation();">' + arrIcon + arrLabel + '</a>' +
                                         (p.hasArrival ? '<a href="/voyages/exportarrival/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export Arrival"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
                                         '<a href="/voyages/departure/' + p.id + '" class="' + depBtnCls + '" onclick="event.stopPropagation();">' + depIcon + depLabel + '</a>' +
                                         (p.hasDeparture ? '<a href="/voyages/exportdeparture/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export Departure"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
                                         '<a href="/voyages/tos/' + p.id + '" class="' + tosBtnCls + '" onclick="event.stopPropagation();" title="Terminal Operating System Report">' + tosIcon + tosLabel + '</a>' +
                                         (p.hasTos ? '<a href="/voyages/exporttos/' + p.id + '" class="btn btn-xls" onclick="event.stopPropagation();" title="Export TOS"><i class="bi bi-file-earmark-spreadsheet"></i></a>' : '') +
+                                        lockHtml +
                                     '</div>' +
                                 '</td>';
                             portBody.appendChild(tr);
@@ -463,5 +535,60 @@
             if (!voyageId) { alert('Please select a voyage first.'); return; }
             window.location.href = '@Url.Action("ExportPorts", "Voyages")?id=' + voyageId;
         }
+
+        // ── Request Edit Approval (modal with dropdown) ──
+        function requestEditApproval(voyagePortId, portCode) {
+            document.getElementById('reqEditVoyagePortId').value = voyagePortId;
+            document.getElementById('reqEditPortLabel').textContent = portCode || '—';
+            document.getElementById('reqEditReportType').value = 'TOS';
+            document.getElementById('reqEditReason').value = '';
+            document.getElementById('reqEditError').classList.add('d-none');
+            new bootstrap.Modal(document.getElementById('reqEditModal')).show();
+        }
+
+        async function submitEditRequest() {
+            var voyagePortId = document.getElementById('reqEditVoyagePortId').value;
+            var reportType = document.getElementById('reqEditReportType').value;
+            var reason = document.getElementById('reqEditReason').value.trim();
+            var portCode = document.getElementById('reqEditPortLabel').textContent;
+            var errorEl = document.getElementById('reqEditError');
+
+            if (!reason) {
+                errorEl.textContent = 'Please enter a reason.';
+                errorEl.classList.remove('d-none');
+                return;
+            }
+
+            var btn = document.getElementById('reqEditSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending…';
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            try {
+                var resp = await fetch('@Url.Action("RequestEditApproval", "Voyages")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token ? token.value : ''
+                    },
+                    body: JSON.stringify({ voyagePortId: voyagePortId, reportType: reportType, reason: reason })
+                });
+                var result = await resp.json();
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('reqEditModal')).hide();
+                    alert((result.emailSent ? '✉ Email sent to admin.\n\n' : '') + 'Edit request submitted for ' + portCode + ' — ' + reportType + '.\nYou will be notified once approved.');
+                } else {
+                    errorEl.textContent = result.message || 'Failed to send request.';
+                    errorEl.classList.remove('d-none');
+                }
+            } catch (err) {
+                errorEl.textContent = 'Network error: ' + err.message;
+                errorEl.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send me-1"></i>Send Request';
+            }
+        }
     </script>
+    @Html.AntiForgeryToken()
 }
