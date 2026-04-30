@@ -1,0 +1,73 @@
+@model List<ContainerManagement.Application.Dtos.Auth.RoleListItemDto>
+
+@{
+    ViewData["Title"] = "User Roles";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="mb-0">User Roles</h2>
+        <div class="text-muted">Application access roles assigned to users</div>
+    </div>
+    <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-people me-1"></i>Manage Users
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        @if (Model == null || Model.Count == 0)
+        {
+            <div class="p-4 text-center text-muted">No roles defined yet.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:50px;">#</th>
+                            <th style="width:160px;">Role Name</th>
+                            <th style="width:110px;">Users</th>
+                            <th>Usernames</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Count; i++)
+                        {
+                            var r = Model[i];
+                            <tr>
+                                <td class="text-muted">@(i + 1)</td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-dark border" style="font-size:.85rem; padding:.4rem .65rem;">
+                                        <i class="bi bi-shield-lock me-1"></i>@r.Name
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary-subtle text-primary border" style="font-size:.8rem;">@r.UserCount</span>
+                                </td>
+                                <td>
+                                    @if (r.UserNames != null && r.UserNames.Count > 0)
+                                    {
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var name in r.UserNames)
+                                            {
+                                                <span class="badge bg-light text-dark border" style="font-size:.75rem;">
+                                                    <i class="bi bi-person me-1 text-muted"></i>@name
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic" style="font-size:.78rem;">No users assigned</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,458 @@
+@{
+    ViewData["Title"] = "Bunker Pro Dashboard";
+    // Use the default app layout (so the global app header / nav / Welcome dropdown stays)
+}
+
+@section Styles {
+<style>
+    /* Bleed the dashboard out to the page edges so the sidebar can sit flush */
+    .app-container.py-3.px-4 { padding: 0 !important; }
+    .bp-shell { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 56px); background: #f8fafc; }
+
+    /* ── Sidebar ── */
+    .bp-side { background: #fff; border-right: 1px solid #e5e7eb; padding: 0; display: flex; flex-direction: column; }
+    .bp-side .brand { padding: 1rem 1.1rem; display: flex; align-items: center; gap: .65rem; border-bottom: 1px solid #e5e7eb; }
+    .bp-side .brand .logo { width: 38px; height: 38px; border-radius: 8px; background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .bp-side .brand .title { font-weight: 700; font-size: .95rem; color: #0f172a; line-height: 1; }
+    .bp-side .brand .subtitle { font-size: .58rem; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; margin-top: .15rem; }
+
+    .bp-side .nav-group { padding: .75rem 0; }
+    .bp-side .nav-label { font-size: .62rem; color: #94a3b8; letter-spacing: 1px; text-transform: uppercase; padding: .25rem 1.1rem .35rem; }
+    .bp-side .nav-link { display: flex; align-items: center; gap: .65rem; padding: .55rem 1.1rem; font-size: .82rem; color: #475569; text-decoration: none; border-left: 3px solid transparent; }
+    .bp-side .nav-link i { font-size: .95rem; color: #94a3b8; width: 18px; }
+    .bp-side .nav-link:hover { background: #f8fafc; color: #0f172a; }
+    .bp-side .nav-link.active { background: #eff6ff; color: #1d4ed8; border-left-color: #2563eb; font-weight: 600; }
+    .bp-side .nav-link.active i { color: #2563eb; }
+
+    .bp-side .market-insight { margin: auto .85rem 1rem; background: #f1f5f9; border-radius: .5rem; padding: .75rem .85rem; }
+    .bp-side .market-insight .mi-head { display: flex; justify-content: space-between; align-items: center; font-size: .78rem; font-weight: 600; color: #0f172a; }
+    .bp-side .market-insight .mi-sub { font-size: .68rem; color: #64748b; margin-top: .35rem; }
+    .bp-side .market-insight .mi-price { font-size: 1rem; font-weight: 700; color: #0f172a; margin-top: .15rem; }
+    .bp-side .market-insight .mi-delta { font-size: .68rem; color: #16a34a; margin-top: .15rem; }
+
+    /* ── Main content ── */
+    .bp-main { display: flex; flex-direction: column; }
+    .bp-pagehead { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .bp-pagehead .ph-left h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #0f172a; }
+    .bp-pagehead .ph-left .sub { font-size: .78rem; color: #64748b; margin-top: .15rem; }
+    .bp-pagehead .ph-right { display: flex; align-items: center; gap: .65rem; }
+    .bp-pagehead .company-sel { background: #fff; border: 1px solid #e5e7eb; border-radius: .35rem; padding: .35rem .65rem; font-size: .8rem; color: #475569; cursor: pointer; min-width: 160px; }
+
+    .bp-content { padding: 1.25rem 1.5rem; }
+
+    /* ── Top action row (date filter + new enquiry) ── */
+    .bp-actions { display: flex; justify-content: flex-end; align-items: center; gap: .55rem; margin-bottom: 1rem; }
+    .bp-actions .date-pick { background: #fff; border: 1px solid #e5e7eb; border-radius: .35rem; padding: .4rem .65rem; font-size: .78rem; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: .4rem; }
+    .bp-actions .new-enquiry-btn { background: #2563eb; color: #fff; border: 0; padding: .4rem .85rem; border-radius: .35rem; font-size: .78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: .4rem; }
+    .bp-actions .new-enquiry-btn:hover { background: #1d4ed8; }
+
+    /* ── KPI cards ── */
+    .bp-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+    .bp-kpi { background: #fff; border: 1px solid #e5e7eb; border-radius: .55rem; padding: 1rem; display: flex; align-items: flex-start; gap: .75rem; }
+    .bp-kpi .ico { width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; flex: 0 0 42px; }
+    .bp-kpi .label { font-size: .72rem; color: #64748b; }
+    .bp-kpi .value { font-size: 1.25rem; font-weight: 700; color: #0f172a; line-height: 1.1; margin-top: .15rem; }
+    .bp-kpi .delta { font-size: .68rem; margin-top: .35rem; }
+    .bp-kpi .delta.down { color: #dc2626; }
+    .bp-kpi .delta.up { color: #16a34a; }
+    .bp-kpi .delta.neutral { color: #64748b; }
+
+    /* KPI icon variants */
+    .bp-kpi .ico.blue { background: #dbeafe; color: #2563eb; }
+    .bp-kpi .ico.green { background: #d1fae5; color: #059669; }
+    .bp-kpi .ico.purple { background: #ede9fe; color: #7c3aed; }
+    .bp-kpi .ico.orange { background: #ffedd5; color: #ea580c; }
+    .bp-kpi .ico.teal { background: #ccfbf1; color: #0d9488; }
+
+    /* ── Two-column row ── */
+    .bp-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    @@media (max-width: 1280px) { .bp-row { grid-template-columns: 1fr; } }
+
+    /* Cards */
+    .bp-card { background: #fff; border: 1px solid #e5e7eb; border-radius: .55rem; padding: 1rem; }
+    .bp-card .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+    .bp-card .card-head h3 { margin: 0; font-size: .95rem; font-weight: 700; color: #0f172a; }
+    .bp-card .card-head .head-sub { font-size: .72rem; color: #64748b; }
+    .bp-card .card-head a { font-size: .72rem; color: #2563eb; text-decoration: none; }
+    .bp-card .card-head a:hover { text-decoration: underline; }
+
+    .bp-table { width: 100%; font-size: .78rem; }
+    .bp-table thead th { color: #64748b; font-weight: 600; font-size: .68rem; padding: .5rem .35rem; border-bottom: 1px solid #e5e7eb; text-transform: none; }
+    .bp-table tbody td { padding: .55rem .35rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .bp-table tbody tr:last-child td { border-bottom: 0; }
+    .bp-table .vessel-name { font-weight: 600; color: #0f172a; }
+    .bp-table .status-pill { padding: .15rem .45rem; border-radius: 999px; font-size: .65rem; font-weight: 600; display: inline-block; }
+    .bp-table .status-pill.rfq-sent { background: #fee2e2; color: #b91c1c; }
+    .bp-table .status-pill.open { background: #fef3c7; color: #92400e; }
+    .bp-table .status-pill.planning { background: #dbeafe; color: #1d4ed8; }
+    .bp-table .status-pill.booked { background: #d1fae5; color: #047857; }
+    .bp-table .status-pill.delivered { background: #d1fae5; color: #047857; }
+    .bp-table .status-pill.in-progress { background: #fed7aa; color: #c2410c; }
+    .bp-table .view-all { padding: .65rem .35rem 0; text-align: center; }
+    .bp-table .view-all a { font-size: .72rem; color: #2563eb; text-decoration: none; }
+
+    .bp-card .delta-up { color: #16a34a; }
+    .bp-card .delta-down { color: #dc2626; }
+
+    .sparkline { width: 60px; height: 20px; }
+
+    /* Spend Overview ring */
+    .spend-ring-wrap { display: flex; align-items: center; gap: 1rem; }
+    .spend-ring-wrap svg { flex: 0 0 auto; }
+    .spend-legend { font-size: .72rem; flex: 1; }
+    .spend-legend .item { display: flex; justify-content: space-between; padding: .2rem 0; }
+    .spend-legend .lbl { display: inline-flex; align-items: center; gap: .35rem; color: #475569; }
+    .spend-legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .spend-legend .amt { color: #0f172a; font-weight: 600; }
+    .spend-link { display: block; margin-top: .65rem; text-align: center; font-size: .72rem; color: #2563eb; text-decoration: none; }
+
+    /* Bunker Demand Map */
+    .bp-map { position: relative; min-height: 320px; background: #f8fafc; border-radius: .35rem; overflow: hidden; }
+    .bp-map svg { width: 100%; height: 320px; }
+    .bp-map .pin { position: absolute; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .75rem; box-shadow: 0 4px 8px rgba(0,0,0,.15); }
+    .bp-map .pin.high { background: #ef4444; }
+    .bp-map .pin.med { background: #f59e0b; }
+    .bp-map .pin.low { background: #16a34a; }
+    .bp-map .pin .label { position: absolute; left: 36px; top: 50%; transform: translateY(-50%); font-size: .72rem; font-weight: 600; color: #0f172a; background: rgba(255,255,255,.85); padding: .15rem .4rem; border-radius: .25rem; white-space: nowrap; }
+    .bp-map .legend { position: absolute; bottom: .5rem; left: .5rem; background: rgba(255,255,255,.95); padding: .35rem .65rem; border-radius: .35rem; font-size: .7rem; display: flex; gap: .85rem; }
+    .bp-map .legend .li { display: inline-flex; align-items: center; gap: .25rem; color: #475569; }
+    .bp-map .legend .li::before { content: ''; width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .bp-map .legend .li.high::before { background: #ef4444; }
+    .bp-map .legend .li.med::before { background: #f59e0b; }
+    .bp-map .legend .li.low::before { background: #16a34a; }
+
+    /* Top suppliers */
+    .supplier-row { display: grid; grid-template-columns: 1.4fr .6fr .8fr 1.2fr; gap: .35rem; align-items: center; padding: .55rem 0; border-bottom: 1px solid #f1f5f9; font-size: .78rem; }
+    .supplier-row:last-child { border-bottom: 0; }
+    .supplier-row .sname { font-weight: 600; color: #0f172a; }
+    .supplier-row .qty, .supplier-row .spend { color: #475569; }
+    .supplier-row .share { display: flex; align-items: center; gap: .35rem; color: #64748b; font-size: .72rem; }
+    .supplier-row .bar { height: 3px; background: #e5e7eb; border-radius: 2px; flex: 1; overflow: hidden; }
+    .supplier-row .bar-fill { height: 100%; background: #2563eb; }
+
+    /* Procurement workflow */
+    .bp-workflow { background: #fff; border: 1px solid #e5e7eb; border-radius: .55rem; padding: 1rem 1.25rem; }
+    .bp-workflow h3 { font-size: .9rem; font-weight: 700; color: #0f172a; margin-bottom: .85rem; }
+    .bp-workflow .steps { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .bp-workflow .step { display: flex; align-items: center; gap: .5rem; padding: .35rem .65rem; }
+    .bp-workflow .step .step-icon { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .bp-workflow .step .step-text { font-size: .78rem; }
+    .bp-workflow .step .step-text .t1 { font-weight: 600; color: #0f172a; }
+    .bp-workflow .step .step-text .t2 { color: #64748b; font-size: .68rem; }
+    .bp-workflow .arrow { color: #cbd5e1; font-size: 1rem; }
+    .bp-workflow .icon-blue { background: #dbeafe; color: #2563eb; }
+    .bp-workflow .icon-yellow { background: #fef3c7; color: #b45309; }
+    .bp-workflow .icon-purple { background: #ede9fe; color: #7c3aed; }
+    .bp-workflow .icon-green { background: #d1fae5; color: #059669; }
+    .bp-workflow .icon-orange { background: #ffedd5; color: #ea580c; }
+    .bp-workflow .icon-gray { background: #f1f5f9; color: #475569; }
+
+    /* Price trend chart */
+    .price-trend-chart { height: 180px; position: relative; }
+    .price-trend-chart svg { width: 100%; height: 100%; }
+    .price-trend-tip { position: absolute; top: 25%; right: 35%; background: #0f172a; color: #fff; padding: .35rem .55rem; border-radius: .35rem; font-size: .65rem; line-height: 1.3; pointer-events: none; }
+    .price-trend-tip .pt-date { color: #cbd5e1; }
+    .price-trend-tip .pt-price { font-weight: 700; }
+
+    /* Tabs in Bunker Price */
+    .price-tabs { display: flex; gap: 0; border-bottom: 1px solid #e5e7eb; margin-bottom: .65rem; }
+    .price-tabs .pt-tab { padding: .35rem .75rem; font-size: .78rem; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
+    .price-tabs .pt-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+</style>
+}
+
+<div class="bp-shell">
+
+    <!-- ─── Sidebar ─── -->
+    <aside class="bp-side">
+        <div class="nav-group" style="padding-top:1rem;">
+            <a class="nav-link active" href="#"><i class="bi bi-speedometer2"></i>Dashboard</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Procurement</div>
+            <a class="nav-link" href="#"><i class="bi bi-file-earmark-text"></i>Enquiries (RFQ)</a>
+            <a class="nav-link" href="#"><i class="bi bi-cart3"></i>Orders</a>
+            <a class="nav-link" href="#"><i class="bi bi-file-earmark-medical"></i>Contracts</a>
+            <a class="nav-link" href="#"><i class="bi bi-people"></i>Suppliers</a>
+            <a class="nav-link" href="#"><i class="bi bi-graph-up-arrow"></i>Price Intelligence</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Planning</div>
+            <a class="nav-link" href="#"><i class="bi bi-calendar3"></i>Vessel Schedule</a>
+            <a class="nav-link" href="/bunker/planning"><i class="bi bi-map"></i>Voyage Planner</a>
+            <a class="nav-link" href="#"><i class="bi bi-geo-alt"></i>Ports & Prices</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Operations</div>
+            <a class="nav-link" href="#"><i class="bi bi-truck"></i>Bunker Deliveries</a>
+            <a class="nav-link" href="#"><i class="bi bi-file-earmark"></i>Documents</a>
+            <a class="nav-link" href="#"><i class="bi bi-receipt"></i>Invoices</a>
+            <a class="nav-link" href="#"><i class="bi bi-shield-exclamation"></i>Claims</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Analytics</div>
+            <a class="nav-link" href="#"><i class="bi bi-bar-chart"></i>Reports</a>
+            <a class="nav-link" href="#"><i class="bi bi-pie-chart"></i>Spend Analysis</a>
+            <a class="nav-link" href="#"><i class="bi bi-piggy-bank"></i>Savings Tracker</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Admin</div>
+            <a class="nav-link" href="#"><i class="bi bi-gear"></i>Settings</a>
+            <a class="nav-link" href="#"><i class="bi bi-shield-lock"></i>Users &amp; Roles</a>
+        </div>
+
+        <div class="market-insight">
+            <div class="mi-head">Market Insight <i class="bi bi-chevron-right"></i></div>
+            <div class="mi-sub">VLSFO Average</div>
+            <div class="mi-price">$589.50 <span style="font-size:.65rem;color:#64748b;font-weight:400;">/ MT</span></div>
+            <div class="mi-delta"><i class="bi bi-arrow-up"></i> 2.6% vs last 7 days</div>
+        </div>
+    </aside>
+
+    <!-- ─── Main ─── -->
+    <div class="bp-main">
+
+        <!-- Page heading (replaces the old custom topbar — global app header lives in _Layout) -->
+        <div class="bp-pagehead">
+            <div class="ph-left">
+                <h2>Dashboard</h2>
+                <div class="sub">Overview of your bunker procurement activities</div>
+            </div>
+            <div class="ph-right">
+                <select class="company-sel"><option>All Companies</option></select>
+            </div>
+        </div>
+
+        <div class="bp-content">
+
+            <!-- Action row -->
+            <div class="bp-actions">
+                <div class="date-pick"><i class="bi bi-calendar3"></i>Last 30 Days <i class="bi bi-chevron-down"></i></div>
+                <button class="new-enquiry-btn"><i class="bi bi-plus-lg"></i>New Enquiry</button>
+            </div>
+
+            <!-- KPIs -->
+            <div class="bp-kpis">
+                <div class="bp-kpi">
+                    <div class="ico blue"><i class="bi bi-droplet-fill"></i></div>
+                    <div>
+                        <div class="label">Total Spend (30 Days)</div>
+                        <div class="value">$18.62M</div>
+                        <div class="delta down"><i class="bi bi-arrow-down"></i> 6.3% vs previous 30 days</div>
+                    </div>
+                </div>
+                <div class="bp-kpi">
+                    <div class="ico green"><i class="bi bi-bar-chart-fill"></i></div>
+                    <div>
+                        <div class="label">Total Quantity</div>
+                        <div class="value">31,450 MT</div>
+                        <div class="delta up"><i class="bi bi-arrow-up"></i> 4.8% vs previous 30 days</div>
+                    </div>
+                </div>
+                <div class="bp-kpi">
+                    <div class="ico purple"><i class="bi bi-cart3"></i></div>
+                    <div>
+                        <div class="label">Total Orders</div>
+                        <div class="value">28</div>
+                        <div class="delta neutral">— 0% vs previous 30 days</div>
+                    </div>
+                </div>
+                <div class="bp-kpi">
+                    <div class="ico orange"><i class="bi bi-currency-dollar"></i></div>
+                    <div>
+                        <div class="label">Avg Price (VLSFO)</div>
+                        <div class="value">$589.50 <small style="font-size:.7rem;color:#64748b;font-weight:500;">/ MT</small></div>
+                        <div class="delta down"><i class="bi bi-arrow-down"></i> 2.6% vs previous 30 days</div>
+                    </div>
+                </div>
+                <div class="bp-kpi">
+                    <div class="ico teal"><i class="bi bi-truck"></i></div>
+                    <div>
+                        <div class="label">Active Vessels</div>
+                        <div class="value">24</div>
+                        <div class="delta neutral">— as of today</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 1: Upcoming Bunker Requirements + Bunker Price Snapshot + Spend Overview -->
+            <div class="bp-row">
+                <!-- Upcoming Bunker Requirements -->
+                <div class="bp-card">
+                    <div class="card-head"><h3>Upcoming Bunker Requirements</h3></div>
+                    <table class="bp-table">
+                        <thead>
+                            <tr><th>Vessel</th><th>Port / ETA</th><th>Fuel Type</th><th>Quantity (MT)</th><th>ETA</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="vessel-name">MV Oceanic Star</td><td>Singapore</td><td>VLSFO</td><td>1,500</td><td>18 May 2024</td><td><span class="status-pill rfq-sent">RFQ Sent</span></td></tr>
+                            <tr><td class="vessel-name">MV Global Voyager</td><td>Fujairah</td><td>VLSFO</td><td>2,000</td><td>19 May 2024</td><td><span class="status-pill open">Open</span></td></tr>
+                            <tr><td class="vessel-name">MV Horizon</td><td>Rotterdam</td><td>MGO</td><td>800</td><td>21 May 2024</td><td><span class="status-pill planning">Planning</span></td></tr>
+                            <tr><td class="vessel-name">MV Pacific Wind</td><td>Port Louis</td><td>VLSFO</td><td>1,200</td><td>22 May 2024</td><td><span class="status-pill open">Open</span></td></tr>
+                            <tr><td class="vessel-name">MV Atlantic Trader</td><td>Houston</td><td>VLSFO</td><td>1,000</td><td>23 May 2024</td><td><span class="status-pill rfq-sent">RFQ Sent</span></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="view-all"><a href="#">View all requirements →</a></div>
+                </div>
+
+                <!-- Bunker Price Snapshot -->
+                <div class="bp-card">
+                    <div class="card-head"><h3>Bunker Price Snapshot</h3><a href="#">View all ports →</a></div>
+                    <div class="price-tabs">
+                        <div class="pt-tab active">VLSFO</div>
+                        <div class="pt-tab">MGO</div>
+                        <div class="pt-tab">LNG</div>
+                    </div>
+                    <table class="bp-table">
+                        <thead><tr><th>Port</th><th>Price (USD/MT)</th><th>Change (vs 7d)</th><th>Trend (7d)</th></tr></thead>
+                        <tbody>
+                            <tr><td>Singapore</td><td>$585.00</td><td class="delta-down">▼ 3.6%</td><td><svg class="sparkline" viewBox="0 0 60 20" preserveAspectRatio="none"><polyline fill="none" stroke="#16a34a" stroke-width="1.2" points="0,12 10,10 20,15 30,8 40,12 50,6 60,9"/></svg></td></tr>
+                            <tr><td>Fujairah</td><td>$576.50</td><td class="delta-down">▼ 2.8%</td><td><svg class="sparkline" viewBox="0 0 60 20" preserveAspectRatio="none"><polyline fill="none" stroke="#16a34a" stroke-width="1.2" points="0,10 10,12 20,8 30,11 40,9 50,12 60,8"/></svg></td></tr>
+                            <tr><td>Rotterdam</td><td>$592.00</td><td class="delta-down">▼ 1.9%</td><td><svg class="sparkline" viewBox="0 0 60 20" preserveAspectRatio="none"><polyline fill="none" stroke="#16a34a" stroke-width="1.2" points="0,10 10,9 20,11 30,7 40,10 50,6 60,8"/></svg></td></tr>
+                            <tr><td>Houston</td><td>$605.00</td><td class="delta-up">▲ 0.7%</td><td><svg class="sparkline" viewBox="0 0 60 20" preserveAspectRatio="none"><polyline fill="none" stroke="#dc2626" stroke-width="1.2" points="0,12 10,10 20,11 30,9 40,8 50,7 60,5"/></svg></td></tr>
+                            <tr><td>Gibraltar</td><td>$582.00</td><td class="delta-down">▼ 2.2%</td><td><svg class="sparkline" viewBox="0 0 60 20" preserveAspectRatio="none"><polyline fill="none" stroke="#16a34a" stroke-width="1.2" points="0,10 10,12 20,8 30,11 40,9 50,12 60,9"/></svg></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Spend Overview -->
+                <div class="bp-card">
+                    <div class="card-head"><h3>Spend Overview <small style="color:#64748b;font-weight:500;font-size:.72rem;">(30 Days)</small></h3></div>
+                    <div class="spend-ring-wrap">
+                        <svg width="130" height="130" viewBox="0 0 42 42">
+                            <circle cx="21" cy="21" r="15.91549" fill="#fff" stroke="#f1f5f9" stroke-width="6"/>
+                            <!-- 61% blue -->
+                            <circle cx="21" cy="21" r="15.91549" fill="transparent" stroke="#2563eb" stroke-width="6" stroke-dasharray="61 39" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+                            <!-- 23% yellow -->
+                            <circle cx="21" cy="21" r="15.91549" fill="transparent" stroke="#eab308" stroke-width="6" stroke-dasharray="23 77" stroke-dashoffset="-36" transform="rotate(-90 21 21)"/>
+                            <!-- 10% green -->
+                            <circle cx="21" cy="21" r="15.91549" fill="transparent" stroke="#16a34a" stroke-width="6" stroke-dasharray="10 90" stroke-dashoffset="-59" transform="rotate(-90 21 21)"/>
+                            <!-- 6% red -->
+                            <circle cx="21" cy="21" r="15.91549" fill="transparent" stroke="#dc2626" stroke-width="6" stroke-dasharray="6 94" stroke-dashoffset="-69" transform="rotate(-90 21 21)"/>
+                            <text x="21" y="20" text-anchor="middle" font-size="4.2" font-weight="700" fill="#0f172a">$18.62M</text>
+                            <text x="21" y="25" text-anchor="middle" font-size="2" fill="#64748b">Total Spend</text>
+                        </svg>
+                        <div class="spend-legend">
+                            <div class="item"><span class="lbl"><span class="dot" style="background:#2563eb"></span>VLSFO</span><span class="amt">$11.42M (61%)</span></div>
+                            <div class="item"><span class="lbl"><span class="dot" style="background:#eab308"></span>MGO</span><span class="amt">$4.32M (23%)</span></div>
+                            <div class="item"><span class="lbl"><span class="dot" style="background:#16a34a"></span>LNG</span><span class="amt">$1.85M (10%)</span></div>
+                            <div class="item"><span class="lbl"><span class="dot" style="background:#dc2626"></span>LSMGO</span><span class="amt">$1.03M (6%)</span></div>
+                        </div>
+                    </div>
+                    <a class="spend-link" href="#">View full spend analysis →</a>
+                </div>
+            </div>
+
+            <!-- Row 2: Bunker Demand Map + Recent Orders + Price Trend -->
+            <div class="bp-row">
+                <!-- Bunker Demand Map -->
+                <div class="bp-card">
+                    <div class="card-head"><h3>Bunker Demand Map</h3><select style="border:1px solid #e5e7eb;border-radius:.3rem;padding:.25rem .55rem;font-size:.72rem;"><option>All Fuel Types</option></select></div>
+                    <div class="bp-map">
+                        <!-- World map silhouette (simplified) -->
+                        <svg viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice" style="background:#eff6ff;">
+                            <path d="M120,140 Q160,120 200,135 L240,150 L260,180 L240,220 L200,230 L170,210 L130,200 Z" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1"/>
+                            <path d="M270,170 Q310,160 350,170 L390,185 L380,225 L340,235 L300,230 L270,210 Z" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1"/>
+                            <path d="M400,90 Q470,80 540,100 L600,130 L620,170 L580,200 L500,210 L420,180 L400,140 Z" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1"/>
+                            <path d="M620,140 Q670,130 720,150 L740,200 L700,240 L640,220 L620,180 Z" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1"/>
+                            <path d="M450,220 Q480,215 510,230 L520,280 L490,320 L460,310 L440,260 Z" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1"/>
+                        </svg>
+                        <div class="pin med" style="left:21%;top:48%;">3<span class="label">Houston</span></div>
+                        <div class="pin med" style="left:36%;top:38%;">2<span class="label">Gibraltar</span></div>
+                        <div class="pin med" style="left:47%;top:30%;">5<span class="label">Rotterdam</span></div>
+                        <div class="pin high" style="left:71%;top:42%;">8<span class="label">Fujairah</span></div>
+                        <div class="pin high" style="left:75%;top:60%;">10<span class="label">Singapore</span></div>
+                        <div class="pin low" style="left:62%;top:75%;">4<span class="label">Port Louis</span></div>
+                        <div class="legend">
+                            <span class="li high">High Demand</span>
+                            <span class="li med">Medium Demand</span>
+                            <span class="li low">Low Demand</span>
+                        </div>
+                    </div>
+                    <div class="view-all"><a href="#">View all port insights →</a></div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="bp-card">
+                    <div class="card-head"><h3>Recent Orders</h3><a href="#">View all orders →</a></div>
+                    <table class="bp-table">
+                        <thead><tr><th>Order ID</th><th>Vessel</th><th>Port</th><th>Fuel</th><th>Qty (MT)</th><th>Price (USD/MT)</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr><td>ORD-2024-1028</td><td class="vessel-name">MV Oceanic Star</td><td>Singapore</td><td>VLSFO</td><td>1,500</td><td>585.00</td><td><span class="status-pill booked">Booked</span></td></tr>
+                            <tr><td>ORD-2024-1027</td><td class="vessel-name">MV Pacific Wind</td><td>Fujairah</td><td>VLSFO</td><td>2,000</td><td>576.50</td><td><span class="status-pill delivered">Delivered</span></td></tr>
+                            <tr><td>ORD-2024-1026</td><td class="vessel-name">MV Global Voyager</td><td>Rotterdam</td><td>MGO</td><td>800</td><td>872.00</td><td><span class="status-pill delivered">Delivered</span></td></tr>
+                            <tr><td>ORD-2024-1025</td><td class="vessel-name">MV Horizon</td><td>Gibraltar</td><td>VLSFO</td><td>1,000</td><td>582.00</td><td><span class="status-pill booked">Booked</span></td></tr>
+                            <tr><td>ORD-2024-1024</td><td class="vessel-name">MV Atlantic Trader</td><td>Houston</td><td>VLSFO</td><td>1,500</td><td>605.00</td><td><span class="status-pill in-progress">In Progress</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Price Trend + Top Suppliers -->
+                <div>
+                    <div class="bp-card" style="margin-bottom:1rem;">
+                        <div class="card-head"><h3>Price Trend <small style="color:#64748b;font-weight:500;font-size:.72rem;">(VLSFO)</small></h3><a href="#">View full report →</a></div>
+                        <div class="price-trend-chart">
+                            <svg viewBox="0 0 320 160" preserveAspectRatio="none">
+                                <text x="0" y="15" font-size="9" fill="#94a3b8">USD/MT</text>
+                                <text x="0" y="30" font-size="8" fill="#94a3b8">660</text>
+                                <text x="0" y="60" font-size="8" fill="#94a3b8">620</text>
+                                <text x="0" y="90" font-size="8" fill="#94a3b8">580</text>
+                                <text x="0" y="120" font-size="8" fill="#94a3b8">540</text>
+                                <text x="0" y="150" font-size="8" fill="#94a3b8">500</text>
+                                <polyline fill="none" stroke="#2563eb" stroke-width="2" points="30,55 50,40 70,30 90,50 110,65 130,70 150,80 170,75 190,90 210,95 230,90 250,75 270,80 290,90 310,95"/>
+                                <circle cx="170" cy="75" r="4" fill="#2563eb"/>
+                                <text x="30" y="155" font-size="7" fill="#94a3b8">16 Apr</text>
+                                <text x="80" y="155" font-size="7" fill="#94a3b8">21 Apr</text>
+                                <text x="130" y="155" font-size="7" fill="#94a3b8">26 Apr</text>
+                                <text x="180" y="155" font-size="7" fill="#94a3b8">1 May</text>
+                                <text x="230" y="155" font-size="7" fill="#94a3b8">6 May</text>
+                                <text x="270" y="155" font-size="7" fill="#94a3b8">11 May</text>
+                                <text x="295" y="155" font-size="7" fill="#94a3b8">16 May</text>
+                            </svg>
+                            <div class="price-trend-tip">
+                                <div class="pt-date">16 May 2024</div>
+                                <div class="pt-price">$589.50 / MT</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bp-card">
+                        <div class="card-head"><h3>Top Suppliers <small style="color:#64748b;font-weight:500;font-size:.72rem;">(30 Days)</small></h3><a href="#">View all suppliers →</a></div>
+                        <div style="font-size:.68rem;color:#94a3b8;display:grid;grid-template-columns:1.4fr .6fr .8fr 1.2fr;gap:.35rem;padding:.25rem 0;">
+                            <span>Supplier</span><span>Qty (MT)</span><span>Spend (USD)</span><span>Share</span>
+                        </div>
+                        <div class="supplier-row"><span class="sname">Global Bunkers Pte Ltd</span><span class="qty">8,450</span><span class="spend">$4.92M</span><span class="share">26%<span class="bar"><span class="bar-fill" style="width:26%"></span></span></span></div>
+                        <div class="supplier-row"><span class="sname">Oceanic Fuels DMCC</span><span class="qty">7,200</span><span class="spend">$4.18M</span><span class="share">22%<span class="bar"><span class="bar-fill" style="width:22%"></span></span></span></div>
+                        <div class="supplier-row"><span class="sname">Gulf Fuel Ltd</span><span class="qty">5,650</span><span class="spend">$3.28M</span><span class="share">18%<span class="bar"><span class="bar-fill" style="width:18%"></span></span></span></div>
+                        <div class="supplier-row"><span class="sname">World Fuel Services</span><span class="qty">5,180</span><span class="spend">$3.01M</span><span class="share">16%<span class="bar"><span class="bar-fill" style="width:16%"></span></span></span></div>
+                        <div class="supplier-row"><span class="sname">SeaBunkers Group</span><span class="qty">4,970</span><span class="spend">$2.23M</span><span class="share">12%<span class="bar"><span class="bar-fill" style="width:12%"></span></span></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Procurement workflow -->
+            <div class="bp-workflow">
+                <h3>Procurement Workflow</h3>
+                <div class="steps">
+                    <div class="step"><div class="step-icon icon-blue"><i class="bi bi-envelope"></i></div><div class="step-text"><div class="t1">Enquiry / RFQ</div><div class="t2">Create &amp; Send</div></div></div>
+                    <div class="arrow">→</div>
+                    <div class="step"><div class="step-icon icon-yellow"><i class="bi bi-file-earmark-text"></i></div><div class="step-text"><div class="t1">Receive Quotes</div><div class="t2">From Suppliers</div></div></div>
+                    <div class="arrow">→</div>
+                    <div class="step"><div class="step-icon icon-purple"><i class="bi bi-bar-chart-steps"></i></div><div class="step-text"><div class="t1">Compare &amp; Evaluate</div><div class="t2">Price &amp; Terms</div></div></div>
+                    <div class="arrow">→</div>
+                    <div class="step"><div class="step-icon icon-green"><i class="bi bi-check-circle"></i></div><div class="step-text"><div class="t1">Confirm Order</div><div class="t2">With Supplier</div></div></div>
+                    <div class="arrow">→</div>
+                    <div class="step"><div class="step-icon icon-orange"><i class="bi bi-truck"></i></div><div class="step-text"><div class="t1">Bunker Delivery</div><div class="t2">Receive &amp; Verify</div></div></div>
+                    <div class="arrow">→</div>
+                    <div class="step"><div class="step-icon icon-gray"><i class="bi bi-file-earmark-medical"></i></div><div class="step-text"><div class="t1">Documents &amp; Invoice</div><div class="t2">BDN, Invoice, Payment</div></div></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

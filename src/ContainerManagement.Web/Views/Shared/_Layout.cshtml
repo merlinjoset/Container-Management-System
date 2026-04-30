@@ -15,7 +15,13 @@
     <style>
         .app-navbar {
             background: linear-gradient(90deg, #0f172a, #111827);
+            min-height: 56px;
+            height: 56px;
+            padding-top: 0;
+            padding-bottom: 0;
         }
+        .app-navbar > .container-fluid { min-height: 56px; height: 56px; }
+        .app-navbar .navbar-nav { align-items: center; }
 
             .app-navbar .nav-link {
                 color: rgba(255,255,255,.85) !important;
@@ -61,17 +67,109 @@
                 display: block;
             }
 
+        /* ── Welcome / user dropdown trigger ── */
         .user-pill {
-            background: rgba(255,255,255,.10);
-            border: 1px solid rgba(255,255,255,.18);
-            color: rgba(255,255,255,.92);
-            padding: .35rem .65rem;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.15);
+            color: #fff !important;
+            text-decoration: none !important;
+            padding: .32rem .65rem .32rem .35rem;
             border-radius: 999px;
-            font-size: .9rem;
+            font-size: .82rem;
             display: inline-flex;
-            gap: .35rem;
+            gap: .5rem;
             align-items: center;
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease;
+            line-height: 1.2;
         }
+        .user-pill:hover, .user-pill:focus { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.25); color: #fff !important; text-decoration: none !important; }
+        .user-pill::after { display: none !important; }
+        .user-pill .user-avatar {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: #fff; font-weight: 700; font-size: .72rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            flex: 0 0 26px;
+        }
+        .user-pill .user-welcome-label { color: rgba(255,255,255,.7); font-weight: 500; }
+        .user-pill .user-name {
+            color: #fff; font-weight: 600; max-width: 180px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .user-pill .caret-icon { font-size: .65rem; opacity: .7; margin-left: .15rem; }
+
+        /* ── Welcome / user dropdown panel ── */
+        .user-menu-dropdown {
+            min-width: 280px;
+            padding: 0;
+            border: 0;
+            border-radius: .65rem;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, .18), 0 2px 8px rgba(15, 23, 42, .08);
+            overflow: hidden;
+            /* Sit above the navbar, top menu bar, and tab bar */
+            z-index: 1080 !important;
+            margin-top: .35rem;
+        }
+        /* Ensure the dropdown's parent stacks correctly without affecting navbar height */
+        .navbar .nav-item.dropdown { position: relative; }
+        /* Dropdown panel floats absolutely — never expands the navbar */
+        .navbar .user-menu-dropdown.dropdown-menu {
+            position: absolute !important;
+            inset: auto 0 auto auto !important;
+            transform: none !important;
+        }
+        .user-menu-dropdown .user-card {
+            background: linear-gradient(135deg, #f8fafc, #eef2ff);
+            padding: 1rem 1rem .85rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex; align-items: center; gap: .7rem;
+        }
+        .user-menu-dropdown .user-card .avatar-lg {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: #fff; font-weight: 700; font-size: 1.05rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            flex: 0 0 44px;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, .3);
+        }
+        .user-menu-dropdown .user-card .user-meta { min-width: 0; flex: 1; }
+        .user-menu-dropdown .user-card .meta-name {
+            font-weight: 700; color: #0f172a; font-size: .9rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .user-menu-dropdown .user-card .meta-email {
+            font-size: .72rem; color: #64748b; margin-top: .1rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .user-menu-dropdown .user-card .meta-status {
+            font-size: .65rem; color: #16a34a; margin-top: .25rem;
+            display: inline-flex; align-items: center; gap: .25rem;
+        }
+        .user-menu-dropdown .user-card .meta-status::before {
+            content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;
+        }
+        .user-menu-dropdown .menu-section-label {
+            font-size: .65rem; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: .8px;
+            padding: .65rem 1rem .25rem; font-weight: 600;
+        }
+        .user-menu-dropdown .dropdown-item {
+            font-size: .85rem; padding: .55rem 1rem;
+            display: flex; align-items: center; gap: .6rem;
+            color: #334155;
+            transition: background .12s ease;
+        }
+        .user-menu-dropdown .dropdown-item i { color: #64748b; width: 18px; font-size: .95rem; }
+        .user-menu-dropdown .dropdown-item:hover { background: #f1f5f9; color: #0f172a; }
+        .user-menu-dropdown .dropdown-item:hover i { color: #0f172a; }
+        .user-menu-dropdown .dropdown-item.active { background: #eef2ff; color: #4338ca; font-weight: 600; }
+        .user-menu-dropdown .dropdown-item.active i { color: #4338ca; }
+        .user-menu-dropdown .logout-item { color: #dc2626; padding: .55rem 1rem; }
+        .user-menu-dropdown .logout-item i { color: #dc2626; }
+        .user-menu-dropdown .logout-item:hover { background: #fef2f2; color: #b91c1c; }
+        .user-menu-dropdown .logout-item:hover i { color: #b91c1c; }
+        .user-menu-dropdown hr { margin: .35rem 0; border-color: #e5e7eb; }
 
         .app-container {
             min-height: calc(100vh - 120px);
@@ -279,9 +377,16 @@
         var isAccount = path.StartsWith("/account");
         var isJobs = path.StartsWith("/jobs");
         var isSchedules = path.StartsWith("/schedules");
+        var isProcurement = path.StartsWith("/procurement");
+        var isBunker = path.StartsWith("/procurement/bunker") || path.StartsWith("/bunker");
+        var isBunkerDashboard = path.StartsWith("/bunker/dashboard") || path == "/bunker";
+        var isRoles = path.StartsWith("/roles");
 
         var globalMastersActive = isOperators || isVessels || isRegions || isCountries || isPorts || isTerminals || isVendors || isServices || isRoutes || isDistances || isSlots;
         var scheduleActive = isSchedules || isVoyages;
+        var procurementActive = isProcurement || (isBunker && !isBunkerDashboard);
+        var jobDashboardActive = isJobs || isBunkerDashboard;
+        var settingsActive = isUsers || isRoles;
 
         var display =
         User.FindFirstValue(ClaimTypes.Email)
@@ -301,18 +406,55 @@
                 <ul class="navbar-nav ms-auto align-items-center gap-2 flex-row">
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        <li class="nav-item my-2 my-lg-0">
-                            <span class="user-pill">
-                                <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
-                                <span>Signed in</span>
-                                <strong class="ms-1">@display</strong>
-                            </span>
-                        </li>
-                        <li class="nav-item">
-                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-                            </form>
+                        // Show only the username (no email fallback)
+                        var emailClaim = User.FindFirstValue(ClaimTypes.Email) ?? "";
+                        var usernameClaim = User.FindFirstValue("username") ?? User.Identity?.Name ?? "";
+                        var shortName = string.IsNullOrWhiteSpace(usernameClaim) ? "User" : usernameClaim;
+                        var initials = shortName.Length >= 2
+                            ? shortName.Substring(0, 2).ToUpperInvariant()
+                            : shortName.Substring(0, 1).ToUpperInvariant();
+
+                        <li class="nav-item dropdown my-2 my-lg-0">
+                            <a class="user-pill" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" id="userMenuToggle">
+                                <span class="user-avatar">@initials</span>
+                                <span class="user-welcome-label">Welcome,</span>
+                                <span class="user-name">@shortName</span>
+                                <i class="bi bi-chevron-down caret-icon"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end user-menu-dropdown" aria-labelledby="userMenuToggle">
+                                <li>
+                                    <div class="user-card">
+                                        <div class="avatar-lg">@initials</div>
+                                        <div class="user-meta">
+                                            <div class="meta-name">@shortName</div>
+                                            <div class="meta-email" title="@emailClaim">@(string.IsNullOrWhiteSpace(emailClaim) ? "—" : emailClaim)</div>
+                                            <div class="meta-status">Online</div>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="menu-section-label">Settings</div>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item @(isUsers ? "active" : "")" asp-controller="Users" asp-action="Index">
+                                        <i class="bi bi-people"></i><span>Users</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item @(isRoles ? "active" : "")" asp-controller="Roles" asp-action="Index">
+                                        <i class="bi bi-shield-lock"></i><span>User Roles</span>
+                                    </a>
+                                </li>
+                                <li><hr /></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dropdown-item logout-item">
+                                            <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
                         </li>
                     }
                     else
@@ -337,11 +479,23 @@
                 <div class="collapse navbar-collapse" id="topMenuCollapse">
                     <ul class="navbar-nav">
 
-                        @* Job Dashboard *@
-                        <li class="nav-item">
-                            <a class="nav-link @(isJobs ? "active" : "")" asp-controller="Jobs" asp-action="Index">
-                                <i class="bi bi-kanban me-1"></i>Dashboard
+                        @* Job Dashboard dropdown *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(jobDashboardActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-kanban me-1"></i>Job Dashboard
                             </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item @(isBunkerDashboard ? "active" : "")" asp-controller="Bunker" asp-action="Dashboard">
+                                        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item @(isJobs ? "active" : "")" asp-controller="Jobs" asp-action="Index">
+                                        <i class="bi bi-kanban me-1"></i>Job Dashboard
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
 
                         @* Masters dropdown *@
@@ -378,6 +532,16 @@
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item @(isVoyages ? "active" : "")" asp-controller="Voyages" asp-action="Index">Voyages</a></li>
                                 <li><a class="dropdown-item @(isSchedules && path.Contains("/viewer") ? "active" : "")" asp-controller="Schedules" asp-action="Viewer">Schedule Viewer</a></li>
+                            </ul>
+                        </li>
+
+                        @* Procurement dropdown *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @(procurementActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-bag-check me-1"></i>Procurement
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item @(isBunker ? "active" : "")" asp-controller="Bunker" asp-action="Planning">Bunker Planning</a></li>
                             </ul>
                         </li>
 
@@ -663,7 +827,7 @@
 
         // path → { label, icon }
         const tabMeta = {
-            '/jobs':              { label: 'Dashboard',  icon: 'bi-kanban' },
+            '/jobs':              { label: 'Job Dashboard',  icon: 'bi-kanban' },
             '/operators':         { label: 'Operators',  icon: 'bi-building' },
             '/regions':           { label: 'Regions',    icon: 'bi-globe2' },
             '/countries':         { label: 'Countries',  icon: 'bi-flag' },
@@ -680,7 +844,10 @@
             '/voyages/tos':       { label: 'TOS',        icon: 'bi-clipboard2-data' },
             '/voyages':           { label: 'Voyages',    icon: 'bi-compass' },
             '/schedules':         { label: 'Schedules',  icon: 'bi-calendar3' },
-            '/users':             { label: 'Users',      icon: 'bi-people' }
+            '/bunker/dashboard':  { label: 'Dashboard',       icon: 'bi-speedometer2' },
+            '/bunker':            { label: 'Bunker Planning', icon: 'bi-droplet' },
+            '/users':             { label: 'Users',      icon: 'bi-people' },
+            '/roles':             { label: 'User Roles', icon: 'bi-shield-lock' }
         };
 
         function getTabs() {

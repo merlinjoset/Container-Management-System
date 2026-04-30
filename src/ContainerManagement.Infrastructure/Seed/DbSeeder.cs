@@ -23,26 +23,32 @@ public static class DbSeeder
             await db.Database.EnsureCreatedAsync();
         }
 
+        await EnsureRolesAsync(db);
         await EnsureAdminAsync(db);
+    }
+
+    private static async Task EnsureRolesAsync(AppDbContext db)
+    {
+        // Make sure every built-in role exists, regardless of whether seed user is created.
+        foreach (var name in AppRoles.All)
+        {
+            var existing = await db.Roles.FirstOrDefaultAsync(r => r.Name == name);
+            if (existing == null)
+            {
+                db.Roles.Add(new RoleEntity { Id = Guid.NewGuid(), Name = name });
+            }
+        }
+        await db.SaveChangesAsync();
     }
 
     private static async Task EnsureAdminAsync(AppDbContext db)
     {
         if (await db.Users.AsNoTracking().AnyAsync()) return;
 
-        var adminRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.Admin);
-        if (adminRole == null)
-        {
-            adminRole = new RoleEntity { Id = Guid.NewGuid(), Name = AppRoles.Admin };
-            db.Roles.Add(adminRole);
-        }
-
-        var userRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.User);
-        if (userRole == null)
-        {
-            userRole = new RoleEntity { Id = Guid.NewGuid(), Name = AppRoles.User };
-            db.Roles.Add(userRole);
-        }
+        var adminRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.Admin)
+                        ?? throw new InvalidOperationException("Admin role missing after seed.");
+        var userRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.User)
+                       ?? throw new InvalidOperationException("User role missing after seed.");
 
         var adminId = Guid.NewGuid();
         db.Users.Add(new UserEntity

@@ -9,5 +9,6 @@ public interface IUserManagementRepository
     Task AssignRoleAsync(Guid userId, string roleName, CancellationToken ct);
 
     Task<List<ContainerManagement.Application.Dtos.Auth.UserListItemDto>> GetUsersAsync(CancellationToken ct);
+    Task<List<ContainerManagement.Application.Dtos.Auth.RoleListItemDto>> GetRolesAsync(CancellationToken ct);
     Task SaveChangesAsync(CancellationToken ct);
 }

@@ -87,4 +87,36 @@ public class EfUserManagementRepository : IUserManagementRepository
 
         return users.OrderBy(u => u.Email ?? u.UserName).ToList();
     }
+
+    public async Task<List<RoleListItemDto>> GetRolesAsync(CancellationToken ct)
+    {
+        var roles = await _db.Roles.AsNoTracking()
+            .OrderBy(r => r.Name)
+            .Select(r => new RoleListItemDto { Id = r.Id, Name = r.Name ?? "" })
+            .ToListAsync(ct);
+
+        // Fetch all user-role pairs joined with user info (username/email)
+        var assignments = await _db.UserRoles.AsNoTracking()
+            .Select(ur => new
+            {
+                ur.RoleId,
+                Username = ur.User != null ? (ur.User.UserName ?? ur.User.Email ?? "") : ""
+            })
+            .ToListAsync(ct);
+
+        var byRole = assignments
+            .Where(a => !string.IsNullOrWhiteSpace(a.Username))
+            .GroupBy(a => a.RoleId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Username!).OrderBy(u => u, StringComparer.OrdinalIgnoreCase).ToList());
+
+        foreach (var r in roles)
+        {
+            if (byRole.TryGetValue(r.Id, out var names))
+            {
+                r.UserNames = names;
+                r.UserCount = names.Count;
+            }
+        }
+        return roles;
+    }
 }

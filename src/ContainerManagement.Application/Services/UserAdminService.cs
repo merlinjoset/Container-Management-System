@@ -34,10 +34,19 @@ public class UserAdminService
             await _repo.AssignRoleAsync(id, AppRoles.Admin, ct);
         }
 
+        if (dto.IsAgent)
+        {
+            await _repo.EnsureRoleExistsAsync(AppRoles.Agent, ct);
+            await _repo.AssignRoleAsync(id, AppRoles.Agent, ct);
+        }
+
         await _repo.SaveChangesAsync(ct);
         return id;
     }
 
     public Task<List<UserListItemDto>> GetUsersAsync(CancellationToken ct)
         => _repo.GetUsersAsync(ct);
+
+    public Task<List<RoleListItemDto>> GetRolesAsync(CancellationToken ct)
+        => _repo.GetRolesAsync(ct);
 }

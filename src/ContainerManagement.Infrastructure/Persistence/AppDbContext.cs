@@ -62,10 +62,10 @@ public class AppDbContext : DbContext
             e.Property(x => x.LockoutEnd).HasColumnType("datetimeoffset");
         });
 
-        // ---------------- Roles ----------------
+        // ---------------- TblRoles ----------------
         b.Entity<RoleEntity>(e =>
         {
-            e.ToTable("Roles");
+            e.ToTable("TblRoles");
             e.HasKey(x => x.Id);
 
             e.Property(x => x.Name).HasMaxLength(256).IsRequired();

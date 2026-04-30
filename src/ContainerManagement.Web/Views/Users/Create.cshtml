@@ -36,9 +36,17 @@
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
                     <div class="col-md-6 d-flex align-items-center">
-                        <div class="form-check mt-4">
-                            <input asp-for="IsAdmin" class="form-check-input" />
-                            <label class="form-check-label" for="IsAdmin">Admin</label>
+                        <div class="mt-4">
+                            <label class="form-label fw-semibold d-block mb-1" style="font-size:.85rem;">Roles</label>
+                            <div class="form-check form-check-inline">
+                                <input asp-for="IsAdmin" class="form-check-input" />
+                                <label class="form-check-label" for="IsAdmin">Admin</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input asp-for="IsAgent" class="form-check-input" />
+                                <label class="form-check-label" for="IsAgent">Agent</label>
+                            </div>
+                            <div class="form-text" style="font-size:.7rem;">User role is always assigned by default.</div>
                         </div>
                     </div>
                 </div>

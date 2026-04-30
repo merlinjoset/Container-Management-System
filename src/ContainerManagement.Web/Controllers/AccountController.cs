@@ -19,7 +19,7 @@ public class AccountController : Controller
     public IActionResult Login()
 {
     if (User?.Identity?.IsAuthenticated == true)
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction("Dashboard", "Bunker");
     return View();
 }
 
@@ -43,7 +43,7 @@ public class AccountController : Controller
                 Expires = res.ExpiresAtUtc
             });
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Dashboard", "Bunker");
         }
         catch (UnauthorizedAccessException)
         {
